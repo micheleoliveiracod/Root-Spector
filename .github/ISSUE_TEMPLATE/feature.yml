@@ -1,13 +1,13 @@
 name: 🚀 Feature Request
-description: Propor uma nova funcionalidade para o BiotecPredict
+description: Propor uma nova funcionalidade para o Root-Spector
 title: "feat: "
-labels: ["feat"]
+labels: ["feature"]
 body:
   - type: markdown
     attributes:
       value: |
         ## 🚀 Nova Funcionalidade
-        Obrigado por contribuir com o BiotecPredict! Preencha os campos abaixo para propor uma nova funcionalidade.
+        Obrigado por contribuir com o Root-Spector! Preencha os campos abaixo para propor uma nova funcionalidade.
 
   - type: textarea
     id: context
@@ -59,10 +59,10 @@ body:
     id: references
     attributes:
       label: Referências
-      description: Links para documentação, steering files, ou recursos externos
+      description: Links para documentação ou recursos externos
       placeholder: |
-        - `.specs/product.md`
-        - `.specs/tech.md`
+        - `specs/product.md`
+        - `specs/design.md`
     validations:
       required: false
 
@@ -72,30 +72,29 @@ body:
       label: Categoria
       description: Qual camada do sistema esta funcionalidade afeta?
       options:
-        - Backend - API
-        - Backend - Processadores
-        - Backend - Machine Learning
-        - Backend - Banco de Dados
-        - Frontend - Componentes
-        - Frontend - Páginas
-        - Frontend - Serviços
-        - Infraestrutura
+        - root_cause_agent - Grafo/Nós (LangGraph)
+        - root_cause_agent - Ferramenta/Validação
+        - backend - API (FastAPI)
+        - frontend - Componentes React
+        - config - Regras do setor
+        - tests/e2e - Testes automatizados
         - Documentação
         - Outro
     validations:
       required: true
 
   - type: dropdown
-    id: sprint
+    id: milestone
     attributes:
-      label: Sprint
-      description: Para qual sprint esta funcionalidade é planejada?
+      label: Milestone
+      description: Para qual milestone esta funcionalidade é planejada? (ver docs/gitflow.md)
       options:
-        - Sprint 1 - Setup e Estrutura Base
-        - Sprint 2 - Upload e Persistência
-        - Sprint 3 - Dashboards e Compliance Score
-        - Sprint 4 - Machine Learning e Publicação
-        - Backlog (sem sprint definida)
+        - M1 - Especificação & Arquitetura
+        - M2 - Dados & Configuração
+        - M3 - Implementação do Agente
+        - M4 - Testes & Verificação
+        - M5 - Documentação & Entrega
+        - Backlog (sem milestone definida)
     validations:
       required: true
 

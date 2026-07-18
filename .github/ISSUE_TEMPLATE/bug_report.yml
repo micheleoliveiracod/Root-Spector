@@ -1,13 +1,13 @@
 name: 🐛 Bug Report
-description: Reportar um bug ou comportamento incorreto no BiotecPredict
+description: Reportar um bug ou comportamento incorreto no Root-Spector
 title: "fix: "
-labels: ["bug"]
+labels: ["bugfix"]
 body:
   - type: markdown
     attributes:
       value: |
         ## 🐛 Reportar Bug
-        Obrigado por ajudar a melhorar o BiotecPredict! Preencha os campos abaixo para reportar um bug.
+        Obrigado por ajudar a melhorar o Root-Spector! Preencha os campos abaixo para reportar um bug.
 
   - type: textarea
     id: description
@@ -90,14 +90,13 @@ body:
       label: Componente Afetado
       description: Qual parte do sistema está afetada?
       options:
-        - Backend - API
-        - Backend - Processadores
-        - Backend - Machine Learning
-        - Backend - Banco de Dados
-        - Frontend - Componentes
-        - Frontend - Páginas
-        - Frontend - Serviços
-        - Infraestrutura
+        - root_cause_agent - Grafo/Nós (LangGraph)
+        - root_cause_agent - Ferramenta/Validação
+        - backend - API (FastAPI)
+        - frontend - Componentes React
+        - config - Regras do setor
+        - tests/e2e - Testes automatizados
+        - CI/CD
         - Outro
     validations:
       required: true

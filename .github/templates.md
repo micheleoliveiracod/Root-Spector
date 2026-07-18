@@ -1,15 +1,16 @@
 # Templates do GitHub
 
-Este diretório contém templates para Issues e Pull Requests do projeto.
+Guia dos templates de Issues (`.github/ISSUE_TEMPLATE/`) e Pull Requests
+(`.github/pull_request_template.md`) do projeto.
 
 ## 📋 Templates de Issues
 
 ### 🚀 Feature Request (`feature.yml`)
-Use para propor novas funcionalidades.
+Use para propor novas funcionalidades. Label: `feature`.
 
 **Quando usar:**
-- Adicionar nova funcionalidade ao sistema
-- Implementar novo componente ou módulo
+- Adicionar nova funcionalidade ao agente/backend/frontend
+- Implementar novo módulo
 - Expandir capacidades existentes
 
 **Campos obrigatórios:**
@@ -17,12 +18,12 @@ Use para propor novas funcionalidades.
 - Escopo
 - Critérios de Aceite
 - Categoria
-- Prioridade
+- Milestone
 
 ---
 
 ### 🐛 Bug Report (`bug_report.yml`)
-Use para reportar bugs ou comportamentos incorretos.
+Use para reportar bugs ou comportamentos incorretos. Label: `bugfix`.
 
 **Quando usar:**
 - Sistema não funciona como esperado
@@ -40,7 +41,7 @@ Use para reportar bugs ou comportamentos incorretos.
 ---
 
 ### 📚 Documentation (`documentation.yml`)
-Use para melhorias ou adições à documentação.
+Use para melhorias ou adições à documentação. Label: `docs`.
 
 **Quando usar:**
 - Criar nova documentação
@@ -55,7 +56,7 @@ Use para melhorias ou adições à documentação.
 ---
 
 ### 🔧 Chore/Maintenance (`chore.yml`)
-Use para tarefas de manutenção, configuração ou refatoração.
+Use para tarefas de manutenção, configuração ou refatoração. Label: `chore`.
 
 **Quando usar:**
 - Atualizar dependências
@@ -73,7 +74,7 @@ Use para tarefas de manutenção, configuração ou refatoração.
 ---
 
 ### 💬 General Issue (`general.yml`)
-Use para issues que não se encaixam nas outras categorias.
+Use para issues que não se encaixam nas outras categorias. Sem label fixa.
 
 **Quando usar:**
 - Discussões gerais
@@ -84,16 +85,16 @@ Use para issues que não se encaixam nas outras categorias.
 
 ## 📝 Template de Pull Request
 
-O template de PR (`pull_request_template.md`) é aplicado automaticamente ao criar uma nova Pull Request.
+O template de PR (`.github/pull_request_template.md`) é aplicado
+automaticamente ao criar uma nova Pull Request — mesmo conteúdo do template
+descrito em `specs/gitflow.md` § Convenção de Pull Requests.
 
 **Seções do template:**
-- **Contexto**: Por que a mudança é necessária
-- **O que foi feito**: Descrição das alterações
-- **Como testar**: Passos para validação
-- **Dependências**: Issues relacionadas
-- **Referências**: Links para documentação
-- **Checklist**: Itens de verificação
-- **Screenshots/Logs**: Evidências visuais (opcional)
+- **Contexto**: qual milestone/issue isso resolve
+- **O que mudou**: lista curta das mudanças
+- **Como testar**: comando(s) pra verificar localmente
+- **Checklist**: CI verde, critérios de aceitação conferidos, `docs/prompts.md` atualizado
+- **Closes #**: issue(s) fechada(s) por este PR
 
 ---
 
@@ -104,13 +105,13 @@ O template de PR (`pull_request_template.md`) é aplicado automaticamente ao cri
 1. **Seja específico**: Descreva claramente o problema ou funcionalidade
 2. **Forneça contexto**: Explique por que a issue é necessária
 3. **Defina critérios de aceite**: Como validar que está completo
-4. **Referencie documentação**: Link para steering files relevantes
-5. **Use labels apropriadas**: Facilita organização e busca
+4. **Referencie documentação**: Link para `specs/`/`docs/` relevantes
+5. **Use as labels de tipo + etapa** (ver `docs/gitflow.md` § Labels de etapa)
 
 ### Para Pull Requests
 
-1. **Título descritivo**: Use Conventional Commits (feat:, fix:, docs:, chore:)
-2. **Descrição completa**: Explique o que foi feito e por quê
+1. **Título descritivo**: `<tipo>(<escopo>): <descrição>` (Conventional Commits, ver `specs/gitflow.md`)
+2. **Descrição completa**: Explique o que mudou e por quê
 3. **Passos de teste**: Facilite a revisão
 4. **Link issues**: Use "Closes #123" para fechar automaticamente
 5. **Checklist completo**: Marque todos os itens antes de solicitar revisão
@@ -120,9 +121,10 @@ O template de PR (`pull_request_template.md`) é aplicado automaticamente ao cri
 ## 📚 Referências
 
 - [Conventional Commits](https://www.conventionalcommits.org/)
-- [Git Flow do Projeto](../.specs/gitflow.md)
-- [Estrutura do Projeto](../.specs/structure.md)
-- [Stack Tecnológica](../.specs/tech.md)
+- [Convenção de Gitflow do projeto](../specs/gitflow.md)
+- [Estrutura do Projeto](../specs/structure.md)
+- [Stack Tecnológica](../specs/tech.md)
+- [Plano operacional (milestones, branches, issues)](../docs/gitflow.md)
 
 ---
 
@@ -131,7 +133,7 @@ O template de PR (`pull_request_template.md`) é aplicado automaticamente ao cri
 Para atualizar os templates:
 
 1. Edite os arquivos `.yml` em `.github/ISSUE_TEMPLATE/`
-2. Edite `pull_request_template.md` para o template de PR
+2. Edite `.github/pull_request_template.md` para o template de PR
 3. Teste criando uma nova issue/PR
 4. Commit e push das alterações
 

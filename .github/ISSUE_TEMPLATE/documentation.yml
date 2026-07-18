@@ -1,13 +1,13 @@
 name: 📚 Documentation
 description: Melhorias ou adições à documentação
 title: "docs: "
-labels: ["documentation"]
+labels: ["docs"]
 body:
   - type: markdown
     attributes:
       value: |
         ## 📚 Documentação
-        Ajude a melhorar a documentação do BiotecPredit!
+        Ajude a melhorar a documentação do Root-Spector!
 
   - type: textarea
     id: context
