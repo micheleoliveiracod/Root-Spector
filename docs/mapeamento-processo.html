@@ -1,0 +1,427 @@
+<title>Root-Spector — Mapeamento do processo</title>
+<style>
+  :root {
+    --paper: #F3F6F5;
+    --paper-raised: #FFFFFF;
+    --ink: #14201F;
+    --ink-soft: #47534F;
+    --line: #D8E0DD;
+    --shadow: 0 1px 2px rgba(20,33,32,0.06), 0 6px 18px rgba(20,33,32,0.05);
+
+    --lane-bio: #5B7A87;      --lane-bio-soft: #E8EEF0;
+    --lane-btp: #3B6FB0;      --lane-btp-soft: #E7EEF8;
+    --lane-rs:  #0E8A82;      --lane-rs-soft:  #E1F1EE;
+    --lane-op:  #B4842A;      --lane-op-soft:  #F7EFDD;
+    --lane-qual: #6B5B95;     --lane-qual-soft: #ECE9F3;
+    --lane-rag:  #8E6A4F;     --lane-rag-soft:  #F2EAE2;
+    --lane-qa:   #4C6B54;     --lane-qa-soft:   #E7EFE8;
+    --roadmap-ribbon: #8A5A2E;
+  }
+  :root[data-theme="dark"] {
+    --paper: #10171A; --paper-raised: #16201F; --ink: #E7EDEA; --ink-soft: #A7B4AF;
+    --line: #253230; --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 6px 18px rgba(0,0,0,0.35);
+    --lane-bio: #86A3AF; --lane-bio-soft: #1B2528;
+    --lane-btp: #7FA6E0; --lane-btp-soft: #182236;
+    --lane-rs:  #38B6AC; --lane-rs-soft:  #12302D;
+    --lane-op:  #D9A64E; --lane-op-soft:  #2E2A1B;
+    --lane-qual: #A594C9; --lane-qual-soft: #241F30;
+    --lane-rag:  #C79E7B; --lane-rag-soft:  #2B2119;
+    --lane-qa:   #8FBF9B; --lane-qa-soft:   #1B2A1E;
+    --roadmap-ribbon: #C58A4E;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #10171A; --paper-raised: #16201F; --ink: #E7EDEA; --ink-soft: #A7B4AF;
+      --line: #253230; --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 6px 18px rgba(0,0,0,0.35);
+      --lane-bio: #86A3AF; --lane-bio-soft: #1B2528;
+      --lane-btp: #7FA6E0; --lane-btp-soft: #182236;
+      --lane-rs:  #38B6AC; --lane-rs-soft:  #12302D;
+      --lane-op:  #D9A64E; --lane-op-soft:  #2E2A1B;
+      --lane-qual: #A594C9; --lane-qual-soft: #241F30;
+      --lane-rag:  #C79E7B; --lane-rag-soft:  #2B2119;
+      --lane-qa:   #8FBF9B; --lane-qa-soft:   #1B2A1E;
+      --roadmap-ribbon: #C58A4E;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1500px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header.masthead { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--lane-rs); margin: 0;
+  }
+  h1 {
+    font-family: Charter, "Iowan Old Style", Georgia, serif;
+    font-size: clamp(24px, 3.4vw, 32px); margin: 0; text-wrap: balance; letter-spacing: -0.01em;
+  }
+  .dek { font-size: 15.5px; line-height: 1.6; color: var(--ink-soft); max-width: 72ch; margin: 6px 0 0; }
+
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 18px; align-items: center;
+    margin: 20px 0 28px; padding: 12px 16px; background: var(--paper-raised);
+    border: 1px solid var(--line); border-radius: 10px;
+    font-size: 12.5px; color: var(--ink-soft);
+  }
+  .legend .item { display: flex; align-items: center; gap: 7px; }
+  .legend .shape { flex: none; }
+  .legend .circle-start { width: 14px; height: 14px; border-radius: 50%; border: 1.6px solid var(--ink-soft); background: transparent; }
+  .legend .circle-end { width: 14px; height: 14px; border-radius: 50%; border: 3px solid var(--ink-soft); background: transparent; }
+  .legend .rect-task { width: 22px; height: 14px; border-radius: 4px; border: 1.4px solid var(--ink-soft); }
+  .legend .diamond { width: 14px; height: 14px; border: 1.4px solid var(--ink-soft); transform: rotate(45deg); }
+  .legend .swatches { display: flex; gap: 10px; margin-left: auto; }
+  .legend .swatch { display: flex; align-items: center; gap: 5px; }
+  .legend .dot { width: 9px; height: 9px; border-radius: 50%; }
+
+  .bpmn { display: flex; flex-direction: column; }
+
+  .lane {
+    display: flex; align-items: stretch; border: 1px solid var(--line);
+    border-bottom: none; background: var(--paper-raised);
+  }
+  .lane:last-of-type { border-bottom: 1px solid var(--line); border-radius: 0 0 10px 10px; }
+  .lane:first-of-type { border-radius: 10px 10px 0 0; }
+
+  .lane-label {
+    flex: none; width: 132px; display: flex; align-items: center;
+    padding: 14px 12px; font-weight: 700; font-size: 13px; line-height: 1.3;
+    border-right: 1px solid var(--line);
+  }
+  .lane[data-lane="bio"] .lane-label { background: var(--lane-bio-soft); color: var(--lane-bio); }
+  .lane[data-lane="btp"] .lane-label { background: var(--lane-btp-soft); color: var(--lane-btp); }
+  .lane[data-lane="rs"]  .lane-label { background: var(--lane-rs-soft);  color: var(--lane-rs); }
+  .lane[data-lane="op"]  .lane-label { background: var(--lane-op-soft);  color: var(--lane-op); }
+  .lane[data-lane="qual"] .lane-label { background: var(--lane-qual-soft); color: var(--lane-qual); }
+  .lane[data-lane="rag"]  .lane-label { background: var(--lane-rag-soft);  color: var(--lane-rag); }
+  .lane[data-lane="qa"]   .lane-label { background: var(--lane-qa-soft);   color: var(--lane-qa); }
+
+  .lane-track {
+    flex: 1; display: flex; align-items: center; gap: 0;
+    padding: 18px 20px; overflow-x: auto;
+  }
+
+  .spacer { flex: none; width: 40px; }
+  .spacer.w2 { width: 120px; }
+  .spacer.w3 { width: 200px; }
+
+  .arrow { flex: none; display: flex; align-items: center; color: var(--ink-soft); margin: 0 2px; }
+  .arrow svg { display: block; }
+
+  .node { flex: none; display: flex; flex-direction: column; gap: 3px; }
+
+  .evt {
+    width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    text-align: center; font-size: 10px; font-weight: 700; line-height: 1.15; padding: 4px;
+  }
+  .evt.start { border: 2px solid; background: transparent; }
+  .evt.end { border: 4px solid; background: transparent; }
+
+  .task {
+    width: 190px; border-radius: 10px; border: 1.4px solid; padding: 10px 12px;
+    box-shadow: var(--shadow); background: var(--paper-raised);
+  }
+  .task .t-tag {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 9.5px; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.85;
+  }
+  .task .t-name { font-weight: 700; font-size: 12.5px; margin-top: 2px; }
+  .task .t-desc { font-size: 11px; color: var(--ink-soft); line-height: 1.4; margin-top: 3px; }
+
+  .gateway {
+    width: 52px; height: 52px; transform: rotate(45deg); border: 2px solid;
+    display: flex; align-items: center; justify-content: center; background: var(--paper-raised);
+  }
+  .gateway span { transform: rotate(-45deg); font-size: 16px; font-weight: 800; }
+  .gateway-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .gateway-label {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 9.5px; text-align: center; color: var(--ink-soft); max-width: 90px; line-height: 1.25;
+  }
+
+  [data-lane="bio"] .task, [data-lane="bio"] .evt, [data-lane="bio"] .gateway { color: var(--lane-bio); border-color: var(--lane-bio); }
+  [data-lane="btp"] .task, [data-lane="btp"] .evt, [data-lane="btp"] .gateway { color: var(--lane-btp); border-color: var(--lane-btp); }
+  [data-lane="rs"]  .task, [data-lane="rs"]  .evt, [data-lane="rs"]  .gateway { color: var(--lane-rs);  border-color: var(--lane-rs); }
+  [data-lane="op"]  .task, [data-lane="op"]  .evt, [data-lane="op"]  .gateway { color: var(--lane-op);  border-color: var(--lane-op); }
+  [data-lane="qual"] .task, [data-lane="qual"] .evt, [data-lane="qual"] .gateway { color: var(--lane-qual); border-color: var(--lane-qual); }
+  [data-lane="rag"]  .task, [data-lane="rag"]  .evt, [data-lane="rag"]  .gateway { color: var(--lane-rag);  border-color: var(--lane-rag); }
+  [data-lane="qa"]   .task, [data-lane="qa"]   .evt, [data-lane="qa"]   .gateway { color: var(--lane-qa);   border-color: var(--lane-qa); }
+
+  .lane-connector {
+    display: flex; align-items: center; gap: 8px; padding: 4px 20px 4px 152px;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 11px; color: var(--ink-soft); background: var(--paper);
+  }
+  .lane-connector svg { flex: none; }
+
+  .branch-note {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 9.5px; color: var(--lane-bio); text-align: center; max-width: 70px; line-height: 1.3;
+  }
+
+  .loop-box {
+    flex: none; display: flex; flex-direction: column; gap: 10px;
+    border: 1.6px dashed var(--lane-rs); border-radius: 14px; padding: 14px 16px;
+    background: color-mix(in srgb, var(--lane-rs-soft) 60%, var(--paper-raised));
+  }
+  .loop-box.op {
+    border-color: var(--lane-op);
+    background: color-mix(in srgb, var(--lane-op-soft) 60%, var(--paper-raised));
+  }
+  .loop-box .loop-title {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--lane-rs); font-weight: 700;
+  }
+  .loop-box.op .loop-title { color: var(--lane-op); }
+  .loop-row { display: flex; align-items: center; gap: 6px; }
+
+  .graph-wrap {
+    border: 1.6px solid var(--lane-rs); border-radius: 16px; padding: 16px;
+    display: flex; flex-direction: column; gap: 12px; position: relative;
+    background: color-mix(in srgb, var(--lane-rs-soft) 35%, var(--paper-raised));
+  }
+  .graph-wrap .graph-label {
+    position: absolute; top: -11px; left: 16px; background: var(--paper);
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--lane-rs); padding: 0 8px;
+  }
+
+  .roadmap {
+    margin-top: 32px; padding: 20px 20px 24px; border-radius: 14px;
+    border: 1.6px dashed var(--roadmap-ribbon);
+    background: repeating-linear-gradient(135deg, transparent, transparent 12px, color-mix(in srgb, var(--roadmap-ribbon) 6%, transparent) 12px, color-mix(in srgb, var(--roadmap-ribbon) 6%, transparent) 24px);
+    position: relative;
+  }
+  .roadmap-ribbon {
+    display: inline-block; font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700;
+    color: #fff; background: var(--roadmap-ribbon); padding: 5px 12px; border-radius: 100px;
+    margin-bottom: 10px;
+  }
+  .roadmap-note { font-size: 13.5px; color: var(--ink-soft); line-height: 1.55; max-width: 78ch; margin: 0 0 18px; }
+  .roadmap .bpmn { opacity: 0.92; }
+
+  footer.credit {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 11px; color: var(--ink-soft); text-align: center; margin-top: 10px;
+  }
+
+  @media (max-width: 640px) {
+    table { min-width: 520px; }
+  }
+</style>
+
+<div class="page">
+
+  <header class="masthead">
+    <p class="eyebrow">Root-Spector · mapeamento de processo</p>
+    <h1>Tratamento de Não-Conformidade de Bioprocesso</h1>
+    <p class="dek">Do lote saindo do biorreator até a ação corretiva — mostrando onde o BiotecPredict, o agente Root-Spector (Ishikawa + 5 Porquês) e o operador entram no processo produtivo real.</p>
+  </header>
+
+  <div class="legend">
+    <div class="item"><span class="shape circle-start"></span> início</div>
+    <div class="item"><span class="shape circle-end"></span> fim</div>
+    <div class="item"><span class="shape rect-task"></span> tarefa</div>
+    <div class="item"><span class="shape diamond"></span> decisão (gateway)</div>
+    <div class="swatches">
+      <div class="swatch"><span class="dot" style="background:var(--lane-bio)"></span>Biorreator/Sensores</div>
+      <div class="swatch"><span class="dot" style="background:var(--lane-btp)"></span>BiotecPredict</div>
+      <div class="swatch"><span class="dot" style="background:var(--lane-rs)"></span>Root-Spector</div>
+      <div class="swatch"><span class="dot" style="background:var(--lane-op)"></span>Operador</div>
+    </div>
+  </div>
+  <p class="dek" style="margin: -14px 0 24px; font-size: 13px;">A área com fundo tracejado ao final ("Fase 2") é <strong>visão de roadmap</strong> — documentada aqui, mas fora do escopo implementado nesta entrega.</p>
+
+  <div class="bpmn">
+
+    <!-- LANE: Biorreator / Sensores -->
+    <div class="lane" data-lane="bio">
+      <div class="lane-label">Biorreator / Sensores</div>
+      <div class="lane-track">
+        <div class="node"><div class="evt start">início<br/>do lote</div></div>
+        <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="node"><div class="task"><div class="t-tag">tarefa</div><div class="t-name">Sensores registram leituras</div><div class="t-desc">temperatura, pH, oxigênio dissolvido, pressão, velocidade do agitador — continuamente</div></div></div>
+        <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="node"><div class="task"><div class="t-tag">tarefa</div><div class="t-name">Lote finalizado</div><div class="t-desc">leituras consolidadas, enviadas (upload) pro BiotecPredict</div></div></div>
+      </div>
+    </div>
+
+    <div class="lane-connector">
+      <svg width="16" height="24" viewBox="0 0 16 24"><path d="M8 0V18M2 12L8 20L14 12" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      dados de biosensor do lote
+    </div>
+
+    <!-- LANE: BiotecPredict -->
+    <div class="lane" data-lane="btp">
+      <div class="lane-label">BiotecPredict</div>
+      <div class="lane-track">
+        <div class="spacer w3"></div>
+        <div class="node"><div class="task"><div class="t-tag">tarefa</div><div class="t-name">Avalia o lote</div><div class="t-desc">calcula <code>compliance_score</code> + <code>risk_prediction</code> (ML); persiste em SQLite (<code>batches</code>)</div></div></div>
+        <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="gateway-wrap">
+          <div class="gateway"><span>?</span></div>
+          <div class="gateway-label">classification via _classify_score()</div>
+        </div>
+        <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="node" style="align-items:center;">
+          <div class="branch-note">ACCEPTABLE (score ≥ 80)</div>
+          <div class="evt end" style="margin-top:4px;">segue<br/>produção</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="lane-connector">
+      <svg width="16" height="24" viewBox="0 0 16 24"><path d="M8 0V18M2 12L8 20L14 12" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      WARNING/CRITICAL (score &lt; 80) → vira NC de entrada
+    </div>
+
+    <!-- LANE: Root-Spector -->
+    <div class="lane" data-lane="rs">
+      <div class="lane-label">Root-Spector — Agente (LangGraph)</div>
+      <div class="lane-track">
+        <div class="spacer w3"></div><div class="spacer w2"></div>
+        <div class="node"><div class="task"><div class="t-tag">tarefa · determinístico</div><div class="t-name">preparar_contexto</div><div class="t-desc">calcula <code>sensor_metrics</code>, identifica <code>parametros_fora_da_faixa</code> (ex: agitator_speed)</div></div></div>
+        <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+        <div class="graph-wrap">
+          <span class="graph-label">grafo LangGraph — 2 fases em sequência</span>
+
+          <div class="loop-box">
+            <span class="loop-title">↻ Fase 1 — Ishikawa (6 categorias) — Método → Máquina → Material → Mão de obra → Meio ambiente → Medição</span>
+            <div class="loop-row">
+              <div class="task" style="width:180px;"><div class="t-tag">agêntico</div><div class="t-name">formular_pergunta_ishikawa</div><div class="t-desc">pergunta de contexto da categoria atual — não sobre o parâmetro cru</div></div>
+              <div class="arrow"><svg width="20" height="14" viewBox="0 0 20 14"><path d="M0 7H16M11 2L16 7L11 12" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="task" style="width:140px;"><div class="t-tag">ferramenta</div><div class="t-name">usar_ferramenta</div><div class="t-desc">no máx. 1x por categoria</div></div>
+            </div>
+            <div class="loop-row" style="justify-content:center;">
+              <span style="font-family: ui-monospace, monospace; font-size:10px; color: var(--ink-soft);">↕ pergunta desce / resposta sobe (ver raia Operador)</span>
+            </div>
+            <div class="loop-row" style="justify-content:center;">
+              <span style="font-family: ui-monospace, monospace; font-size:10px; color: var(--lane-rs); text-align:center;">ainda falta categoria → repete; 6/6 respondidas → segue</span>
+            </div>
+          </div>
+
+          <div class="node" style="align-self:center;">
+            <div class="task" style="width:260px;"><div class="t-tag">agêntico · "orquestrador"</div><div class="t-name">orquestrar_analise</div><div class="t-desc">identifica <code>categoria_principal</code> (+ justificativa) e <code>categorias_descartadas</code> (+ motivo); verifica inconsistências</div></div>
+          </div>
+
+          <div class="loop-box">
+            <span class="loop-title">↻ Fase 2 — 5 Porquês, ancorado em categoria_principal</span>
+            <div class="loop-row">
+              <div class="task" style="width:180px;"><div class="t-tag">agêntico</div><div class="t-name">formular_porque</div><div class="t-desc">1ª pergunta parte da categoria; 2ª-5ª partem da resposta anterior</div></div>
+              <div class="arrow"><svg width="20" height="14" viewBox="0 0 20 14"><path d="M0 7H16M11 2L16 7L11 12" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="task" style="width:140px;"><div class="t-tag">ferramenta</div><div class="t-name">usar_ferramenta</div><div class="t-desc">no máx. 1x por porquê</div></div>
+            </div>
+            <div class="loop-row" style="justify-content:center;">
+              <span style="font-family: ui-monospace, monospace; font-size:10px; color: var(--lane-rs); text-align:center;">numero_porque ≤ 5 → repete; senão → segue</span>
+            </div>
+          </div>
+
+          <div class="node" style="align-self:center;">
+            <div class="task" style="width:240px;"><div class="t-tag">agêntico · "relatório"</div><div class="t-name">gerar_causa_raiz</div><div class="t-desc">sintetiza Ishikawa + 5 porquês em <code>causa_raiz</code> + narrativa, por categoria; valida e salva</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="lane-connector">
+      <svg width="16" height="24" viewBox="0 0 16 24"><path d="M8 0V18M2 12L8 20L14 12" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      11 perguntas (6 Ishikawa + 5 porquês), human-in-the-loop / relatório final
+    </div>
+
+    <!-- LANE: Operador -->
+    <div class="lane" data-lane="op">
+      <div class="lane-label">Operador</div>
+      <div class="lane-track">
+        <div class="spacer w3"></div><div class="spacer w3"></div>
+        <div class="node"><div class="task"><div class="t-tag">tarefa · humana</div><div class="t-name">Responde Ishikawa (6x) + 5 Porquês</div><div class="t-desc">via terminal (input()) — 11 respostas ao todo, cada uma molda a próxima pergunta</div></div></div>
+        <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="node"><div class="task"><div class="t-tag">tarefa · humana</div><div class="t-name">Recebe o relatório</div><div class="t-desc">causa raiz + Ishikawa + cadeia de porquês, em reports/</div></div></div>
+        <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="gateway-wrap">
+          <div class="gateway"><span>?</span></div>
+          <div class="gateway-label">operador valida: aprova ou pede ajuste?</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="lane-connector" style="flex-direction: column; align-items: flex-start; gap: 2px; padding-top:8px; padding-bottom:8px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 14V2M3 7L8 2L13 7" stroke="var(--lane-op)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span><strong style="color:var(--lane-op);">pede ajuste</strong> → novo ciclo completo no Root-Spector — ciclo anterior é <strong>preservado</strong> em <code>ciclos_anteriores</code> (evidência/auditoria, nunca sobrescrito)</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 2V14M3 9L8 14L13 9" stroke="var(--lane-rs)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span><strong style="color:var(--lane-rs);">aprova</strong> → segue pro Setor da Qualidade (Fase 2)</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="roadmap">
+    <div class="roadmap-ribbon">Fase 2 — roadmap, fora do escopo desta entrega</div>
+    <p class="roadmap-note">O relatório aprovado pelo operador não volta pra ele — segue pro setor da Qualidade, que investiga o tratamento da NC com apoio de um segundo agente (RAG) sobre a base documental da empresa. A Garantia da Qualidade não executa o plano do RAG automaticamente: avalia junto com a Coordenação da Produção e decide se mantém a sugestão ou ajusta algo antes de seguir. O ciclo fecha em PDCA: o Agente RAG recomenda o Plan (ação corretiva + Kaizen), a Garantia da Qualidade + Coordenação da Produção validam e executam (Do), e verificam eficácia por reincidência (Check) — se não reincidir, padroniza; se reincidir, um novo plano é gerado (Act).</p>
+
+    <div class="bpmn">
+      <div class="lane" data-lane="qual">
+        <div class="lane-label">Setor da Qualidade</div>
+        <div class="lane-track">
+          <div class="node"><div class="evt start">relatório<br/>aprovado</div></div>
+          <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="node"><div class="task"><div class="t-tag">tarefa</div><div class="t-name">Aciona o Agente RAG</div><div class="t-desc">solicita como tratar esta NC especificamente</div></div></div>
+        </div>
+      </div>
+      <div class="lane-connector"><svg width="16" height="24" viewBox="0 0 16 24"><path d="M8 0V18M2 12L8 20L14 12" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>consulta</div>
+      <div class="lane" data-lane="rag">
+        <div class="lane-label">Agente RAG</div>
+        <div class="lane-track">
+          <div class="spacer w2"></div>
+          <div class="node"><div class="task"><div class="t-tag">agêntico · retrieval</div><div class="t-name">Busca na base documental</div><div class="t-desc">documentação interna, legislação aplicável, normas ANVISA, referências bibliográficas</div></div></div>
+          <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="node"><div class="task" style="width:210px;"><div class="t-tag">agêntico</div><div class="t-name">Recomenda: PDCA estruturado</div><div class="t-desc">ação corretiva + Kaizen de melhoria, plano Plan-Do-Check-Act fundamentado nas fontes recuperadas</div></div></div>
+        </div>
+      </div>
+      <div class="lane-connector"><svg width="16" height="24" viewBox="0 0 16 24"><path d="M8 0V18M2 12L8 20L14 12" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>relatório final: causa raiz + plano PDCA (Plan)</div>
+      <div class="lane" data-lane="qa">
+        <div class="lane-label">Garantia da Qualidade</div>
+        <div class="lane-track">
+          <div class="node"><div class="task"><div class="t-tag">tarefa</div><div class="t-name">Recebe o relatório final</div><div class="t-desc">causa raiz + plano PDCA + fontes citadas — não vai para o operador</div></div></div>
+          <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="node"><div class="task" style="width:210px;"><div class="t-tag">tarefa · colaborativa</div><div class="t-name">Avalia o plano com a Coordenação da Produção</div><div class="t-desc">decide junto: segue o plano sugerido pelo Agente RAG como está, ou ajusta algo antes de executar</div></div></div>
+          <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="gateway-wrap">
+            <div class="gateway"><span>?</span></div>
+            <div class="gateway-label">mantém sugestão ou ajusta?</div>
+          </div>
+          <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="node"><div class="task"><div class="t-tag">tarefa · Do</div><div class="t-name">Executa o plano</div><div class="t-desc">ação corretiva + Kaizen aplicados no processo produtivo (como sugerido, ou ajustado)</div></div></div>
+          <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="gateway-wrap">
+            <div class="gateway"><span>?</span></div>
+            <div class="gateway-label">Check: reincidência do problema?</div>
+          </div>
+          <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="node" style="align-items:center;">
+            <div class="branch-note" style="color:var(--lane-qa);">sem reincidência → eficaz</div>
+            <div class="evt end" style="margin-top:4px;">PDCA<br/>padronizado</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="lane-connector" style="padding-left:152px;">
+      <svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 14V2M3 7L8 2L13 7" stroke="var(--lane-rag)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span><strong style="color:var(--lane-rag);">Act:</strong> reincidiu → não foi eficaz → volta pro Agente RAG pra um novo plano PDCA (causa raiz pode ter sido mal endereçada)</span>
+    </div>
+  </div>
+
+  <footer class="credit">root-spector · mapeamento de processo produtivo · biorreator → biotecpredict → agente (ishikawa+5 porquês) → operador → (roadmap) qualidade → agente rag → garantia da qualidade (pdca)</footer>
+
+</div>
