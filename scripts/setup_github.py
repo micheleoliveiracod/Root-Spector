@@ -293,12 +293,12 @@ ISSUES: list[Issue] = [
         "durante toda a implementação, e ter um esqueleto de apresentação pra "
         "evoluir junto com o projeto.",
         [
-            "`slides/apresentacao.md` (esqueleto)",
+            "`docs/apresentacao.md` (esqueleto)",
             "`docs/gitflow.md` (plano operacional: milestones, branches, issues, labels)",
         ],
         [
             "`docs/gitflow.md` conecta milestones ↔ branches ↔ issues ↔ labels sem lacunas",
-            "`slides/apresentacao.md` tem a estrutura mínima pra ser preenchida em M5",
+            "`docs/apresentacao.md` tem a estrutura mínima pra ser preenchida em M5",
         ],
     ),
     # M2 -- Dados & Configuracao (2)
@@ -339,7 +339,7 @@ ISSUES: list[Issue] = [
         [
             "`models.py` (schemas Pydantic: NaoConformidade, RespostaIshikawa, PorQue, Diagnostico, CicloAnterior)",
             "`state.py` (AgentState completo)",
-            "`config.py` (seleção de LLM plugável via `init_chat_model` + fallback em cadeia Gemini → Anthropic → OpenAI)",
+            "`config.py` (seleção de LLM plugável via `init_chat_model` + fallback em cadeia Gemini → Groq → Anthropic → OpenAI)",
             "`pyproject.toml` com as dependências reais",
         ],
         [
@@ -395,8 +395,9 @@ ISSUES: list[Issue] = [
         "§ Interface e `specs/structure.md` § backend/).",
         [
             "`root_cause_agent/reports.py` (Diagnostico → `reports/{batch_id}_{timestamp}.json` + `.html` via Jinja2)",
-            "`backend/main.py` (FastAPI, pacote próprio: listar lotes, iniciar/responder/revisar/aprovar/ajustar "
-            "investigação, servir relatórios; captura `FalhaLLMError` → HTTP 503)",
+            "`backend/main.py` (FastAPI, pacote próprio: listar lotes, iniciar/responder/revisar/ajustar "
+            "investigação — `responder` já gera o relatório ao concluir o ciclo —, servir relatórios; "
+            "captura `FalhaLLMError` → HTTP 503)",
             "Converter `root_cause_agent/main.py` em harness de teste (roda o grafo com respostas fixas, sem servidor)",
         ],
         [
@@ -411,10 +412,10 @@ ISSUES: list[Issue] = [
         "Scaffold frontend/ (React + TypeScript + Vite)",
         "Interface pra demonstração ao vivo: única tela que lista os lotes, "
         "conduz as perguntas ao operador e mostra o relatório final.",
-        ["`frontend/` completo: lista de lotes → pergunta atual → revisão → link do relatório"],
+        ["`frontend/` completo: lista de lotes → pergunta atual → revisão (já com o link do relatório)"],
         [
             "`npm run dev` sobe a aplicação sem erro",
-            "Fluxo completo (lista → pergunta → revisão → aprovar/ajustar → relatório) navegável na tela",
+            "Fluxo completo (lista → pergunta → revisão com link do relatório → pedir ajuste) navegável na tela",
         ],
     ),
     # M4 -- Testes & Verificação (5)
@@ -429,15 +430,15 @@ ISSUES: list[Issue] = [
             "`tests/test_graph.py` (via harness de `main.py`: roda o grafo com 11 respostas "
             "fornecidas — 6 Ishikawa + 5 porquês —, produz `Diagnostico` válido; cobre também "
             "o caso de \"pedir ajuste\" gerando um segundo ciclo)",
-            "`tests/test_config.py` (cadeia de fallback Gemini → Anthropic → OpenAI, "
+            "`tests/test_config.py` (cadeia de fallback Gemini → Groq → Anthropic → OpenAI, "
             "provedores mockados via `pytest-mock`, nunca uma chamada real; cobre o caso "
             "de todos os provedores configurados falhando → `FalhaLLMError`)",
         ],
         [
             "`pytest` passa 100% localmente",
             "`test_graph.py` cobre tanto o ciclo único quanto o caso de reabertura (\"ajustar\")",
-            "`test_config.py` cobre pelo menos: só Gemini, Gemini+Anthropic, os 3 provedores, "
-            "e todos falhando",
+            "`test_config.py` cobre pelo menos: só Gemini, Gemini+Groq, Gemini+Groq+Anthropic, "
+            "os 4 provedores, e todos falhando",
         ],
     ),
     Issue(
@@ -447,27 +448,27 @@ ISSUES: list[Issue] = [
         "respondem como esperado) e de schema (OpenAPI gerado é válido e cobre as rotas "
         "documentadas em `specs/design.md`), sem depender de um LLM real.",
         [
-            "`tests/test_backend.py` — `TestClient` (FastAPI) cobrindo as 7 rotas: "
-            "`/api/lotes`, iniciar, responder, revisão, aprovar, ajustar, `/reports/{arquivo}`",
+            "`tests/test_backend.py` — `TestClient` (FastAPI) cobrindo as 6 rotas: "
+            "`/api/lotes`, iniciar, responder, revisão, ajustar, `/reports/{arquivo}`",
             "Teste de contrato OpenAPI: `GET /openapi.json` válido "
-            "(`openapi-spec-validator`) e cobre as 7 rotas documentadas",
+            "(`openapi-spec-validator`) e cobre as 6 rotas documentadas",
             "Teste do caminho de erro: `FalhaLLMError` simulada → HTTP 503 com a mensagem "
             "\"Serviço de IA indisponível, recarregue a página.\"",
         ],
         [
             "Todas as rotas testadas retornam o status/schema esperado",
-            "`/openapi.json` é um documento OpenAPI válido e cobre as 7 rotas",
+            "`/openapi.json` é um documento OpenAPI válido e cobre as 6 rotas",
             "Rota que aciona o LLM, com `FalhaLLMError` mockada, devolve HTTP 503 e a mensagem exata",
         ],
     ),
     Issue(
         "M4 — Testes & Verificação", "test",
         "Testes do frontend (componentes React)",
-        "Garantir que a única tela do frontend (lista → pergunta → revisão → relatório) "
-        "não quebra silenciosamente.",
+        "Garantir que a única tela do frontend (lista → pergunta → revisão com link do "
+        "relatório) não quebra silenciosamente.",
         [
             "Configuração do Vitest + React Testing Library em `frontend/`",
-            "Testes de `ListaLotes`, `PerguntaAtual`, `RevisaoRespostas`, `LinkRelatorio` "
+            "Testes de `ListaLotes`, `PerguntaAtual`, `RevisaoRespostas` "
             "(render + interação básica, `api.ts` mockado)",
         ],
         [
@@ -483,12 +484,12 @@ ISSUES: list[Issue] = [
         "ajuste\", e conferir que o relatório final é gerado. Roda igual local e no CI, "
         "mesmo comando — nunca contra um provedor de LLM real nem `data/biotecpredict.db`.",
         [
-            "Playwright configurado em `e2e/` (Node, pacote próprio, `webServer` sobe "
+            "Playwright configurado em `tests/e2e/` (Node, pacote próprio, `webServer` sobe "
             "backend + frontend automaticamente)",
             "Cenário principal: escolher lote elegível → responder as 11 perguntas → "
-            "revisar → aprovar → conferir link do relatório",
-            "Cenário de ajuste: revisar → pedir ajuste → novo ciclo → aprovar → conferir "
-            "`ciclos_anteriores` no relatório",
+            "revisar → conferir link do relatório já gerado",
+            "Cenário de ajuste: revisar → pedir ajuste → novo ciclo → conferir "
+            "`ciclos_anteriores` no relatório do novo ciclo",
         ],
         [
             "`npx playwright test` passa 100% localmente",
@@ -506,7 +507,7 @@ ISSUES: list[Issue] = [
             "Job `lint`: `ruff check .`",
             "Job `test`: `pytest` (`test_tools.py`, `test_graph.py`, `test_config.py`, `test_backend.py`)",
             "Job `frontend-test`: `npm run test` (Vitest) em `frontend/`",
-            "Job `e2e`: sobe backend+frontend e roda `npx playwright test` em `e2e/`",
+            "Job `e2e`: sobe backend+frontend e roda `npx playwright test` em `tests/e2e/`",
         ],
         [
             "Os 4 jobs rodam em todo push/PR pra `develop` e ficam visíveis no PR",
@@ -530,7 +531,7 @@ ISSUES: list[Issue] = [
     ),
     Issue(
         "M5 — Documentação & Entrega", "docs",
-        "Revisar slides/apresentacao.md",
+        "Revisar docs/apresentacao.md",
         "Revisão final do material de apresentação ao professor.",
         ["Revisão final dos slides"],
         ["Slides refletem o estado real e final do projeto, sem informação desatualizada"],

@@ -16,9 +16,9 @@ Ishikawa — Método, Máquina, Material, Mão de obra, Meio ambiente, Medição
 com o operador, identifica a categoria mais provável, e só então aprofunda
 com 5 perguntas "por quê" ancoradas nessa categoria — cada pergunta
 partindo da resposta anterior — até chegar a uma causa raiz sistêmica. Ao
-final, o operador revisa a cadeia completa e **aprova** (gera o relatório)
-ou **pede ajuste** (reabre um novo ciclo completo, preservando o anterior
-para auditoria). O relatório aprovado é produzido em **JSON** (para
+final, o relatório já é gerado e o operador revisa a cadeia completa,
+podendo **pedir ajuste** (reabre um novo ciclo completo, preservando o
+anterior para auditoria). O relatório é produzido em **JSON** (para
 consumo por outros sistemas) **e HTML** (para leitura humana).
 
 **Por que Ishikawa antes de 5 Porquês:** 5 Porquês não tem mecanismo
@@ -58,10 +58,12 @@ texto completo do enunciado.
 ## Entrada
 
 A base de entrada deste agente é um arquivo `data/biotecpredict.db` —
-**uma exportação real do banco do BiotecPredict** (schema idêntico,
-gerado por uma instância real daquela aplicação), colocado manualmente na
+**schema idêntico ao banco real do BiotecPredict**, colocado manualmente na
 pasta `data/` e nunca versionado (ver `specs/design.md` § Estratégia de
-dados para a justificativa). O agente lê a tabela `batches` e seleciona
+dados para a justificativa e a proveniência exata dos dados de
+demonstração atuais, montados a partir de `data/simulacao_causa_raiz/` e
+classificados pelo motor real do BiotecPredict). O agente lê a tabela
+`batches` e seleciona
 linhas com `status='COMPLETED'` e `compliance_score` não nulo, classificado
 como `WARNING` ou `CRITICAL` — usando a lógica real de
 `ComplianceService._classify_score()` do BiotecPredict (`score>=80`
@@ -91,7 +93,7 @@ o contexto (Ishikawa), depois aprofundando (5 Porquês) — ver
 
 Um objeto `Diagnostico`, persistido em **dois formatos** — `reports/{batch_id}_{timestamp}.json`
 (consumo por máquina/outros sistemas) e `reports/{batch_id}_{timestamp}.html`
-(leitura humana, é o link exibido ao operador após a aprovação) — contendo:
+(leitura humana, é o link exibido ao operador assim que o ciclo é concluído) — contendo:
 - a NC original (eco, para rastreabilidade)
 - `respostas_ishikawa`: as 6 perguntas/respostas de contexto, uma por categoria
 - `categoria_principal`: a categoria identificada como mais provável, com justificativa
@@ -112,10 +114,10 @@ Um objeto `Diagnostico`, persistido em **dois formatos** — `reports/{batch_id}
 - **RF6** — O agente deve conduzir exatamente 5 iterações do método dos 5 Porquês, ancoradas na `categoria_principal`: a cada iteração, formular uma pergunta "por quê" (a 1ª a partir da categoria identificada, as demais a partir da resposta do operador na iteração anterior), podendo consultar a ferramenta de biosensor (no máximo 1 vez por iteração) quando precisar de mais evidência.
 - **RF7** — O sistema deve pausar a execução em cada uma das 11 iterações (6 Ishikawa + 5 porquês) para capturar a resposta do operador (human-in-the-loop) via interface web, antes de seguir para a próxima pergunta.
 - **RF8** — O sistema deve manter a cadeia completa de perguntas e respostas (Ishikawa e 5 Porquês) como memória/contexto durante toda a execução (estado do grafo).
-- **RF9** — Ao final das 11 iterações, o sistema deve apresentar ao operador a cadeia completa para revisão, com duas ações possíveis: **aprovar** (gera o `Diagnostico` final e os relatórios JSON/HTML) ou **pedir ajuste** (arquiva o ciclo atual em `ciclos_anteriores` e reinicia um novo ciclo completo para o mesmo lote).
-- **RF10** — O sistema deve produzir, na aprovação, uma saída estruturada (`Diagnostico`) em JSON e em HTML, validada contra um schema antes de ser salva.
+- **RF9** — Ao final das 11 iterações, o sistema deve gerar o `Diagnostico` final e os relatórios JSON/HTML, e apresentar ao operador a cadeia completa para revisão já com os links do relatório, permitindo **pedir ajuste** (arquiva o ciclo atual em `ciclos_anteriores` e reinicia um novo ciclo completo para o mesmo lote).
+- **RF10** — O sistema deve produzir, ao final de cada ciclo, uma saída estruturada (`Diagnostico`) em JSON e em HTML, validada contra um schema antes de ser salva.
 - **RF11** — O sistema deve permitir trocar o provedor/modelo de LLM usado por configuração (variável de ambiente), sem alterar código.
-- **RF12** — O sistema deve expor uma interface web local (backend FastAPI + frontend React/TypeScript) que, ao ser iniciada, lista os lotes de `data/biotecpredict.db` com sua classificação, destacando os elegíveis (risco médio/alto), e permite ao operador escolher um lote e conduzir a investigação inteiramente pelo navegador.
+- **RF12** — O sistema deve expor uma interface web local (backend FastAPI + frontend React/TypeScript) que, ao ser iniciada, lista os lotes de `data/biotecpredict.db` com sua classificação, destacando os elegíveis (risco médio/alto) e os parâmetros de biosensor fora da faixa aceitável, e permite ao operador escolher um lote e conduzir a investigação inteiramente pelo navegador — durante as 11 perguntas, o histórico completo dos parâmetros do lote (média/mínimo/máximo por parâmetro, com destaque do que está fora da faixa) permanece visível na tela.
 - **RF13** — O sistema deve validar a resposta do operador em duas camadas antes de aceitá-la: (a) rejeitar deterministicamente respostas vazias/só espaço ou uma lista fixa de frases evasivas conhecidas ("não sei" etc.), sinalizando "Este tipo de resposta não é aceito" na tela, sem avançar a investigação e sem contar como tentativa; (b) julgar via LLM se uma resposta que passou pela camada anterior é informativa para a pergunta feita, dando ao operador no máximo 2 tentativas por pergunta — se a 2ª também não for informativa, a investigação segue para a próxima pergunta, registrando as duas tentativas e sinalizando a não-informatividade.
 
 ## Requisitos não-funcionais (RNF)
@@ -123,9 +125,9 @@ Um objeto `Diagnostico`, persistido em **dois formatos** — `reports/{batch_id}
 - **RNF1 (Segurança)** — Nenhuma chave de API deve ser hardcoded ou versionada; leitura exclusiva via variável de ambiente/`.env` (gitignored).
 - **RNF2 (Segurança)** — A ferramenta de consulta a dados deve ser somente-leitura (consulta SQL `SELECT`, nunca `INSERT`/`UPDATE`/`DELETE`) e restrita ao banco SQLite local, ao `batch_id` do lote sob investigação (injetado a partir do estado via `InjectedState`, não escolhido pelo LLM a cada chamada) e a uma janela de datas validada (formato ISO parseável, `data_inicio <= data_fim`; formato inválido devolve uma mensagem de erro clara para o LLM, não um resultado vazio silencioso) — sem acesso arbitrário a arquivos ou rede.
 - **RNF3 (Adaptabilidade)** — Nenhum limiar, nome de setor, ou parâmetro específico de produto deve estar hardcoded na lógica do grafo/nós — deve vir de `config/`.
-- **RNF4 (Rastreabilidade)** — `data/biotecpredict.db` é uma exportação real de uma instância do BiotecPredict (não um dataset sintético) e não é versionada — o repositório documenta como obtê-la (ver `specs/design.md`); uma fixture sintética equivalente (`tests/fixtures/biotecpredict_teste.db`), estática e versionada, existe apenas para os testes automatizados, claramente rotulada como tal, e nunca é usada pela aplicação em execução.
+- **RNF4 (Rastreabilidade)** — `data/biotecpredict.db` nunca é versionado — o repositório documenta como obtê-lo/gerá-lo (ver `specs/design.md` § Estratégia de dados) e sua proveniência exata (dataset curado, classificado pelo motor real do BiotecPredict, nunca inventado); uma fixture sintética equivalente (`tests/fixtures/biotecpredict_teste.db`), estática e versionada, existe apenas para os testes automatizados, claramente rotulada como tal, e nunca é usada pela aplicação em execução.
 - **RNF5 (Simplicidade)** — A implementação deve ser a mais simples que ainda satisfaça RF1–RF12 — sem camadas de abstração além do necessário para separar: schemas, estado, configuração, ferramentas, nós, grafo, geração de relatórios e API. Em particular: "orquestração" e "geração de relatório" são nós do mesmo `StateGraph`, não agentes/grafos separados — ver `specs/design.md` § Decisão de simplicidade. O frontend React não usa router nem biblioteca de gerência de estado — uma única tela com estado local basta.
-- **RNF6 (Resiliência)** — O LLM deve ter fallback em cadeia — Gemini (oficial, gratuito, usado em testes/prototipagem) → Anthropic → OpenAI, cada camada ativada apenas se a respectiva chave de API estiver configurada — antes de qualquer chamada ser considerada uma falha. Só quando todos os provedores configurados falharem (rede, rate limit, chave inválida/ausente) é que o nó agêntico captura a falha e relança `FalhaLLMError`; a API traduz isso numa resposta HTTP 503 com a mensagem "Serviço de IA indisponível, recarregue a página." (sem retry automático em loop); o checkpoint da investigação (`thread_id`) permanece pausado no último ponto bem-sucedido, permitindo repetir a ação mais tarde sem perder progresso nem repetir perguntas já respondidas.
+- **RNF6 (Resiliência)** — O LLM deve ter fallback em cadeia — Gemini (oficial, gratuito, usado em testes/prototipagem) → Groq (gratuito, usado nos mesmos testes) → Anthropic → OpenAI, cada camada ativada apenas se a respectiva chave de API estiver configurada — antes de qualquer chamada ser considerada uma falha. Só quando todos os provedores configurados falharem (rede, rate limit, chave inválida/ausente) é que o nó agêntico captura a falha e relança `FalhaLLMError`; a API traduz isso numa resposta HTTP 503 com a mensagem "Serviço de IA indisponível, recarregue a página." (sem retry automático em loop); o checkpoint da investigação (`thread_id`) permanece pausado no último ponto bem-sucedido, permitindo repetir a ação mais tarde sem perder progresso nem repetir perguntas já respondidas.
 
 ## Fora de escopo (nesta entrega)
 
@@ -142,12 +144,16 @@ Um objeto `Diagnostico`, persistido em **dois formatos** — `reports/{batch_id}
 
 ## Critérios de aceitação
 
-- [ ] `pytest` passa com os testes de `tests/` (usando a fixture sintética, sem depender de `data/biotecpredict.db`).
-- [ ] `npm run test` (Vitest) passa nos componentes de `frontend/`, e `npx playwright test` (`e2e/`) passa o fluxo completo (incluindo o caso de "pedir ajuste") local e no GitHub Actions — ambos sem depender de um provedor de LLM real (`LLM_PROVIDER=fake`) nem de `data/biotecpredict.db`.
-- [ ] A cadeia de fallback de LLM (RNF6) tem cobertura automatizada (`tests/test_config.py`) simulando cada provedor falhando, sem chamada real.
-- [ ] Com `data/biotecpredict.db` presente, a interface web lista os lotes elegíveis corretamente e conduz uma investigação completa (11 perguntas + revisão + aprovação) produzindo `Diagnostico` válido em JSON e HTML.
-- [ ] O fluxo de "pedir ajuste" reabre um novo ciclo e preserva o ciclo anterior em `ciclos_anteriores`.
-- [ ] Nenhuma chave de API, nem `data/biotecpredict.db`, aparece no histórico de commits.
-- [ ] README.md contém todas as seções exigidas pelo rubric (ver `specs/design.md`).
-- [ ] `docs/prompts.md` registra os prompts principais usados no desenvolvimento.
-- [ ] `slides/apresentacao.md` cobre os 6 pontos exigidos pelo rubric.
+- [x] `pytest` passa com os testes de `tests/` (usando a fixture sintética, sem depender de `data/biotecpredict.db`).
+- [x] `npm run test` (Vitest) passa nos componentes de `frontend/`, e `npx playwright test` (`tests/e2e/`) passa o fluxo completo (incluindo o caso de "pedir ajuste") local e no GitHub Actions — ambos sem depender de um provedor de LLM real (`LLM_PROVIDER=fake`) nem de `data/biotecpredict.db`.
+- [x] A cadeia de fallback de LLM (RNF6) tem cobertura automatizada (`tests/test_config.py`) simulando cada provedor falhando, sem chamada real.
+- [x] Com `data/biotecpredict.db` presente, a interface web lista os lotes elegíveis corretamente e conduz uma investigação completa (11 perguntas + revisão, já com o relatório gerado) produzindo `Diagnostico` válido em JSON e HTML.
+- [x] O fluxo de "pedir ajuste" reabre um novo ciclo e preserva o ciclo anterior em `ciclos_anteriores`.
+- [x] Nenhuma chave de API, nem `data/biotecpredict.db`, aparece no histórico de commits (nada além de M1 foi commitado ainda — ver `docs/gitflow.md`).
+- [x] README.md contém todas as seções exigidas pelo rubric (ver `specs/design.md`).
+- [x] `docs/prompts.md` registra os prompts principais usados no desenvolvimento.
+- [x] `docs/apresentacao.md` cobre os 6 pontos exigidos pelo rubric.
+
+**Nota:** todos os critérios acima foram verificados **localmente** — os
+commits/PRs formais do Gitflow (M2 a M5 + Release) ainda estão pendentes,
+ver `docs/gitflow.md`.

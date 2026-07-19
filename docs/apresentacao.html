@@ -239,14 +239,14 @@
     <div class="grid2">
       <div class="card">
         <p class="kicker">Entrada esperada</p>
-        <p>Linha de <code>batches</code>, schema real do BiotecPredict, lida de <code>data/biotecpredict.db</code>.</p>
+        <p>Linha de <code>batches</code>, schema real do BiotecPredict, lida de <code>data/biotecpredict.db</code> — lote 11 do dataset de demonstração atual.</p>
         <div class="json-block">{
-  "id": 512,
+  "id": 11,
   "status": "COMPLETED",
-  "compliance_score": 42.0,
-  "risk_prediction": "HIGH_RISK"
+  "compliance_score": 71.32,
+  "risk_prediction": "MEDIUM_RISK"
 }</div>
-        <p><code>preparar_contexto</code> calcula <code>sensor_metrics</code> e identifica <code>parametros_fora_da_faixa: ["agitator_speed"]</code> antes do agente entrar em ação.</p>
+        <p><code>preparar_contexto</code> calcula <code>sensor_metrics</code> e identifica <code>parametros_fora_da_faixa: ["dissolved_oxygen", "agitator_speed"]</code> antes do agente entrar em ação.</p>
       </div>
 
       <div class="card">

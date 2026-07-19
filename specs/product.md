@@ -11,7 +11,7 @@ produz um relatório estruturado da causa raiz identificada.
 > ⚠️ O produto **não substitui o especialista de qualidade**. O agente
 > facilita e acelera a coleta e a síntese de informação; a validação da
 > causa raiz e a decisão sobre a ação corretiva são sempre do operador, que
-> revisa e aprova (ou pede ajuste) antes de qualquer relatório ser gerado.
+> revisa o relatório já gerado (ou pede ajuste, reabrindo um novo ciclo).
 
 ---
 
@@ -29,6 +29,14 @@ cruza manualmente o evento com o histórico do processo:
 - Quando há mais de uma categoria possível de causa (método, máquina,
   material, mão de obra, meio ambiente, medição), não há um jeito
   sistemático de priorizar por onde começar antes de aprofundar.
+- Um colaborador da qualidade investigando a NC de um processo operacional
+  realizado por outro colaborador carrega um viés interpessoal difícil de
+  eliminar — um agente de IA traz imparcialidade e impessoalidade a essa
+  investigação, por não ser parte da equipe operacional.
+- Quanto mais lenta a investigação e o tratamento da causa, maior o risco
+  de o lote seguir avançando no processo produtivo e se transformar em
+  produto antes do problema ser endereçado — aumentando o desperdício.
+  Agilidade no processo de investigação reduz essa janela de risco.
 
 ---
 
@@ -47,9 +55,9 @@ Uma plataforma web local que:
 - Valida a resposta do operador em duas camadas — rejeita respostas vazias
   ou evasivas, e dá até 2 chances quando uma resposta não é informativa —
   para manter a qualidade da investigação sem travar o fluxo indefinidamente.
-- Sintetiza a cadeia completa numa causa raiz estruturada, que o operador
-  revisa e aprova (gerando o relatório) ou pede ajuste (reabrindo um novo
-  ciclo, com o anterior preservado para auditoria).
+- Sintetiza a cadeia completa numa causa raiz estruturada, gera o relatório
+  e apresenta ao operador pra revisão, que pode pedir ajuste (reabrindo um
+  novo ciclo, com o anterior preservado para auditoria).
 - Produz o relatório final em JSON (consumo por outros sistemas) e HTML
   (leitura humana).
 
@@ -78,7 +86,9 @@ Uma plataforma web local que:
 
 **Dentro do escopo:**
 - Leitura de lotes reprovados/classificados a partir de
-  `data/biotecpredict.db` (exportação real do BiotecPredict).
+  `data/biotecpredict.db` (schema real do BiotecPredict, classificado pelo
+  motor real do BiotecPredict — ver `specs/design.md` § Estratégia de
+  dados para a proveniência).
 - Mapeamento Ishikawa (6 categorias fixas) + 5 Porquês (ancorado na
   categoria mais provável), conduzidos via interface web com
   human-in-the-loop (`interrupt()`/checkpointer do LangGraph).
@@ -87,10 +97,10 @@ Uma plataforma web local que:
 - Validação em duas camadas da resposta do operador (rejeição
   determinística de vazio/evasiva + julgamento de informatividade pelo LLM,
   até 2 tentativas por pergunta).
-- Revisão do operador com aprovação ou pedido de ajuste (novo ciclo,
-  histórico preservado).
+- Revisão do operador com o relatório já gerado, e opção de pedido de
+  ajuste (novo ciclo, histórico preservado).
 - Relatório final em JSON + HTML.
-- Fallback de LLM em cadeia (Gemini → Anthropic → OpenAI) para
+- Fallback de LLM em cadeia (Gemini → Groq → Anthropic → OpenAI) para
   resiliência a falhas de rede/rate limit/chave.
 
 **Fora do escopo (nesta entrega — ver `specs/requirements.md` para a lista
@@ -140,7 +150,7 @@ lista, já classificada, que o operador escolhe o lote.
 
 ## Saída Esperada por Investigação
 
-Para cada investigação aprovada, o sistema produz um `Diagnostico`
+Para cada investigação concluída, o sistema produz um `Diagnostico`
 (`reports/{batch_id}_{timestamp}.json` + `.html`) contendo:
 
 - A NC original (eco, para rastreabilidade).
@@ -155,9 +165,13 @@ Para cada investigação aprovada, o sistema produz um `Diagnostico`
 
 ## Fonte de Dados
 
-**Real:** `data/biotecpredict.db` — exportação de uma instância real do
-BiotecPredict, colocada manualmente em `data/`, nunca versionada (ver
-`.gitignore` e `specs/design.md` § Estratégia de dados).
+**Demonstração:** `data/biotecpredict.db` — nunca versionado, colocado
+manualmente em `data/`, montado a partir do dataset curado e versionado
+`data/simulacao_causa_raiz/` (15 lotes: 5 ideais + 10 com um desvio de
+causa física única cada), classificado pelo motor real (não reimplementado)
+do BiotecPredict — ver `specs/design.md` § Estratégia de dados para a
+proveniência completa. `docs/demo/gabarito-testes.md` tem o roteiro de
+respostas esperadas pros dois lotes elegíveis do dataset atual.
 
 **Teste:** `tests/fixtures/biotecpredict_teste.db` — fixture sintética e
 determinística, arquivo estático e versionado, usada exclusivamente pelos

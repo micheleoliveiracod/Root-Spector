@@ -24,8 +24,9 @@ reais.
 
 ## Workflow: CI — Lint & Testes
 
-**Arquivo:** `.github/workflows/ci.yml` (a ser criado no milestone M4, ver
-`docs/gitflow.md`).
+**Arquivo:** `.github/workflows/ci.yml` — implementado e verificado
+localmente (`docs/gitflow.md` M4); commit/push formal ainda pendente, como
+o resto do projeto além de M1.
 
 **Dispara em:**
 - `push` na branch `develop` (valida o estado da branch de integração após
@@ -55,9 +56,9 @@ on:
 | Job | Ferramenta | O que valida |
 |---|---|---|
 | `lint` | `ruff check .` | Estilo e erros estáticos do Python |
-| `test` | `pytest` | `tests/test_tools.py`, `tests/test_graph.py`, `tests/test_config.py` (fallback Gemini→Anthropic→OpenAI, mockado), `tests/test_backend.py` (rotas do `backend/main.py` via `TestClient` + contrato OpenAPI via `openapi-spec-validator`) — usando exclusivamente `tests/fixtures/biotecpredict_teste.db`, nunca `data/biotecpredict.db`, e sem chamar um provedor de LLM real |
+| `test` | `pytest` | `tests/test_tools.py`, `tests/test_graph.py`, `tests/test_config.py` (fallback Gemini→Groq→Anthropic→OpenAI, mockado), `tests/test_backend.py` (rotas do `backend/main.py` via `TestClient` + contrato OpenAPI via `openapi-spec-validator`) — usando exclusivamente `tests/fixtures/biotecpredict_teste.db`, nunca `data/biotecpredict.db`, e sem chamar um provedor de LLM real |
 | `frontend-test` | `npm run test` (Vitest + React Testing Library) | Componentes de `frontend/src/components/` (render + interação básica, `api.ts` mockado) |
-| `e2e` | `npx playwright test` (`e2e/`) | Fluxo completo pelo navegador: lista de lotes → 11 perguntas → revisão → aprovar/ajustar → link do relatório. Backend e frontend sobem automaticamente (`webServer` do `playwright.config.ts`), sempre contra a fixture de teste e um LLM fake (`LLM_PROVIDER=fake`) — roda igual local e no CI, mesmo comando |
+| `e2e` | `npx playwright test` (`tests/e2e/`) | Fluxo completo pelo navegador: lista de lotes → 11 perguntas → revisão (com link do relatório já gerado) → pedir ajuste. Backend e frontend sobem automaticamente (`webServer` do `playwright.config.ts`), sempre contra a fixture de teste e um LLM fake (`LLM_PROVIDER=fake`) — roda igual local e no CI, mesmo comando |
 
 **Passos (jobs Python — `lint`/`test`):** checkout → setup Python 3.11 →
 `pip install -e ".[dev]"` → rodar a ferramenta.
@@ -65,7 +66,7 @@ on:
 `frontend/` → `npm run test`.
 **Passos (`e2e`, depende de `test` e `frontend-test` passarem primeiro):**
 checkout → setup Python 3.11 + Node 20 → instalar dependências dos três
-pacotes (`root_cause_agent`+`backend`, `frontend/`, `e2e/`) → instalar o
+pacotes (`root_cause_agent`+`backend`, `frontend/`, `tests/e2e/`) → instalar o
 navegador do Playwright (`npx playwright install --with-deps chromium`) →
 `npx playwright test`; em caso de falha, o relatório HTML do Playwright é
 publicado como artefato do job.
@@ -101,8 +102,10 @@ select = ["E", "F", "I", "UP"]
 
 ## Fora do escopo desta entrega
 
-- Deploy automatizado (CD) — o projeto roda localmente (`uvicorn` +
-  `npm run dev`), não há ambiente de produção a publicar.
+- Deploy automatizado (CD) — o projeto roda localmente, via `uvicorn` +
+  `npm run dev` ou via `deploy/` (Docker + docker-compose, ver
+  `specs/structure.md`); não há pipeline de CD nem ambiente de produção
+  hospedado a publicar.
 - Cobertura mínima obrigatória / Codecov — os critérios de aceitação
   (`specs/requirements.md`) definem o que precisa passar, não uma métrica
   de cobertura.
@@ -127,7 +130,7 @@ verdade, local e no CI, com o mesmo comando.
 ruff check .
 pytest
 npm run test --prefix frontend
-npx playwright test --config e2e/playwright.config.ts
+npx playwright test --config tests/e2e/playwright.config.ts
 ```
 
 **Visualizar status:** aba *Actions* do repositório, workflow "CI — Lint & Testes".
@@ -142,7 +145,7 @@ npx playwright test --config e2e/playwright.config.ts
    ou de um provedor de LLM real em vez do mock/fake.
 3. Falha de teste (frontend) → rodar `npm run test` dentro de `frontend/`;
    conferir se `api.ts` está mockado no teste, não chamando o backend real.
-4. Falha de E2E → rodar `npx playwright test --debug` dentro de `e2e/` pra
+4. Falha de E2E → rodar `npx playwright test --debug` dentro de `tests/e2e/` pra
    abrir o trace viewer; no CI, baixar o artefato `playwright-report` do job
    que falhou. Confirmar que `LLM_PROVIDER=fake` está setado — sem isso a
    suíte tentaria chamar um provedor real.

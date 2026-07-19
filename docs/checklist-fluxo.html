@@ -370,16 +370,16 @@
 <div class="page">
 
   <header class="masthead">
-    <p class="eyebrow">Root-Spector · status em 12/07/2026 (checklist) · nota de 15/07/2026 abaixo</p>
+    <p class="eyebrow">Root-Spector · checklist revisado em 19/07/2026 · fluxo abaixo é o desenho original (nota abaixo)</p>
     <h1>Checklist do rubric &amp; fluxo do agente</h1>
     <p class="dek">Onde o projeto está em relação ao que a disciplina exige, e como o agente vai funcionar de fato no cenário de negócio: lote reprovado pelo BiotecPredict entra, diagnóstico de causa raiz sai.</p>
   </header>
 
-  <p class="stale-note"><strong>Nota (2026-07-15):</strong> o fluxo abaixo é o desenho original (só 5 Porquês, <code>input()</code> bloqueante, sem interface web) — desde então o design evoluiu para Ishikawa + 5 Porquês, plataforma web (FastAPI + React) com <code>interrupt()</code>/checkpointer, fallback de LLM (Gemini → Anthropic → OpenAI) e validação em duas camadas da resposta do operador. Ver o <a href="https://claude.ai/code/artifact/84701476-fd38-44cb-9c04-cc3906a2b021">mapa de fluxo técnico atualizado</a> para o desenho corrente, nó a nó. Só a linha de segurança/validação abaixo foi atualizada aqui.</p>
+  <p class="stale-note"><strong>Nota (2026-07-19):</strong> a tabela de checklist abaixo foi atualizada para refletir o estado atual (implementação completa e verificada localmente). O pipeline visual na 2ª seção continua sendo o <strong>desenho original</strong> (só 5 Porquês, <code>input()</code> bloqueante, sem interface web) — desde então o design evoluiu para Ishikawa + 5 Porquês, plataforma web (FastAPI + React) com <code>interrupt()</code>/checkpointer, fallback de LLM em cadeia (Gemini → Groq → Anthropic → OpenAI) e validação em duas camadas da resposta do operador. Ver <code>docs/diagrama-fluxo.md</code> (Mermaid) ou <code>docs/fluxo-tecnico-agente.html</code> para o desenho corrente, nó a nó.</p>
 
   <section>
     <h2>Checklist de requisitos obrigatórios</h2>
-    <p class="section-note">Specs e arquitetura estão fechadas para todos os itens técnicos — o que falta é a implementação em código (milestones M2–M4) e o histórico de commits (Gitflow, a partir de amanhã).</p>
+    <p class="section-note">A implementação está completa e verificada localmente (specs, código, 33 pytest + Vitest + Playwright, todos verdes) — o que falta é formalizar o histórico de commits (Gitflow: M2 a M5 + Release), único ponto ainda pendente antes da submissão.</p>
 
     <div class="table-wrap">
       <table>
@@ -390,23 +390,23 @@
           <tr class="group-head"><td colspan="3">Técnico — obrigatório pelo rubric</td></tr>
           <tr>
             <td class="req">Agente implementado com LangGraph (estado, nós, conexões)</td>
-            <td class="where">Desenhado em <code>specs/design.md</code>; módulos <code>state.py</code>, <code>graph.py</code>, <code>nodes.py</code> existem como stub</td>
-            <td><span class="badge planned">planejado</span></td>
+            <td class="where">Implementado em <code>root_cause_agent/</code> (<code>state.py</code>, <code>graph.py</code>, <code>nodes.py</code>) — 8 nós, checkpointer <code>SqliteSaver</code>, coberto por <code>tests/test_graph.py</code></td>
+            <td><span class="badge done">concluído</span></td>
           </tr>
           <tr>
             <td class="req">Pelo menos 1 ferramenta integrada</td>
-            <td class="where"><code>consultar_leituras_biosensor</code> implementada em <code>tools.py</code> (código real)</td>
-            <td><span class="badge wip">em andamento</span></td>
+            <td class="where"><code>consultar_leituras_biosensor</code> implementada em <code>tools.py</code> e integrada ao grafo (<code>ToolNode</code>), coberta por <code>tests/test_tools.py</code></td>
+            <td><span class="badge done">concluído</span></td>
           </tr>
           <tr>
             <td class="req">Memória/contexto mantido no estado</td>
-            <td class="where"><code>AgentState.cadeia_porques</code>/<code>respostas_ishikawa</code> (histórico da conversa) + <code>messages</code> (reducer <code>add_messages</code>) — <code>state.py</code> (código real, grafo ainda stub)</td>
-            <td><span class="badge planned">planejado</span></td>
+            <td class="where"><code>AgentState.cadeia_porques</code>/<code>respostas_ishikawa</code> (histórico da conversa) + <code>messages</code> (reducer <code>add_messages</code>) — <code>state.py</code>, grafo completo em <code>graph.py</code></td>
+            <td><span class="badge done">concluído</span></td>
           </tr>
           <tr>
             <td class="req">Geração de resposta final estruturada</td>
-            <td class="where"><code>Diagnostico</code> (Pydantic) — <code>models.py</code> (código real)</td>
-            <td><span class="badge wip">em andamento</span></td>
+            <td class="where"><code>Diagnostico</code> (Pydantic) — <code>models.py</code>, gerado por <code>gerar_causa_raiz</code> e persistido em JSON+HTML (<code>reports.py</code>)</td>
+            <td><span class="badge done">concluído</span></td>
           </tr>
           <tr>
             <td class="req">Fluxo organizado (entrada → contexto → análise → ferramenta → resposta)</td>
@@ -415,30 +415,30 @@
           </tr>
           <tr>
             <td class="req">Cuidados básicos de segurança e validação</td>
-            <td class="where">RNF1–6 em <code>specs/requirements.md</code>: chave de API só via <code>.env</code>; ferramenta restrita a <code>SELECT</code> e ao <code>batch_id</code> do lote sob investigação (injetado do estado via <code>InjectedState</code>, não escolhido pelo LLM), com <code>data_inicio</code>/<code>data_fim</code> validadas (<code>datetime.fromisoformat</code>); entrada (<code>NaoConformidade</code>) e saída (<code>Diagnostico</code>) validadas via Pydantic; resposta do operador validada em duas camadas (rejeição de vazio/evasiva + julgamento de informatividade) — tudo já implementado em <code>tools.py</code>/<code>models.py</code>, desenhado em <code>nodes.py</code></td>
+            <td class="where">RNF1–6 em <code>specs/requirements.md</code>: chave de API só via <code>.env</code>; ferramenta restrita a <code>SELECT</code> e ao <code>batch_id</code> do lote sob investigação (injetado do estado via <code>InjectedState</code>, não escolhido pelo LLM), com <code>data_inicio</code>/<code>data_fim</code> validadas (<code>datetime.fromisoformat</code>); entrada (<code>NaoConformidade</code>) e saída (<code>Diagnostico</code>) validadas via Pydantic; resposta do operador validada em duas camadas (rejeição de vazio/evasiva + julgamento de informatividade) — tudo implementado em <code>tools.py</code>/<code>models.py</code>/<code>nodes.py</code></td>
             <td><span class="badge done">concluído</span></td>
           </tr>
 
           <tr class="group-head"><td colspan="3">Entregáveis do repositório</td></tr>
           <tr>
             <td class="req">README.md completo</td>
-            <td class="where">Esqueleto com todas as seções; "como executar" e exemplo real de saída dependem do código</td>
-            <td><span class="badge wip">em andamento</span></td>
+            <td class="where">Todas as seções preenchidas — como executar, ferramenta, fluxo, exemplo real de entrada/saída alinhado ao dataset atual</td>
+            <td><span class="badge done">concluído</span></td>
           </tr>
           <tr>
             <td class="req">docs/prompts.md</td>
-            <td class="where">Atualizado a cada decisão de projeto; faltam prompts de implementação/correção</td>
-            <td><span class="badge wip">em andamento</span></td>
+            <td class="where">Atualizado a cada decisão de projeto, do planejamento à implementação — curado para cobrir só o escopo do Root-Spector</td>
+            <td><span class="badge done">concluído</span></td>
           </tr>
           <tr>
             <td class="req">Apresentação de até 2 slides</td>
-            <td class="where"><code>slides/apresentacao.md</code> — conteúdo completo</td>
+            <td class="where"><code>docs/apresentacao.md</code> + <code>docs/apresentacao.html</code> — conteúdo completo</td>
             <td><span class="badge done">concluído</span></td>
           </tr>
           <tr>
             <td class="req">Histórico de commits organizado e rastreável</td>
-            <td class="where">Plano completo em <code>docs/gitflow.md</code>; nenhum commit/branch criado ainda</td>
-            <td><span class="badge todo">não iniciado</span></td>
+            <td class="where">M1 commitado/mergeado em <code>main</code>; branches de M2–M5 e Release já existem (vazias) no GitHub; commits/PRs de M2 em diante ainda pendentes — ver <code>docs/gitflow.md</code></td>
+            <td><span class="badge wip">em andamento</span></td>
           </tr>
           <tr>
             <td class="req">Nenhuma chave de API versionada</td>
@@ -449,7 +449,7 @@
       </table>
     </div>
 
-    <p class="callout"><strong>Leitura geral:</strong> nenhum item obrigatório está em risco — o que resta é execução, não decisão. O design (specs/design.md) já cobre 100% dos itens do rubric; falta implementar <code>nodes.py</code>/<code>graph.py</code>/<code>api.py</code>/frontend e executar o Gitflow (commits/branches).</p>
+    <p class="callout"><strong>Leitura geral:</strong> nenhum item obrigatório está em risco — a implementação está completa e verificada localmente (33 pytest + Vitest + Playwright, todos verdes, inclusive via <code>deploy/</code> no Docker). O que resta é formalizar o histórico de commits do Gitflow (M2 a M5 + Release) antes da submissão.</p>
   </section>
 
   <section>

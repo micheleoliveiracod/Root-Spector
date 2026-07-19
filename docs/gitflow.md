@@ -1,9 +1,16 @@
 # Gitflow do projeto — plano operacional
 
-> **Status: só planejamento.** Nada aqui foi executado ainda — nenhuma
-> branch, issue, milestone, board ou workflow de CI foi criada/rodada no
-> GitHub. Este arquivo é o plano a ser seguido quando decidirmos começar a
-> execução.
+> **Status:** a estrutura do GitHub já foi criada rodando
+> `scripts/setup_github.py` — os 6 milestones, as 20 labels (9 padrão do
+> GitHub + 11 deste projeto) e as issues (21 definidas no script; 22 no
+> repositório no momento, 1 a mais por uma execução anterior — ver nota
+> abaixo) existem de verdade, assim como as 6 branches vazias
+> (`develop` + as 5 de milestone, sem nenhum commit). O que **não** foi
+> feito ainda é o trabalho de Gitflow em si: nenhum código foi commitado
+> nessas branches, nenhum PR foi aberto/mergeado além de M1 — todo o
+> desenvolvimento de M2 a M5 existe só localmente (ver `docs/prompts.md`
+> para o histórico da decisão de concentrar o trabalho local antes de
+> formalizar o Gitflow, e `specs/structure.md` § Status).
 
 Ver `specs/gitflow.md` para a convenção (modelo de branches, commits, PRs,
 Kanban), verificada contra o Gitflow clássico oficial. Este arquivo aplica
@@ -47,8 +54,8 @@ Modelo de branches).
 | 1 | `docs/especificacao-e-arquitetura` | M1 — Especificação & Arquitetura | `specs/`, estrutura de pastas, stubs dos módulos, docs iniciais (README, slides em rascunho, `docs/gitflow.md`) |
 | 2 | `chore/dados-e-configuracao` | M2 — Dados & Configuração | `config/regras_bioprocesso.yaml` (thresholds, faixas por sensor, categorias Ishikawa) e confirmação do schema real via `data/biotecpredict.db`; `tests/fixtures/biotecpredict_teste.db` como fixture estática de teste |
 | 3 | `feature/implementacao-agente` | M3 — Implementação do Agente | `root_cause_agent/` completo (`models.py`, `state.py`, `config.py`, `tools.py`, `nodes.py`, `graph.py`, `reports.py`, `main.py` harness), `backend/` (FastAPI, pacote próprio — ver `specs/structure.md`), `frontend/` |
-| 4 | `test/testes-e-verificacao` | M4 — Testes & Verificação | `test_tools.py`, `test_graph.py`, `test_config.py` (fallback), `test_backend.py` (rotas + OpenAPI), testes do `frontend/` (Vitest), `e2e/` (Playwright, local + CI), workflow de CI (`.github/workflows/ci.yml`) |
-| 5 | `docs/documentacao-final` | M5 — Documentação & Entrega | README completo, `docs/prompts.md` final, slides revisados, checklist do rubric |
+| 4 | `test/testes-e-verificacao` | M4 — Testes & Verificação | `test_tools.py`, `test_graph.py`, `test_config.py` (fallback), `test_backend.py` (rotas + OpenAPI), testes do `frontend/` (Vitest), `tests/e2e/` (Playwright, local + CI), workflow de CI (`.github/workflows/ci.yml`) |
+| 5 | `docs/documentacao-final` | M5 — Documentação & Entrega | README completo, `docs/prompts.md` final, slides revisados, checklist do rubric, `deploy/` (Docker + docker-compose) |
 | — | `release/v1.0-entrega` | **Release** (6º milestone, não é `feature/*`/`docs/*`/etc.) | Nasce de `develop` só depois das 5 branches acima mergeadas; **PR pra `main`** (nunca push/commit direto), tag `v1.0-entrega` após o merge, e back-merge (também via PR) em `develop` — é esse PR mergeado que vira a submissão no AVA |
 
 ## Labels de etapa
@@ -70,7 +77,7 @@ qual etapa do projeto uma issue é, sem abrir o card.
 ## CI/CD
 
 Ver `specs/ci-cd.md` para o workflow completo (`.github/workflows/ci.yml`,
-a ser criado no milestone M4).
+implementado no milestone M4).
 
 ## Como issues, branches e milestones se conectam
 
@@ -117,7 +124,7 @@ no máximo 5 por milestone.
 - [x] **README.md inicial**
   - README.md inicial (esqueleto)
 - [x] **Apresentação e plano operacional do Gitflow**
-  - `slides/apresentacao.md` esqueleto
+  - `docs/apresentacao.md` esqueleto
   - Este arquivo (`docs/gitflow.md`)
 
 ### M2 — Dados & Configuração (2 issues)
@@ -125,52 +132,68 @@ no máximo 5 por milestone.
   - `config/regras_bioprocesso.yaml` (thresholds de classification, faixas por sensor, 6 categorias Ishikawa)
   - `tests/fixtures/biotecpredict_teste.db` — fixture sintética estática, usada só pelos testes automatizados, nunca pela aplicação (sem script gerador no projeto — o arquivo já está pronto e versionado)
 - [x] **Confirmar schema real via `data/biotecpredict.db`**
-  - Exportação real do BiotecPredict, colocada manualmente, não versionada — inclui tabela `predictions` (não usada) e lotes com `compliance_score` nulo (tratados como não elegíveis)
+  - Schema real do BiotecPredict confirmado via exportação real, colocada manualmente, não versionada — inclui tabela `predictions` (não usada) e lotes com `compliance_score` nulo (tratados como não elegíveis)
+  - Dataset de demonstração atual: `data/simulacao_causa_raiz/` (versionado, 15 lotes curados), a partir do qual `data/biotecpredict.db` é montado localmente, classificado pelo motor real do BiotecPredict — ver `specs/design.md` § Estratégia de dados
 
 ### M3 — Implementação do Agente (5 issues)
 - [x] **Schemas, estado e configuração (models, state, config, pyproject)**
   - `models.py` (schemas Pydantic: NaoConformidade, RespostaIshikawa, PorQue, Diagnostico, CicloAnterior)
   - `state.py` (AgentState: nc_input, regras_setor, messages, respostas_ishikawa, categoria_atual, categoria_principal, categorias_descartadas, cadeia_porques, numero_porque, pergunta_atual, tentativas_pergunta_atual, ciclos_anteriores, diagnostico)
-  - `config.py` (seleção de LLM via `init_chat_model`, carga do YAML de regras, caminhos dos `.db`; fallback em cadeia Gemini → Anthropic → OpenAI via `with_fallbacks(...)`, cada camada só ativa se a respectiva chave estiver no `.env`)
+  - `config.py` (seleção de LLM via `init_chat_model`, carga do YAML de regras, caminhos dos `.db`; fallback em cadeia Gemini → Groq → Anthropic → OpenAI via `with_fallbacks(...)`, cada camada só ativa se a respectiva chave estiver no `.env`)
   - `pyproject.toml` com as dependências reais (langgraph, langgraph-checkpoint-sqlite, langchain, langchain-google-genai, langchain-anthropic, langchain-openai, pyyaml, python-dotenv, fastapi, uvicorn, jinja2)
 - [x] **Ferramenta e validação da resposta do operador (tools.py)**
   - `consultar_leituras_biosensor` (SQL somente-leitura em `sensor_readings`, `batch_id` injetado do estado via `InjectedState` — não escolhido pelo LLM —, `data_inicio`/`data_fim` validadas)
   - `validar_resposta_operador`, Camada 1 de validação da resposta do operador
-- [ ] **Núcleo do grafo (nodes.py, graph.py)**
+- [x] **Núcleo do grafo (nodes.py, graph.py)**
   - `nodes.py` (preparar_contexto [+ cálculo de sensor_metrics/parametros_fora_da_faixa], formular_pergunta_ishikawa, orquestrar_analise, formular_porque, perguntar_operador [human-in-the-loop via `interrupt()`, Camada 1 de validação, reusado nas duas fases], avaliar_informatividade [Camada 2, até 2 tentativas por pergunta], gerar_causa_raiz; `FalhaLLMError` capturada em cada nó agêntico)
   - `graph.py` (StateGraph com dois loops em sequência + checkpointer `SqliteSaver` para suportar pausa/retomada via API)
-- [ ] **Relatórios e API (reports.py, api.py, main.py harness)**
+- [x] **Relatórios e API (reports.py, api.py, main.py harness)**
   - `root_cause_agent/reports.py` (Diagnostico → `reports/{batch_id}_{timestamp}.json` + `.html`, template Jinja2)
-  - `backend/main.py` (FastAPI, pacote próprio, depende de `root_cause_agent`: listar lotes, iniciar/responder/revisar/aprovar/ajustar investigação, servir relatórios; captura `FalhaLLMError` e devolve HTTP 503 "Serviço de IA indisponível, recarregue a página.")
+  - `backend/main.py` (FastAPI, pacote próprio, depende de `root_cause_agent`: listar lotes, iniciar/responder/revisar/ajustar investigação, servir relatórios — `responder` já gera o relatório ao concluir o ciclo; captura `FalhaLLMError` e devolve HTTP 503 "Serviço de IA indisponível, recarregue a página.")
   - Converter `root_cause_agent/main.py` em harness de teste (roda o grafo com respostas fornecidas em código, sem servidor)
-- [ ] **Scaffold frontend/ (React + TypeScript + Vite)**
-  - Lista de lotes → pergunta atual → revisão → link do relatório
+- [x] **Scaffold frontend/ (React + TypeScript + Vite)**
+  - Lista de lotes → pergunta atual (+ histórico de parâmetros do lote) → revisão (já com o link do relatório)
+  - Design system próprio (`frontend/DESIGN.md`, `styles/tokens.css`), badges pastel de status, indicador de carregamento durante chamadas ao LLM
 
 ### M4 — Testes & Verificação (5 issues)
-- [ ] **Testes automatizados (test_tools.py, test_graph.py)**
+- [x] **Testes automatizados (test_tools.py, test_graph.py)**
   - `test_tools.py` (janela de datas filtrada corretamente, usando a fixture sintética)
   - `test_graph.py` (via harness de `main.py`, sem servidor: roda o grafo com 11 respostas fornecidas — 6 Ishikawa + 5 porquês —, produz `Diagnostico` válido com `categoria_principal` e `cadeia_de_porques` de tamanho 5; cobre também o caso de "pedir ajuste" gerando um segundo ciclo)
-  - `test_config.py` (cadeia de fallback Gemini → Anthropic → OpenAI, provedores mockados; cobre o caso de todos falharem → `FalhaLLMError`)
-- [ ] **Testes do backend (FastAPI: rotas + contrato OpenAPI)**
+  - `test_config.py` (cadeia de fallback Gemini → Groq → Anthropic → OpenAI, provedores mockados; cobre o caso de todos falharem → `FalhaLLMError`)
+- [x] **Testes do backend (FastAPI: rotas + contrato OpenAPI)**
   - `test_backend.py` — rotas de `backend/main.py` via `TestClient`, grafo mockado onde executa um nó agêntico
   - Caminho de erro: `FalhaLLMError` simulada → HTTP 503 com a mensagem exata
   - Contrato `GET /openapi.json` validado com `openapi-spec-validator`
-- [ ] **Testes do frontend (componentes React)**
+- [x] **Testes do frontend (componentes React)**
   - Vitest + React Testing Library configurados em `frontend/`
-  - `ListaLotes`, `PerguntaAtual`, `RevisaoRespostas`, `LinkRelatorio` — render + interação básica, `api.ts` mockado
-- [ ] **Testes E2E (Playwright, local + GitHub Actions)**
-  - `e2e/` (Playwright): `webServer` sobe backend + frontend automaticamente
-  - Cenário principal: lista de lotes → 11 perguntas → revisão → aprovar → conferir link do relatório
-  - Cenário de ajuste: revisão → pedir ajuste → novo ciclo → aprovar → conferir `ciclos_anteriores`
+  - `ListaLotes`, `PerguntaAtual`, `RevisaoRespostas` — render + interação básica, `api.ts` mockado
+- [x] **Testes E2E (Playwright, local + GitHub Actions)**
+  - `tests/e2e/` (Playwright): `webServer` sobe backend + frontend automaticamente
+  - Cenário principal: lista de lotes → 11 perguntas → revisão → conferir link do relatório já gerado
+  - Cenário de ajuste: revisão → pedir ajuste → novo ciclo → conferir link do novo relatório + `ciclos_anteriores`
   - Sempre contra `tests/fixtures/biotecpredict_teste.db` e `LLM_PROVIDER=fake` — mesmo comando local e no CI
-- [ ] **Workflow de CI (.github/workflows/ci.yml)**
+- [x] **Workflow de CI (.github/workflows/ci.yml)**
   - Jobs: `lint` (ruff), `test` (pytest — agente + backend), `frontend-test` (Vitest), `e2e` (Playwright) — ver `specs/ci-cd.md` para os triggers
 
+**Nota:** todos os itens acima ([x]) estão implementados, testados e
+verificados **localmente** (33 pytest + Vitest + 2 cenários Playwright,
+todos verdes; verificado também rodando via `deploy/` no Docker) — os
+commits/branches/PRs formais do Gitflow (`chore/dados-e-configuracao`,
+`feature/implementacao-agente`, `test/testes-e-verificacao`) ainda não
+foram executados, só M1 está de fato commitado/mergeado. Ver `docs/prompts.md`
+para o histórico da decisão de concentrar o trabalho local antes de
+formalizar o Gitflow.
+
 ### M5 — Documentação & Entrega (3 issues)
-- [ ] **README completo + checklist final do rubric**
-  - Preencher as seções pendentes do README (como executar, exemplo real de saída)
-  - Checklist final contra o rubric completo
-- [ ] **Revisar slides/apresentacao.md**
+- [x] **README completo + checklist final do rubric**
+  - README com todas as seções (como executar, exemplo real de entrada/saída
+    alinhado ao dataset atual) preenchidas e revisadas
+  - `deploy/` (Docker + docker-compose) implementado e verificado (build + up
+    + investigação completa rodando via container)
+  - `docs/PRD.md`, `docs/cenarios-de-uso.md`, `docs/diagrama-fluxo.md`
+    (Mermaid) e `docs/openapi.yaml` adicionados como documentação
+    complementar do escopo atual
+- [x] **Revisar docs/apresentacao.md**
 - [ ] **Issue final: subir docs/prompts.md completo**
   - Registro de todos os prompts do projeto, do M1 ao M5 — só fecha depois de tudo o mais acima, já que o log só está completo no fim
 
