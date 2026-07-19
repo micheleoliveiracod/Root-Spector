@@ -1,0 +1,64 @@
+/* Design tokens do Root-Spector -- ver ../../DESIGN.md para a
+   referência completa (paleta, tipografia, uso de cada token). Mesma
+   linguagem visual de docs/mapeamento-processo.html,
+   docs/fluxo-tecnico-agente.html e docs/apresentacao.html. */
+
+:root {
+  /* superfícies e texto */
+  --paper: #f3f6f5;
+  --paper-raised: #ffffff;
+  --ink: #14201f;
+  --ink-soft: #47534f;
+  --line: #d8e0dd;
+
+  /* cor de destaque */
+  --accent: #0e8a82;
+  --accent-ink: #08514c;
+  --accent-soft: #e1f1ee;
+
+  --shadow: 0 1px 2px rgba(20, 33, 32, 0.06), 0 8px 24px rgba(20, 33, 32, 0.06);
+
+  /* cores "semáforo" -- sempre em tons pastel (fundo claro + texto legível,
+     nunca vermelho/amarelo/verde saturados) */
+  --ok-bg: #e4f2e9;
+  --ok-fg: #226a45;
+  --warn-bg: #f6eedd;
+  --warn-fg: #8a6423;
+  --critical-bg: #fbeae6;
+  --critical-fg: #a23b2e;
+  --neutral-bg: #edefee;
+  --neutral-fg: #666f6c;
+
+  /* tipografia */
+  --font-serif: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, "Noto Serif", serif;
+  --font-sans: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #10171a;
+    --paper-raised: #16201f;
+    --ink: #e7edea;
+    --ink-soft: #a7b4af;
+    --line: #253230;
+
+    --accent: #38b4a9;
+    --accent-ink: #9be0d6;
+    --accent-soft: #12302d;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
+
+    --ok-bg: #16302b;
+    --ok-fg: #6fcb93;
+    --warn-bg: #2e2a1b;
+    --warn-fg: #d8c57e;
+    --critical-bg: #2e1d1a;
+    --critical-fg: #e0796a;
+    --neutral-bg: #1e2624;
+    --neutral-fg: #93a19c;
+  }
+}
