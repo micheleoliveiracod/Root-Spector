@@ -30,7 +30,8 @@ frontend/coverage/
 frontend/tsconfig.tsbuildinfo
 npm-debug.log*
 
-# e2e (Playwright)
+# e2e (Playwright) -- checkpoint do LangGraph gerado em runtime pelo webServer
+tests/data/
 tests/e2e/node_modules/
 tests/e2e/test-results/
 tests/e2e/playwright-report/
