@@ -8,6 +8,9 @@ venv/
 .env
 .coverage
 
+# configuração local do Claude Code (worktrees, sessão), não faz parte do projeto
+.claude/
+
 # bancos locais: biotecpredict.db (exportado do BiotecPredict, colocado
 # manualmente em data/) e checkpoints.db (estado do LangGraph em runtime)
 # -- ver README "Como executar". Nunca commitar.
@@ -26,10 +29,10 @@ frontend/coverage/
 npm-debug.log*
 
 # e2e (Playwright)
-e2e/node_modules/
-e2e/test-results/
-e2e/playwright-report/
-e2e/.cache/
+tests/e2e/node_modules/
+tests/e2e/test-results/
+tests/e2e/playwright-report/
+tests/e2e/.cache/
 
 # material de avaliação da disciplina, não faz parte do código do projeto
 escopo-avaliacao/
