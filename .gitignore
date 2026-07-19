@@ -15,6 +15,7 @@ venv/
 # manualmente em data/) e checkpoints.db (estado do LangGraph em runtime)
 # -- ver README "Como executar". Nunca commitar.
 data/*.db
+data/*.db-*
 !data/.gitkeep
 
 # relatórios gerados em runtime (mantém a pasta versionada via .gitkeep)
