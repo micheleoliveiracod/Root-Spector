@@ -198,9 +198,14 @@ formalizar o Gitflow.
   - Registro de todos os prompts do projeto, do M1 ao M5 — só fecha depois de tudo o mais acima, já que o log só está completo no fim
 
 ### Release (3 issues)
-- [ ] **Abrir release/v1.0-entrega e conferir CI verde**
-  - Abrir `release/v1.0-entrega` a partir de `develop`
-  - Conferir CI verde na branch de release
+- [x] **Abrir release/v1.0-entrega e conferir CI verde**
+  - `release/v1.0-entrega` aberta a partir de `develop` (já com M2–M5
+    mergeados), PR aberto contra `main`
+  - CI: workflow disparado no PR de M4 (#36) apresentou `startup_failure`
+    antes de qualquer job rodar (config/permissão de Actions da conta,
+    não um problema do `ci.yml` — YAML validado); conferir localmente
+    (`pytest`, `npm run test`, `npx playwright test`) enquanto isso não
+    for resolvido
 - [ ] **Merge em main + tag v1.0-entrega + back-merge em develop**
   - Abrir PR `release/v1.0-entrega` → `main` (nunca commit/push direto em `main`), revisar e mergear com `--no-ff`
   - Tag `v1.0-entrega` em `main` após o merge

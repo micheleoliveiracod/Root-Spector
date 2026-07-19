@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "root-spector"
-version = "0.1.0"
+version = "1.0.0"
 description = "Agente LangGraph que investiga a causa raiz de nao-conformidades de bioprocesso, complementar ao BiotecPredict"
 requires-python = ">=3.11"
 dependencies = [

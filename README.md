@@ -10,9 +10,9 @@
 
 > **Status:** agente, backend, frontend e testes (pytest + Vitest + Playwright)
 > implementados e verificados localmente, inclusive via `deploy/` (Docker).
-> Commits/branches/PRs formais do Gitflow ainda pendentes — ver
-> `docs/gitflow.md`. Detalhamento técnico em `specs/requirements.md` e
-> `specs/design.md`.
+> M2 a M5 já commitados e mergeados em `develop` via PR; `release/v1.0-entrega`
+> em andamento — ver `docs/gitflow.md`. Detalhamento técnico em
+> `specs/requirements.md` e `specs/design.md`.
 
 ## Descrição do problema
 

@@ -211,8 +211,8 @@ essa convenção ao plano concreto desta entrega.
 
 ---
 
-**Versão**: 0.1.0
+**Versão**: 1.0.0
 **Status**: agente, backend, frontend e testes (pytest + Vitest + Playwright)
-implementados e verificados localmente, inclusive via `deploy/`
-(Docker) — commits/branches/PRs formais do Gitflow ainda pendentes (ver
-`docs/gitflow.md`).
+implementados e verificados localmente, inclusive via `deploy/` (Docker).
+M2 a M5 commitados e mergeados em `develop` via PR; `release/v1.0-entrega`
+em andamento (ver `docs/gitflow.md`).
