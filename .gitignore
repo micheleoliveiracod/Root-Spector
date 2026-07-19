@@ -1,0 +1,41 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.venv/
+venv/
+.env
+.coverage
+
+# configuração local do Claude Code (worktrees, sessão), não faz parte do projeto
+.claude/
+
+# bancos locais: biotecpredict.db (exportado do BiotecPredict, colocado
+# manualmente em data/) e checkpoints.db (estado do LangGraph em runtime)
+# -- ver README "Como executar". Nunca commitar.
+data/*.db
+data/*.db-*
+!data/.gitkeep
+
+# relatórios gerados em runtime (mantém a pasta versionada via .gitkeep)
+reports/*
+!reports/.gitkeep
+
+# frontend (React + Vite)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+frontend/tsconfig.tsbuildinfo
+npm-debug.log*
+
+# e2e (Playwright) -- checkpoint do LangGraph gerado em runtime pelo webServer
+tests/data/
+tests/e2e/node_modules/
+tests/e2e/test-results/
+tests/e2e/playwright-report/
+tests/e2e/.cache/
+
+# material de avaliação da disciplina, não faz parte do código do projeto
+escopo-avaliacao/
