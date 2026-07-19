@@ -111,9 +111,15 @@ web não pode travar esperando o navegador — precisa continuar disponível
 para outras requisições enquanto aguarda a resposta do operador. A solução
 é o mecanismo de **interrupção/retomada nativo do LangGraph**:
 
-- `perguntar_operador` chama `interrupt({"pergunta": ..., "fase": ...})` em
-  vez de `input()`, pausando a execução do grafo e devolvendo o controle
-  pra API.
+- `perguntar_operador` chama `interrupt({"pergunta": ..., "nc": ..., "fase": ...,
+  "indice": ..., "total": ..., "categoria": ...})` em vez de `input()`, pausando
+  a execução do grafo e devolvendo o controle pra API -- `indice`/`total`
+  situam o operador na cadeia (ex.: "3 de 6"), `categoria` só é enviada na
+  fase Ishikawa (Método, Máquina, Material, Mão de obra, Meio ambiente,
+  Medição), e `nc` (a `NaoConformidade` inteira, com `sensor_metrics` por
+  parâmetro) é reenviada em toda pergunta pra o operador não precisar
+  memorizar qual parâmetro está fora da faixa nem voltar pra lista de lotes
+  pra conferir os dados.
 - O grafo é compilado com um **checkpointer** (`SqliteSaver`, gravando em
   `data/checkpoints.db`), que persiste o estado da investigação por
   `thread_id` (um id de sessão associado ao lote escolhido).
@@ -126,7 +132,7 @@ API request/response precisa.
 
 O frontend é deliberadamente minimalista: uma única tela (sem router, sem
 biblioteca de gerência de estado), com uma máquina de estados simples —
-lista de lotes → pergunta atual → revisão → link do relatório.
+lista de lotes → pergunta atual → revisão (já com o link do relatório).
 
 **A API vive num pacote próprio, `backend/`, separado de `root_cause_agent/`**
 (não dentro dele) — mesma separação backend/frontend do BiotecPredict.
@@ -141,11 +147,10 @@ arrastar FastAPI junto.
 
 | Rota | Efeito |
 |---|---|
-| `GET /api/lotes` | Lista os lotes de `data/biotecpredict.db` com classificação calculada e destaque dos elegíveis |
+| `GET /api/lotes` | Lista os lotes de `data/biotecpredict.db` com classificação calculada, destaque dos elegíveis e, para estes, os parâmetros de biosensor fora da faixa aceitável |
 | `POST /api/investigacoes/{batch_id}/iniciar` | Cria/retoma um `thread_id`, roda o grafo até o 1º `interrupt`, devolve a 1ª pergunta |
-| `POST /api/investigacoes/{thread_id}/responder` | `Command(resume=resposta)`, devolve a próxima pergunta ou sinaliza "pronto pra revisão" |
-| `GET /api/investigacoes/{thread_id}/revisao` | Devolve toda a cadeia (Ishikawa + 5 Porquês) + rascunho de `causa_raiz` |
-| `POST /api/investigacoes/{thread_id}/aprovar` | Gera `reports/{batch_id}_{ts}.json` + `.html` (via `root_cause_agent.reports`), devolve os links |
+| `POST /api/investigacoes/{thread_id}/responder` | `Command(resume=resposta)`, devolve a próxima pergunta ou sinaliza "pronto pra revisão"; ao concluir o ciclo (resposta ao 5º porquê), já gera `reports/{batch_id}_{ts}.json` + `.html` (via `root_cause_agent.reports`) |
+| `GET /api/investigacoes/{thread_id}/revisao` | Devolve toda a cadeia (Ishikawa + 5 Porquês) + rascunho de `causa_raiz` + os links do relatório já gerado |
 | `POST /api/investigacoes/{thread_id}/ajustar` | Arquiva o ciclo atual em `ciclos_anteriores`, reinicia um novo ciclo completo pro mesmo `batch_id` |
 | `GET /reports/{arquivo}` | Serve os relatórios estáticos (JSON e HTML) |
 
@@ -202,16 +207,20 @@ que uma nova pergunta é formulada. Essa validação é reusada nas duas fases
 
 ## Tratamento de falha na chamada ao LLM
 
-**Decisão (2026-07-15):** antes de qualquer coisa chegar a virar um erro
-pro operador, `config.py::get_llm()` já tenta um **fallback em cadeia**:
-Gemini (`LLM_PROVIDER`/`LLM_MODEL` — o provedor oficial deste projeto,
-gratuito, usado em testes e prototipagem) → Anthropic → OpenAI, nessa
-ordem, via `ChatModel.with_fallbacks(...)`. Cada fallback só entra na
-cadeia se sua respectiva chave (`ANTHROPIC_API_KEY`/`OPENAI_API_KEY`)
-estiver configurada no `.env` — rodar só com a chave do Gemini (o cenário
-normal de testes/prototipagem) continua funcionando sem exigir as outras
-duas; configurar as chaves extras (ex: para uma demonstração) ativa a
-resiliência automaticamente, sem mudar nenhum código de nó/grafo.
+**Decisão (2026-07-15, cadeia estendida em 2026-07-18):** antes de qualquer
+coisa chegar a virar um erro pro operador, `config.py::get_llm()` já tenta
+um **fallback em cadeia**: Gemini (`LLM_PROVIDER`/`LLM_MODEL` — o provedor
+oficial deste projeto, gratuito, usado em testes e prototipagem) → Groq
+(hospeda modelos open-source como Llama num chip próprio de inferência
+rápida — 2º provedor gratuito, usado nos mesmos testes) →
+Anthropic → OpenAI, nessa ordem, via `ChatModel.with_fallbacks(...)`. Cada
+fallback só entra na cadeia se sua respectiva chave
+(`GROQ_API_KEY`/`ANTHROPIC_API_KEY`/`OPENAI_API_KEY`) estiver configurada no
+`.env` — rodar só com a chave do Gemini (o cenário mínimo de
+testes/prototipagem) continua funcionando sem exigir as outras três;
+configurar `GROQ_API_KEY` (pra testar o agente com um 2º LLM de verdade,
+também gratuito) e/ou as chaves pagas extras (ex: para uma demonstração)
+ativa a resiliência automaticamente, sem mudar nenhum código de nó/grafo.
 
 Só quando **todos os provedores configurados** falham (rede, rate limit, ou
 chave inválida/ausente em cada um deles) é que a exceção chega ao nó. Todo
@@ -242,7 +251,7 @@ retry": o operador recarrega a página, refaz a mesma ação (reenviar a
 resposta daquela pergunta), e o LangGraph resume a execução do mesmo ponto,
 sem repetir perguntas já respondidas nem perder nada do estado.
 
-**Sem retry automático em loop:** se mesmo com o fallback (Gemini →
+**Sem retry automático em loop:** se mesmo com o fallback (Gemini → Groq →
 Anthropic → OpenAI) nenhum provedor configurado responder, a mensagem "Serviço
 de IA indisponível, recarregue a página." permanece na tela — não há
 nova tentativa automática em intervalo. O operador precisa aguardar os
@@ -268,7 +277,7 @@ root_cause_agent/
 └── main.py      # harness de teste: roda o grafo com respostas fornecidas em código, sem servidor
 
 backend/         # FastAPI -- depende de root_cause_agent, nunca o contrário
-└── main.py      # rotas de lotes/investigação/aprovação/ajuste, serve reports/ como estático
+└── main.py      # rotas de lotes/investigação/ajuste, serve reports/ como estático
 
 frontend/        # React + TypeScript + Vite -- única tela, sem router/lib de estado
 ```
@@ -337,11 +346,13 @@ orquestrar_analise   [nó LLM: analisa as 6 respostas, identifica               
 gerar_causa_raiz  [nó LLM: sintetiza categoria_principal + cadeia_porques + categorias_descartadas
                     em Diagnostico estruturado por categoria; valida contra o schema]
    ↓
-[API: apresenta a cadeia completa ao operador para revisão]
+[API: salva reports/{batch_id}_{ts}.json + .html; apresenta a cadeia
+ completa ao operador para revisão, já com os links do relatório]
    ↓ (operador decide)
-   ├── aprovar → salva reports/{batch_id}_{ts}.json + .html; devolve os links
-   └── pedir ajuste → arquiva o ciclo atual em ciclos_anteriores; reinicia
-                        um novo ciclo completo a partir de preparar_contexto
+   ├── nada a fazer → relatório já está salvo e disponível
+   └── pedir ajuste → arquiva o ciclo atual (já reportado) em
+                        ciclos_anteriores; reinicia um novo ciclo completo
+                        a partir de preparar_contexto
 ```
 
 `AgentState.messages` (reducer `add_messages`) é a memória do sub-loop de
@@ -414,19 +425,29 @@ CREATE TABLE predictions (
 );
 ```
 
-1. **`data/biotecpredict.db` — exportação real, não sintética.** É um
-   arquivo de banco gerado por uma instância real do BiotecPredict,
-   colocado manualmente em `data/` e **nunca versionado** (ver
-   `.gitignore`) — quem for rodar este projeto precisa colocar seu próprio
-   arquivo ali (ver README "Como executar"). Na exportação usada para
-   desenvolver este agente: 27 lotes, todos com `status='COMPLETED'`; 21
-   têm `compliance_score` preenchido (5 `HIGH_RISK`, 9 `MEDIUM_RISK`, 7
-   `LOW_RISK`) e 6 têm `compliance_score`/`risk_prediction` nulos — um
-   estado real do BiotecPredict (lote processado mas sem score atribuído)
-   que este agente trata explicitamente: lotes com score nulo são
-   excluídos da lista de elegíveis, não tratados como erro. A tabela
-   `predictions` existe no schema mas está vazia nesta exportação — não é
-   consultada.
+1. **`data/biotecpredict.db` — nunca versionado, montado a partir de um
+   dataset curado de demonstração.** Colocado manualmente em `data/` (ver
+   `.gitignore`) — quem for rodar este projeto precisa gerar ou colocar seu
+   próprio arquivo ali (ver README "Como executar"). A versão atual foi
+   montada a partir de `data/simulacao_causa_raiz/csv/` — 15 lotes (5
+   "ideais"/aprovados + 10 com um desvio de causa física única cada, ex.:
+   contaminação do meio de cultura, bomba dosadora de pH com defeito,
+   agitador com RPM baixo — ver `data/simulacao_causa_raiz/README.md` para
+   a lista completa e a justificativa fisiológica de cada cenário). Os
+   valores de sensor são desenhados propositalmente (um só parâmetro, ou
+   um par fisiologicamente correlacionado, se desvia por vez — nunca os 5
+   juntos), mas `compliance_score`/`classification`/`risk_prediction`
+   **não são inventados**: vêm de rodar o `ComplianceService`/`MLModel`
+   reais e inalterados do BiotecPredict sobre esses dados (validado em
+   2026-07-19, valores documentados no README daquela pasta). Resultado:
+   só 2 dos 15 lotes (`WARNING`) ficam elegíveis para investigação — os
+   outros 8 lotes com desvio pontuam `ACCEPTABLE` no score real do
+   BiotecPredict mesmo tendo uma causa física conhecida, o que é o
+   comportamento correto do classificador, não uma falha do dataset. A
+   tabela `predictions` existe no schema mas não é populada nem
+   consultada. Um gabarito de teste (causa raiz esperada por lote
+   elegível, com respostas sugeridas pras 11
+   perguntas) fica em `docs/demo/gabarito-testes.md`.
 2. **`tests/fixtures/biotecpredict_teste.db` — fixture sintética, só para
    testes automatizados.** Banco pequeno e determinístico, mesmo schema,
    incluindo um lote com `agitator_speed` fora da faixa (categoria Máquina,
@@ -466,18 +487,20 @@ CREATE TABLE predictions (
 
 **Nota de proveniência:** o *schema* (nomes de tabela, colunas, tipos,
 enums, inclusive a tabela `predictions` não utilizada) é copiado fielmente
-do código-fonte real do BiotecPredict. Os *valores* de demonstração vêm de
-uma exportação real de uma instância do BiotecPredict (não um dataset
-público baixado, nem inventados por este projeto); os *valores* usados nos
-testes automatizados são sintéticos e claramente rotulados como tal. A
-troca de domínio (agro → biotec, ver histórico em `docs/prompts.md`)
-confirmou que a única coisa que muda de fato é `config/` e `data/`; o motor
-(`root_cause_agent/`) permanece o mesmo.
+do código-fonte real do BiotecPredict. Os *valores* de demonstração são
+curados (não uma captura de uma instância em produção, nem um dataset
+público baixado) mas sua classificação/score/risco vêm de rodar o motor de
+scoring real e inalterado do BiotecPredict sobre eles — ver ponto 1 acima;
+os *valores* usados nos testes automatizados são sintéticos, recalibrados
+pra mesma escala do dataset de demonstração, e claramente rotulados como
+tal. A troca de domínio (agro → biotec, ver histórico em
+`docs/prompts.md`) confirmou que a única coisa que muda de fato é
+`config/` e `data/`; o motor (`root_cause_agent/`) permanece o mesmo.
 
 ## Camada de LLM plugável
 
 `config.py::get_llm()` lê `LLM_PROVIDER` (default `google_genai`) e
-`LLM_MODEL` (default `gemini-2.0-flash`) do `.env`, e usa
+`LLM_MODEL` (default `gemini-2.5-flash`) do `.env`, e usa
 `langchain.chat_models.init_chat_model(model, model_provider=provider)`.
 Trocar de LLM = mudar as duas variáveis + instalar o pacote de integração
 correspondente (`langchain-anthropic`, `langchain-openai`, etc.) — não requer
@@ -503,12 +526,14 @@ tocar em `nodes.py` ou `graph.py`.
 
 ## Roadmap (processo real completo — fase 2 não implementada nesta entrega)
 
-O processo produtivo de tratamento de NC não termina na aprovação do
-operador. Mapeado por completo no mapa de processo visual (BPMN, ver
-`docs/prompts.md` para o link), a fase seguinte, ainda não implementada, é:
+O processo produtivo de tratamento de NC não termina no relatório gerado
+pelo Root-Spector. Mapeado por completo no mapa de processo visual (BPMN,
+ver `docs/prompts.md` para o link), a fase seguinte, ainda não
+implementada, é:
 
 **Fase 2 — Setor da Qualidade + Agente RAG, fechando em PDCA.** Só quando o
-operador aprova é que o caso sai do Root-Spector. Ele vai para o setor da
+operador aceita o relatório (não pede ajuste) é que o caso sai do
+Root-Spector. Ele vai para o setor da
 Qualidade, que aciona um **segundo agente**, baseado em RAG
 (retrieval-augmented generation), consultando uma base documental da
 empresa (procedimentos internos, legislação aplicável ao setor, normas
@@ -529,10 +554,10 @@ originalmente pode ter sido incompleta.
 que este projeto ainda não tem (ingestão de documentos, embeddings, vector
 store, um grafo próprio) — construir isso de verdade seria essencialmente
 um segundo projeto — ver `specs/requirements.md` "Fora de escopo". O loop
-de validação do operador (aprovar/pedir ajuste), que originalmente também
-estava nesta lista, **já está implementado** (ver "Fluxo do grafo" acima) —
-era tecnicamente simples de encaixar no motor atual e passou a fazer parte
-do escopo real.
+de revisão do operador (relatório já gerado / pedir ajuste), que
+originalmente também estava nesta lista, **já está implementado** (ver
+"Fluxo do grafo" acima) — era tecnicamente simples de encaixar no motor
+atual e passou a fazer parte do escopo real.
 
 ## Adaptação a outro setor produtivo
 

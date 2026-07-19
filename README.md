@@ -1,7 +1,18 @@
 # Root-Spector — Agente de Investigação de Causa Raiz de NC
 
-> **Status:** arquitetura e specs fechadas; implementação em andamento. Ver
-> `specs/requirements.md` e `specs/design.md` para o desenho completo.
+**Desenvolvido por:** [Michele Oliveira](https://github.com/micheleoliveiracod)
+
+**Organização:** Programa SCTEC e SENAI (https://github.com/IA-para-DEVs-SCTEC-T2)
+
+**Curso:** IA para DEVs
+
+**Objetivo:** Desenvolvimento de um mini projeto E2E com IA em todas as etapas, como entrega parcial do módulo 2.
+
+> **Status:** agente, backend, frontend e testes (pytest + Vitest + Playwright)
+> implementados e verificados localmente, inclusive via `deploy/` (Docker).
+> Commits/branches/PRs formais do Gitflow ainda pendentes — ver
+> `docs/gitflow.md`. Detalhamento técnico em `specs/requirements.md` e
+> `specs/design.md`.
 
 ## Descrição do problema
 
@@ -9,7 +20,13 @@ Quando um processo produtivo gera uma Não-Conformidade (NC) — um lote fora
 da especificação — o passo mais custoso do tratamento costuma ser descobrir
 **por que** aconteceu, não só constatar que aconteceu. Essa investigação
 normalmente depende de um especialista cruzando manualmente o evento de NC
-com dados históricos de processo.
+com dados históricos de processo, e é conduzida por um colaborador da
+qualidade investigando um processo operacional realizado por outro
+colaborador — o que carrega um viés interpessoal difícil de eliminar. Um
+agente de IA traz imparcialidade e impessoalidade a essa investigação, por
+não ser parte da equipe operacional, e agilidade no processo de
+investigação e tratamento da causa, evitando que o lote se transforme em
+um produto e avance no processo produtivo, causando mais desperdícios e a reincidencia do problema.
 
 ## Objetivo do agente
 
@@ -32,9 +49,9 @@ Ishikawa** (6 perguntas de contexto — Método, Máquina, Material, Mão de
 obra, Meio ambiente, Medição — não perguntas diretas sobre o parâmetro fora
 da faixa), identifica a categoria mais provável, e só então aprofunda com o
 **método dos 5 Porquês** ancorado nessa categoria — sempre 6 + 5 rodadas —
-até sintetizar uma causa raiz sistêmica. Ao final, o operador revisa a
-cadeia completa e **aprova** (gera o relatório) ou **pede ajuste** (reabre
-um novo ciclo, preservando o anterior). Não é um agente que investiga
+até sintetizar uma causa raiz sistêmica, gerando o relatório. Ao final, o
+operador revisa a cadeia completa e pode **pedir ajuste** (reabre um novo
+ciclo, preservando o anterior). Não é um agente que investiga
 sozinho; é um agente que conduz a investigação em conjunto com quem opera o
 processo.
 
@@ -61,7 +78,7 @@ preparar_contexto        [determinístico: consulta batches (COMPLETED, com scor
                            identifica parametros_fora_da_faixa, monta a NC]
    ↓
 ┌── FASE 1: ISHIKAWA (6 categorias, sempre nesta ordem) ───────────────┐
-│ formular_pergunta_ishikawa ⇄ usar_ferramenta                        │
+│ formular_pergunta_ishikawa ⇄ usar_ferramenta                         │
 │    ↓                                                                  │
 │ perguntar_operador  ← PONTO HUMAN-IN-THE-LOOP (via interface web)     │
 │    ↓ (repete até as 6 categorias serem respondidas)                   │
@@ -78,7 +95,9 @@ orquestrar_analise   [nó LLM: identifica categoria_principal + categorias_desca
    ↓
 gerar_causa_raiz   [Diagnostico: Ishikawa + cadeia de 5 porquês + causa raiz]
    ↓
-Revisão pelo operador → aprovar (gera relatório JSON+HTML) | pedir ajuste (reabre ciclo)
+reports.py          [gera relatório JSON+HTML]
+   ↓
+Revisão pelo operador → link do relatório já disponível | pedir ajuste (reabre ciclo)
 ```
 
 Detalhamento completo (estado, mecanismo de interrupção/retomada do
@@ -109,7 +128,7 @@ cp .env.example .env         # preencher a chave de API do provedor de LLM escol
 #    (fixture estática já incluída no repositório) — nunca este arquivo real.
 
 # 3. Subir a API
-uvicorn root_cause_agent.api:app --reload
+uvicorn backend.main:app --reload
 
 # 4. Frontend (em outro terminal)
 cd frontend
@@ -122,34 +141,39 @@ inicial já lista os lotes de `data/biotecpredict.db` com sua classificação.
 
 ## Exemplo de entrada (formato)
 
-Linha da tabela `batches` que dispara a investigação (schema real do BiotecPredict):
+Linha da tabela `batches` que dispara a investigação (schema real do
+BiotecPredict; lote 11 do dataset de demonstração atual — ver "Estratégia
+de dados" em `specs/design.md`):
 
 ```json
 {
-  "id": 512,
+  "id": 11,
   "upload_date": "2026-07-05T08:00:00",
   "status": "COMPLETED",
-  "compliance_score": 42.0,
-  "risk_prediction": "HIGH_RISK"
+  "compliance_score": 71.32,
+  "risk_prediction": "MEDIUM_RISK"
 }
 ```
 
-`compliance_score=42.0` é classificado `CRITICAL` (abaixo de 45, regra real
-do BiotecPredict replicada em `config/regras_bioprocesso.yaml`) —
+`compliance_score=71.32` é classificado `WARNING` (entre 45 e 80, regra
+real do BiotecPredict replicada em `config/regras_bioprocesso.yaml`) —
 `classification` não é uma coluna do banco, o agente calcula na hora. O
-`risk_prediction` do modelo de ML concorda (`HIGH_RISK`). `preparar_contexto`
-calcula `sensor_metrics` a partir de `sensor_readings` e identifica
-`parametros_fora_da_faixa: ["agitator_speed"]` — isso já vem pronto quando
-o agente entra em ação; ele não descobre qual parâmetro é, ele investiga
-*por que* esse parâmetro ficou fora da faixa — primeiro mapeando o
-contexto (Ishikawa), depois aprofundando (5 Porquês).
+`risk_prediction` do modelo de ML concorda (`MEDIUM_RISK`).
+`preparar_contexto` calcula `sensor_metrics` a partir de `sensor_readings`
+e identifica `parametros_fora_da_faixa: ["dissolved_oxygen",
+"agitator_speed"]` (par correlacionado — menos agitação, menos
+transferência de oxigênio) — isso já vem pronto quando o agente entra em
+ação; ele não descobre qual parâmetro é, ele investiga *por que* esses
+parâmetros ficaram fora da faixa — primeiro mapeando o contexto
+(Ishikawa), depois aprofundando (5 Porquês).
 
 ## Exemplo de interação (Ishikawa + 5 Porquês)
 
 ```
-[Agente] (Máquina) O agitador deste lote recebeu manutenção preventiva
-         dentro do prazo previsto?
-[Operador] Não, a manutenção estava atrasada.
+[Agente] (Máquina) O agitador deste lote operou dentro da velocidade
+         (RPM) padrão do processo?
+[Operador] Não — o setpoint do inversor de frequência estava abaixo do
+           valor padrão.
 [Agente] (Método) Houve alguma mudança de procedimento neste lote?
 [Operador] Não, seguimos o procedimento padrão.
 ... (Material, Mão de obra, Meio ambiente, Medição)
@@ -157,25 +181,29 @@ contexto (Ishikawa), depois aprofundando (5 Porquês).
 (6 perguntas de contexto, depois a orquestração identifica `categoria_principal: "Máquina"`)
 
 ```
-[Agente] Por que o agitador não recebeu manutenção preventiva dentro do prazo?
-[Operador] Porque não verificamos que estava atrasada.
-[Agente] Por que vocês não verificaram?
-[Operador] Porque o fluxo de trabalho não tem essa conferência.
-[Agente] Por que o fluxo de trabalho não tem essa conferência?
+[Agente] Por que o agitador operou com velocidade abaixo do padrão?
+[Operador] Porque o setpoint configurado no inversor de frequência estava
+           abaixo do valor padrão do processo.
+[Agente] Por que o setpoint estava abaixo do padrão?
+[Operador] Porque foi alterado durante o ajuste do lote anterior e não foi
+           restaurado.
+[Agente] Por que não foi restaurado antes de iniciar este lote?
 [Operador] ...
 ```
-(continua até a 5ª pergunta, depois o operador revisa e aprova ou pede ajuste)
+(continua até a 5ª pergunta, quando o relatório já é gerado; o operador
+revisa e pode pedir ajuste — roteiro completo em
+`docs/demo/gabarito-testes.md`)
 
 ## Exemplo de saída (formato)
 
-Salvo em `reports/512_20260715T000000.json` e `.html`:
+Salvo em `reports/11_20260719T000000.json` e `.html`:
 
 ```json
 {
-  "batch_id": 512,
+  "batch_id": 11,
   "categoria_principal": {
     "categoria": "Máquina",
-    "justificativa": "Manutenção preventiva do agitador atrasada, coincide com a queda de agitator_speed"
+    "justificativa": "Setpoint do inversor de frequência do agitador abaixo do padrão, coincide com a queda de agitator_speed e dissolved_oxygen"
   },
   "categorias_descartadas": [
     {"categoria": "Método", "motivo": "operador confirma procedimento padrão seguido"}
@@ -183,21 +211,21 @@ Salvo em `reports/512_20260715T000000.json` e `.html`:
   "cadeia_de_porques": [
     {
       "numero": 1,
-      "pergunta": "Por que o agitador não recebeu manutenção preventiva dentro do prazo?",
-      "resposta": "Porque não verificamos que estava atrasada.",
-      "evidencia": "agitator_speed: média 42 RPM, faixa aceitável 60-120 RPM"
+      "pergunta": "Por que o agitador operou com velocidade abaixo do padrão?",
+      "resposta": "Porque o setpoint configurado no inversor de frequência estava abaixo do valor padrão do processo.",
+      "evidencia": "agitator_speed e dissolved_oxygen fora da faixa aceitável (par correlacionado)"
     },
     {
       "numero": 2,
-      "pergunta": "Por que vocês não verificaram?",
-      "resposta": "Porque o fluxo de trabalho não tem essa conferência.",
+      "pergunta": "Por que o setpoint estava abaixo do padrão?",
+      "resposta": "Porque foi alterado durante o ajuste do lote anterior e não foi restaurado ao valor padrão.",
       "evidencia": null
     }
   ],
-  "causa_raiz": "Ausência de um passo de verificação de manutenção preventiva do agitador no fluxo de trabalho operacional.",
+  "causa_raiz": "Ausência de atualização do checklist de início de lote após a instalação de um novo inversor de frequência no agitador, permitindo que um setpoint de velocidade incorreto não fosse detectado antes do início do processo.",
   "narrativa": "...",
   "ciclos_anteriores": [],
-  "gerado_em": "2026-07-15T00:00:00"
+  "gerado_em": "2026-07-19T00:00:00"
 }
 ```
 
@@ -227,22 +255,30 @@ O `.html` correspondente apresenta o mesmo conteúdo formatado para leitura.
   consulta à ferramenta por pergunta** — decisão deliberada por
   previsibilidade, mesmo sabendo que a prática real do método às vezes
   para antes (ver `specs/design.md`).
-- **Aprovar ou pedir ajuste** — o relatório não é gerado automaticamente; o
-  operador revisa a cadeia completa antes. Pedir ajuste preserva o ciclo
-  anterior em `ciclos_anteriores` (auditoria).
+- **Relatório gerado ao final de cada ciclo, revisão sempre disponível** — o
+  relatório já é salvo assim que a cadeia é concluída (5º porquê
+  respondido) e seu link aparece na tela de revisão; o operador pode pedir
+  ajuste a qualquer momento, o que preserva o ciclo anterior (já reportado)
+  em `ciclos_anteriores` (auditoria) e reabre um novo ciclo.
 - **Relatório em JSON e HTML** — JSON para consumo por outros sistemas,
   HTML para leitura humana.
 - **LLM plugável**: provedor/modelo escolhidos via variável de ambiente
   (`LLM_PROVIDER`/`LLM_MODEL`) usando `init_chat_model` do LangChain —
   padrão Google Gemini (gratuito) nesta entrega.
 - **Entrada via SQLite, schema real do BiotecPredict** — `data/biotecpredict.db`
-  é uma exportação real de uma instância do BiotecPredict (não um dataset
-  sintético), nunca versionada. Os thresholds de classificação do
-  `compliance_score` (`>=80` ACCEPTABLE, `>=45` WARNING, abaixo CRITICAL)
-  foram conferidos linha a linha em `ComplianceService._classify_score()`
-  do BiotecPredict, não apenas no README dele — ver `specs/design.md`. Uma
-  fixture sintética estática (`tests/fixtures/biotecpredict_teste.db`)
-  existe só para os testes automatizados.
+  (nunca versionado) é montado a partir de um dataset curado de
+  demonstração, versionado em `data/simulacao_causa_raiz/` (15 lotes: 5
+  "ideais" + 10 com um desvio de causa física única cada). Os valores de
+  sensor são desenhados propositalmente, mas `compliance_score`/
+  `classification`/`risk_prediction` não são inventados: vêm de rodar o
+  `ComplianceService`/`MLModel` reais e inalterados do BiotecPredict sobre
+  esses dados — ver "Estratégia de dados" em `specs/design.md`. Os
+  thresholds de classificação (`>=80` ACCEPTABLE, `>=45` WARNING, abaixo
+  CRITICAL) foram conferidos linha a linha em
+  `ComplianceService._classify_score()` do BiotecPredict, não apenas no
+  README dele. Uma fixture sintética estática
+  (`tests/fixtures/biotecpredict_teste.db`) existe só para os testes
+  automatizados.
 
 ## Limitações
 
@@ -263,9 +299,47 @@ Ver seção correspondente em `specs/design.md`.
 
 ## Documentação relacionada
 
+- `docs/PRD.md` — documento de requisitos de produto (problema, público, escopo, critérios de sucesso)
+- `docs/cenarios-de-uso.md` — cenários de uso passo a passo (fluxo principal + validação/erro/ajuste)
+- `docs/diagrama-fluxo.md` — diagramas Mermaid do grafo LangGraph e da sequência de chamadas HTTP
+- `docs/openapi.yaml` — contrato completo da API (gerado a partir do schema real do FastAPI)
 - `specs/requirements.md` — requisitos funcionais e não-funcionais
 - `specs/design.md` — arquitetura, fluxo do grafo, estratégia de dados
 - `docs/prompts.md` — prompts usados para planejar/implementar o agente
 - `docs/gitflow.md` — modelo de branches, CI/CD, convenções de commit/PR
-- `slides/apresentacao.md` — conteúdo da apresentação de 2 slides
+- `docs/apresentacao.md` — conteúdo da apresentação de 2 slides
 - [BiotecPredict](https://github.com/micheleoliveiracod/Projeto-avaliativo-M1-2-BiotecPredict) — projeto complementar (classificação de risco do lote)
+
+---
+
+## ⭐ Agradecimentos
+
+- **SCTEC e SENAI** - Programa de IA para DEVs
+- **Comunidade Open Source** - Ferramentas e bibliotecas utilizadas
+
+---
+
+## 👨‍💻 Desenvolvedor
+
+**Desenvolvido com 💜 por Michele Oliveira**
+- GitHub: [@micheleoliveiracod](https://github.com/micheleoliveiracod)
+- Email: [data.analystmlso@gmail.com](mailto:data.analystmlso@gmail.com)
+
+**Última atualização:**  19 de Julho de 2026
+
+---
+
+## 🤝 Contribuindo
+
+1. Crie uma branch para sua feature: `git checkout -b feature/sua-feature`
+2. Commit suas mudanças: `git commit -m 'feat: descrição da feature'`
+3. Push para a branch: `git push origin feature/sua-feature`
+4. Abra um Pull Request
+
+Consulte [GitFlow](specs/gitflow.md) para mais detalhes.
+
+---
+
+## 📄 Licença do Projeto
+
+Este projeto está licenciado sob a **Apache License 2.0**.

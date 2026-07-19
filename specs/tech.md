@@ -14,13 +14,14 @@ decisões de arquitetura por trás de cada escolha.
 | **langgraph-checkpoint-sqlite** | Checkpointer `SqliteSaver` — persiste o estado da investigação por `thread_id`, viabilizando pausa/retomada via API | 2.0+ |
 | **LangChain** | `init_chat_model` (seleção de provedor/modelo plugável), `@tool`, `with_fallbacks` | 0.3+ |
 | **langchain-google-genai** | Integração com Gemini — provedor oficial, gratuito, usado em testes e prototipagem | 2.0+ |
-| **langchain-anthropic** | Fallback de LLM (2º da cadeia), ativado se `ANTHROPIC_API_KEY` estiver configurada | 0.3+ |
-| **langchain-openai** | Fallback de LLM (3º da cadeia), ativado se `OPENAI_API_KEY` estiver configurada | 0.2+ |
+| **langchain-groq** | Fallback de LLM (2º da cadeia, Groq) — gratuito, ativado se `GROQ_API_KEY` estiver configurada | 0.2+ |
+| **langchain-anthropic** | Fallback de LLM (3º da cadeia), ativado se `ANTHROPIC_API_KEY` estiver configurada | 0.3+ |
+| **langchain-openai** | Fallback de LLM (4º da cadeia), ativado se `OPENAI_API_KEY` estiver configurada | 0.2+ |
 | **Pydantic** | Validação de schemas (`NaoConformidade`, `Diagnostico`, etc.) | 2.9+ |
-| **FastAPI** | API web local (lotes, investigação, aprovação) | 0.115+ |
+| **FastAPI** | API web local (lotes, investigação, ajuste de ciclo) | 0.115+ |
 | **Uvicorn** | Servidor ASGI | 0.32+ |
 | **Jinja2** | Template do relatório HTML | 3.1+ |
-| **SQLite** (`sqlite3`, stdlib) | Leitura de `data/biotecpredict.db` (real) e da fixture de teste; persistência do checkpointer | 3.x |
+| **SQLite** (`sqlite3`, stdlib) | Leitura de `data/biotecpredict.db` e da fixture de teste; persistência do checkpointer | 3.x |
 | **PyYAML** | Carga de `config/regras_bioprocesso.yaml` | 6.0+ |
 | **python-dotenv** | Carga de `.env` | 1.0+ |
 | **pytest** | Testes automatizados | 8.3+ |
@@ -53,7 +54,7 @@ gerência de estado (Redux/Zustand), sem TailwindCSS — CSS simples. A tela
 
 | Tecnologia | Papel | Versão |
 |---|---|---|
-| **Playwright** (`@playwright/test`) | Suíte E2E em `e2e/`, sobe backend + frontend via `webServer` e roda o fluxo completo no navegador (headless), local e no CI, mesmo comando | 1.48+ |
+| **Playwright** (`@playwright/test`) | Suíte E2E em `tests/e2e/`, sobe backend + frontend via `webServer` e roda o fluxo completo no navegador (headless), local e no CI, mesmo comando | 1.48+ |
 
 Sempre contra `tests/fixtures/biotecpredict_teste.db` e `LLM_PROVIDER=fake`
 — nunca contra `data/biotecpredict.db` nem um provedor real (custo e
@@ -66,8 +67,10 @@ determinismo no CI).
 `config.py::get_llm()` monta a cadeia principal + fallback:
 
 ```
-Gemini (LLM_PROVIDER/LLM_MODEL, oficial)
+Gemini (LLM_PROVIDER/LLM_MODEL, oficial, gratuito)
    ↓ falha (rede/rate limit/chave)
+Groq (só se GROQ_API_KEY estiver no .env — 2º provedor gratuito)
+   ↓ falha
 Anthropic (só se ANTHROPIC_API_KEY estiver no .env)
    ↓ falha
 OpenAI (só se OPENAI_API_KEY estiver no .env)
@@ -77,8 +80,10 @@ FalhaLLMError → API devolve HTTP 503
 
 Trocar o provedor principal = mudar `LLM_PROVIDER`/`LLM_MODEL` no `.env` +
 instalar o pacote de integração correspondente — não requer tocar em
-`nodes.py`/`graph.py`. Rodar só com a chave do Gemini (cenário de
-testes/prototipagem) continua funcionando sem exigir Anthropic/OpenAI.
+`nodes.py`/`graph.py`. Rodar só com a chave do Gemini (cenário mínimo de
+testes/prototipagem) continua funcionando sem exigir Groq/Anthropic/OpenAI;
+configurar `GROQ_API_KEY` permite testar o agente com um 2º LLM de verdade,
+também gratuito.
 
 ---
 
@@ -97,18 +102,20 @@ orquestrar_analise           → identifica categoria_principal
         ↓
 gerar_causa_raiz             → Diagnostico (Pydantic)
         ↓
-Revisão do operador          → aprovar | pedir ajuste
-        ↓
 reports.py                   → reports/{batch_id}_{ts}.json + .html
+        ↓
+Revisão do operador          → link do relatório já disponível | pedir ajuste
 ```
 
 ---
 
 ## Dataset
 
-**Fonte real:** exportação de uma instância real do
+**Fonte de demonstração:** `data/biotecpredict.db`, colocada manualmente,
+nunca versionada — montada a partir do dataset curado e versionado
+`data/simulacao_causa_raiz/csv/` (15 lotes), classificado pelo motor real do
 [BiotecPredict](https://github.com/micheleoliveiracod/Projeto-avaliativo-M1-2-BiotecPredict)
-(`data/biotecpredict.db`), colocada manualmente, nunca versionada.
+(`ComplianceService`/`MLModel`, não reimplementado por este projeto).
 
 **Fonte de teste:** `tests/fixtures/biotecpredict_teste.db` — fixture
 sintética e determinística, estática e versionada, mesmo schema, usada só
@@ -150,17 +157,16 @@ isso é um agente para a distinção completa.
   (`rodar_investigacao_com_respostas`), sem subir servidor, com 11
   respostas fornecidas (6 Ishikawa + 5 porquês); cobre também o caso de
   "pedir ajuste" gerando um segundo ciclo.
-- `test_config.py` — cadeia de fallback de LLM (Gemini → Anthropic →
+- `test_config.py` — cadeia de fallback de LLM (Gemini → Groq → Anthropic →
   OpenAI) com provedores mockados (`pytest-mock`), nunca uma chamada real;
   cobre o caso de todos os provedores configurados falhando (`FalhaLLMError`).
 - `test_backend.py` — rotas do `backend/main.py` via `TestClient`
   (`httpx`), com o grafo mockado onde precisa executar um nó agêntico; e o
   contrato `GET /openapi.json` validado com `openapi-spec-validator`.
 - `frontend/src/**/*.test.tsx` (Vitest + React Testing Library) — cada
-  componente principal (`ListaLotes`, `PerguntaAtual`, `RevisaoRespostas`,
-  `LinkRelatorio`) com pelo menos um teste de render e um de interação,
-  `api.ts` mockado.
-- `e2e/tests/*.spec.ts` (Playwright) — fluxo completo pelo navegador contra
+  componente principal (`ListaLotes`, `PerguntaAtual`, `RevisaoRespostas`)
+  com pelo menos um teste de render e um de interação, `api.ts` mockado.
+- `tests/e2e/tests/*.spec.ts` (Playwright) — fluxo completo pelo navegador contra
   backend + frontend reais (subidos pelo `webServer`), sempre com
   `LLM_PROVIDER=fake` e a fixture de teste.
 - SQLite local (arquivo, não in-memory) — não há necessidade de um padrão
