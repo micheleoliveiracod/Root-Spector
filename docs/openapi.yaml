@@ -1,0 +1,194 @@
+openapi: 3.1.0
+info:
+  title: Root-Spector API
+  description: API local que expõe o agente LangGraph do Root-Spector (investigação
+    de causa raiz de NC via Ishikawa + 5 Porquês). Contrato completo em `specs/design.md`
+    § Interface; diagrama do fluxo em `docs/diagrama-fluxo.md`.
+  version: 0.1.0
+paths:
+  /api/lotes:
+    get:
+      tags:
+      - lotes
+      summary: Listar lotes classificados pelo BiotecPredict
+      description: Lê `batches` (status COMPLETED, compliance_score não nulo) e devolve
+        cada lote com `classification` recalculada, `elegivel` (WARNING/CRITICAL)
+        e `parametros_fora_da_faixa` (calculado a partir de `sensor_readings`, vazio
+        para lotes ACCEPTABLE).
+      operationId: listar_lotes_api_lotes_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /api/investigacoes/{batch_id}/iniciar:
+    post:
+      tags:
+      - investigacoes
+      summary: Iniciar (ou retomar) a investigação de um lote
+      description: 'Cria/retoma o `thread_id` (= `batch_id`) e roda o grafo até o
+        primeiro `interrupt()`. Resposta: `{thread_id, fase: ''ishikawa'', categoria,
+        pergunta, nc: {...}}`. Devolve 503 (''Serviço de IA indisponível, recarregue
+        a página.'') se todos os provedores de LLM configurados falharem.'
+      operationId: iniciar_investigacao_api_investigacoes__batch_id__iniciar_post
+      parameters:
+      - name: batch_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Batch Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/investigacoes/{thread_id}/responder:
+    post:
+      tags:
+      - investigacoes
+      summary: Enviar a resposta do operador à pergunta atual
+      description: '`Command(resume=resposta)` — retoma o grafo a partir do `interrupt()`
+        pausado. Se ainda houver perguntas, devolve a próxima (`{thread_id, fase,
+        categoria|numero, pergunta, ...}`); ao concluir o 5º porquê, já gera `reports/*.json`+`.html`
+        e devolve `{thread_id, status: ''pronto_para_revisao''}`. Devolve 503 (''Serviço
+        de IA indisponível, recarregue a página.'') se todos os provedores de LLM
+        configurados falharem.'
+      operationId: responder_api_investigacoes__thread_id__responder_post
+      parameters:
+      - name: thread_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Thread Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RespostaOperador'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/investigacoes/{thread_id}/revisao:
+    get:
+      tags:
+      - investigacoes
+      summary: Consultar o diagnóstico concluído para revisão
+      description: Devolve a cadeia Ishikawa + 5 Porquês, `categoria_principal`, `categorias_descartadas`,
+        `causa_raiz`, `narrativa` e os links `relatorio.json`/`relatorio.html` já
+        gerados. Devolve 400 se o ciclo ainda não chegou à revisão (5º porquê ainda
+        não respondido).
+      operationId: revisao_api_investigacoes__thread_id__revisao_get
+      parameters:
+      - name: thread_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Thread Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/investigacoes/{thread_id}/ajustar:
+    post:
+      tags:
+      - investigacoes
+      summary: Pedir ajuste — arquivar o ciclo atual e reabrir um novo
+      description: Move o diagnóstico atual para `ciclos_anteriores` (auditoria, nunca
+        sobrescrito) e reinicia o grafo para o mesmo `batch_id`, devolvendo a 1ª pergunta
+        do novo ciclo Ishikawa (mesmo formato de `iniciar`). Devolve 400 se não houver
+        diagnóstico em revisão.
+      operationId: ajustar_api_investigacoes__thread_id__ajustar_post
+      parameters:
+      - name: thread_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Thread Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+components:
+  schemas:
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    RespostaOperador:
+      properties:
+        resposta:
+          type: string
+          title: Resposta
+      type: object
+      required:
+      - resposta
+      title: RespostaOperador
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
