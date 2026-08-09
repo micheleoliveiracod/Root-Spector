@@ -319,7 +319,7 @@ Ver seção correspondente em `specs/design.md`.
 
 ---
 
-## 👨‍💻 Desenvolvedor
+## 👩‍💻🪄 Desenvolvedora
 
 **Desenvolvido com 💜 por Michele Oliveira**
 - GitHub: [@micheleoliveiracod](https://github.com/micheleoliveiracod)
