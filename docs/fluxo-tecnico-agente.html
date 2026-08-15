@@ -1,0 +1,373 @@
+<title>Root-Spector — Fluxo técnico do agente</title>
+<style>
+  :root {
+    --paper: #F3F6F5; --paper-raised: #FFFFFF; --ink: #14201F; --ink-soft: #47534F;
+    --line: #D8E0DD; --accent: #0E8A82; --accent-ink: #08514C; --accent-soft: #E1F1EE;
+    --gap: #B4402F; --gap-soft: #FBEAE6; --gap-ink: #8C2F22;
+    --shadow: 0 1px 2px rgba(20,33,32,0.06), 0 6px 18px rgba(20,33,32,0.05);
+  }
+  :root[data-theme="dark"] {
+    --paper: #10171A; --paper-raised: #16201F; --ink: #E7EDEA; --ink-soft: #A7B4AF;
+    --line: #253230; --accent: #38B4A9; --accent-ink: #9BE0D6; --accent-soft: #12302D;
+    --gap: #E0796A; --gap-soft: #2E1D1A; --gap-ink: #F0A296;
+    --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 6px 18px rgba(0,0,0,0.35);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #10171A; --paper-raised: #16201F; --ink: #E7EDEA; --ink-soft: #A7B4AF;
+      --line: #253230; --accent: #38B4A9; --accent-ink: #9BE0D6; --accent-soft: #12302D;
+      --gap: #E0796A; --gap-soft: #2E1D1A; --gap-ink: #F0A296;
+      --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 6px 18px rgba(0,0,0,0.35);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 980px; margin: 0 auto; padding: 40px 24px 90px; display: flex; flex-direction: column; gap: 28px; }
+
+  header.masthead { display: flex; flex-direction: column; gap: 8px; }
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-ink); margin: 0;
+  }
+  h1 {
+    font-family: Charter, "Iowan Old Style", Georgia, serif;
+    font-size: clamp(24px, 3.4vw, 32px); margin: 0; text-wrap: balance; letter-spacing: -0.01em;
+  }
+  .dek { font-size: 15.5px; line-height: 1.6; color: var(--ink-soft); max-width: 72ch; margin: 4px 0 0; }
+
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+    padding: 12px 16px; background: var(--paper-raised); border: 1px solid var(--line);
+    border-radius: 10px; font-size: 12.5px; color: var(--ink-soft);
+  }
+  .legend .item { display: flex; align-items: center; gap: 7px; }
+  .legend .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+
+  .flow { display: flex; flex-direction: column; align-items: stretch; }
+
+  .node {
+    position: relative; background: var(--paper-raised); border: 1.5px solid var(--line);
+    border-radius: 12px; padding: 16px 18px; box-shadow: var(--shadow);
+  }
+  .node.det { border-left: 4px solid var(--ink-soft); }
+  .node.agent { border-left: 4px solid var(--accent); }
+  .node.human { border-left: 4px solid #B4842A; }
+  .node.tool { border-left: 4px solid #3B6FB0; }
+
+  .node-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .node-tag {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 700;
+  }
+  .node.det .node-tag { color: var(--ink-soft); }
+  .node.agent .node-tag { color: var(--accent-ink); }
+  .node.human .node-tag { color: #B4842A; }
+  .node.tool .node-tag { color: #3B6FB0; }
+  .node-name { font-weight: 800; font-size: 16px; margin-top: 2px; }
+  .node-desc { font-size: 13px; color: var(--ink-soft); line-height: 1.5; margin-top: 6px; }
+
+  .io-row { display: flex; gap: 18px; margin-top: 10px; flex-wrap: wrap; }
+  .io { font-size: 11.5px; }
+  .io b {
+    display: block; font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 9.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 3px;
+  }
+  .io code {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace; font-size: 11.5px;
+    background: var(--accent-soft); color: var(--accent-ink); padding: 1px 5px; border-radius: 4px;
+  }
+
+  .gap-badge {
+    display: inline-flex; align-items: center; gap: 5px; font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 10px; letter-spacing: 0.02em; font-weight: 700; color: var(--gap-ink);
+    background: var(--gap-soft); border: 1px solid var(--gap); padding: 3px 9px; border-radius: 100px;
+  }
+  .gap-note {
+    margin-top: 10px; padding: 9px 12px; background: var(--gap-soft); border-left: 3px solid var(--gap);
+    border-radius: 6px; font-size: 12px; color: var(--gap-ink); line-height: 1.5;
+  }
+  .resolved-badge {
+    display: inline-flex; align-items: center; gap: 5px; font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 10px; letter-spacing: 0.02em; font-weight: 700; color: #226A45;
+    background: #E4F2E9; border: 1px solid #2E8F5C; padding: 3px 9px; border-radius: 100px;
+  }
+  .resolved-note {
+    margin-top: 10px; padding: 9px 12px; background: #E4F2E9; border-left: 3px solid #2E8F5C;
+    border-radius: 6px; font-size: 12px; color: #1D5137; line-height: 1.5;
+  }
+
+  .connector { display: flex; align-items: center; justify-content: center; height: 26px; color: var(--ink-soft); }
+  .connector.branch { flex-direction: column; height: auto; padding: 6px 0; gap: 2px; }
+  .connector .lbl {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace; font-size: 10.5px; color: var(--ink-soft);
+  }
+
+  .loop-wrap {
+    border: 1.6px dashed var(--accent); border-radius: 16px; padding: 18px; margin: 4px 0;
+    background: color-mix(in srgb, var(--accent-soft) 55%, var(--paper-raised));
+    display: flex; flex-direction: column; gap: 0; position: relative;
+  }
+  .loop-title {
+    position: absolute; top: -11px; left: 16px; background: var(--paper);
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent-ink); padding: 0 8px;
+  }
+
+  .side-by-side { display: flex; gap: 14px; align-items: stretch; }
+  .side-by-side > .node { flex: 1; }
+
+  .gate {
+    align-self: center; width: 100px; height: 100px; transform: rotate(45deg);
+    border: 2px solid var(--ink-soft); border-radius: 10px; background: var(--paper-raised);
+    display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow);
+  }
+  .gate span { transform: rotate(-45deg); text-align: center; font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700; line-height: 1.3; padding: 8px; }
+
+  footer.credit {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 11px; color: var(--ink-soft); text-align: center; margin-top: 10px;
+  }
+
+  .gaps-summary {
+    border: 1.5px solid var(--gap); border-radius: 12px; padding: 18px 20px; background: var(--gap-soft);
+  }
+  .gaps-summary h2 { margin: 0 0 12px; font-size: 16px; color: var(--gap-ink); }
+  .gaps-summary ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+  .gaps-summary li { font-size: 13.5px; line-height: 1.55; color: var(--ink); }
+  .gaps-summary li b { color: var(--gap-ink); }
+
+  @media (max-width: 640px) {
+    .side-by-side { flex-direction: column; }
+    .io-row { flex-direction: column; gap: 8px; }
+  }
+</style>
+
+<div class="page">
+
+  <header class="masthead">
+    <p class="eyebrow">Root-Spector · fluxo técnico do agente</p>
+    <h1>Como o grafo funciona, nó a nó</h1>
+    <p class="dek">O que cada nó lê e escreve no estado — e, marcados em vermelho, os pontos que ainda não têm comportamento definido. Reflete a arquitetura de plataforma web (FastAPI + React, <code>interrupt()</code> + checkpointer), não mais CLI. Serve pra revisar antes de codar.</p>
+  </header>
+
+  <div class="legend">
+    <div class="item"><span class="dot" style="background:var(--ink-soft)"></span>determinístico</div>
+    <div class="item"><span class="dot" style="background:var(--accent)"></span>agêntico (LLM)</div>
+    <div class="item"><span class="dot" style="background:#3B6FB0"></span>ferramenta</div>
+    <div class="item"><span class="dot" style="background:#B4842A"></span>human-in-the-loop</div>
+    <div class="item" style="margin-left:auto;"><span class="gap-badge">⚠ em aberto</span> = comportamento ainda não decidido</div>
+  </div>
+
+  <div class="resolved-note" style="margin: 0;">
+    <span class="resolved-badge">✓ arquitetura</span> o grafo é compilado com um <b>checkpointer</b> (<code>SqliteSaver</code>, <code>data/checkpoints.db</code>), persistindo o estado por <code>thread_id</code> (= sessão associada ao lote). <code>perguntar_operador</code> chama <code>interrupt(...)</code> em vez de <code>input()</code> bloqueante — pausa o grafo e devolve o controle pra API, que retoma com <code>graph.invoke(Command(resume=resposta), config={"configurable": {"thread_id": ...}})</code>. Isso troca "uma execução síncrona" por "uma invocação curta por resposta do operador", o padrão que uma API request/response exige.
+  </div>
+
+  <div class="flow">
+
+    <div class="node det">
+      <div class="node-head">
+        <div><div class="node-tag">entrada</div><div class="node-name">Interface web: operador escolhe o lote na lista</div></div>
+      </div>
+      <div class="node-desc"><code>GET /api/lotes</code> lista todos os lotes de <code>data/biotecpredict.db</code> (<code>status='COMPLETED'</code>), destacando os elegíveis (<code>classification</code> WARNING/CRITICAL). O operador clica um lote elegível → <code>POST /api/investigacoes/{batch_id}/iniciar</code> cria o <code>thread_id</code> e roda o grafo até o 1º <code>interrupt</code>.</div>
+      <div class="resolved-note"><span class="resolved-badge">✓ resolvido</span> a antiga dúvida "e se não houver lote elegível?" (do design em CLI) some com a interface web: a lista sempre é exibida, com os elegíveis destacados; se nenhum for elegível, o operador simplesmente não tem o que selecionar — não há caminho de erro a tratar, é um estado natural da lista.</div>
+    </div>
+
+    <div class="connector"><svg width="18" height="24" viewBox="0 0 18 24"><path d="M9 0V18M2 12L9 20L16 12" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+    <div class="node det">
+      <div class="node-head"><div><div class="node-tag">nó · preparar_contexto</div><div class="node-name">preparar_contexto</div></div></div>
+      <div class="node-desc"><code>SELECT</code> em <code>batches</code>; calcula <code>sensor_metrics</code> a partir de <code>sensor_readings</code>; compara contra <code>config/regras_bioprocesso.yaml</code> pra achar <code>parametros_fora_da_faixa</code>; monta a <code>NaoConformidade</code>.</div>
+      <div class="io-row">
+        <div class="io"><b>lê</b>banco SQLite, config YAML</div>
+        <div class="io"><b>escreve no estado</b><code>nc_input</code>, <code>regras_setor</code>, <code>cadeia_porques=[]</code>, <code>numero_porque=1</code></div>
+      </div>
+      <div class="resolved-note"><span class="resolved-badge">✓ resolvido</span> qual parâmetro vira o foco não é mais a questão certa — antes de qualquer "por quê", o agente mapeia o contexto com Ishikawa (6 categorias) e só depois aprofunda na categoria identificada. Ver fases abaixo.</div>
+    </div>
+
+    <div class="connector"><svg width="18" height="24" viewBox="0 0 18 24"><path d="M9 0V18M2 12L9 20L16 12" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+    <div class="loop-wrap">
+      <span class="loop-title">↻ Fase 1 — mapeamento Ishikawa — repete exatamente 6x (uma por categoria)</span>
+
+      <div class="node agent" style="margin-bottom:14px;">
+        <div class="node-head"><div><div class="node-tag">nó · agêntico</div><div class="node-name">formular_pergunta_ishikawa</div></div></div>
+        <div class="node-desc">Formula a pergunta de contexto da <code>categoria_atual</code> (Método → Máquina → Material → Mão de obra → Meio ambiente → Medição, sempre nesta ordem) — não pergunta sobre o parâmetro fora da faixa diretamente. Pode chamar a tool.</div>
+        <div class="io-row">
+          <div class="io"><b>lê</b><code>nc_input</code>, <code>regras_setor</code>, <code>respostas_ishikawa</code>, <code>messages</code></div>
+          <div class="io"><b>escreve</b><code>pergunta_atual</code>, <code>messages</code> (+tool_calls, se houver)</div>
+        </div>
+      </div>
+
+      <div class="gate" style="width:76px;height:76px;margin:0 auto 14px;"><span>tool_calls?</span></div>
+
+      <div class="side-by-side" style="margin-bottom:6px;">
+        <div class="node tool">
+          <div class="node-head"><div><div class="node-tag">sim → ferramenta</div><div class="node-name">usar_ferramenta</div></div></div>
+          <div class="node-desc"><code>consultar_leituras_biosensor(data_inicio, data_fim)</code> — <code>batch_id</code> injetado do estado (<code>InjectedState</code>), não escolhido pelo LLM; datas validadas (ISO, início ≤ fim). No máx. 1x por categoria.</div>
+          <div class="io-row">
+            <div class="io"><b>lê</b><code>sensor_readings</code> (SQLite)</div>
+            <div class="io"><b>escreve</b><code>messages</code> (tool result) → volta pro formular_pergunta_ishikawa</div>
+          </div>
+        </div>
+        <div class="node human">
+          <div class="node-head"><div><div class="node-tag">não → human-in-the-loop</div><div class="node-name">perguntar_operador</div></div></div>
+          <div class="node-desc">Mostra <code>pergunta_atual</code> na tela; chama <code>interrupt({"pergunta": ..., "fase": "ishikawa"})</code>, pausando o grafo — a API devolve a pergunta ao frontend e retoma via <code>Command(resume=resposta)</code> quando o operador responde. Reusado na Fase 2.</div>
+          <div class="io-row">
+            <div class="io"><b>lê</b><code>pergunta_atual</code></div>
+            <div class="io"><b>escreve</b><code>tentativas_pergunta_atual</code> (+1, se passar na Camada 1)</div>
+          </div>
+          <div class="resolved-note"><span class="resolved-badge">✓ resolvido</span> <b>Camada 1 (determinística):</b> <code>tools.py::validar_resposta_operador</code> rejeita vazio/só espaço e uma lista fixa de frases evasivas ("não sei", "sei lá", "não lembro", etc. — não "sim"/"não" isolados). Se rejeitada: <code>interrupt()</code> de novo com "Este tipo de resposta não é aceito", sem avançar o grafo e sem contar como tentativa (tentativas ilimitadas nesta camada — é validação de formato, não uma resposta real). Função Python simples, não uma <code>@tool</code> do LLM: não exige julgamento de modelo.</div>
+        </div>
+      </div>
+
+      <div class="connector"><svg width="18" height="24" viewBox="0 0 18 24"><path d="M9 0V18M2 12L9 20L16 12" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+      <div class="node agent" style="margin-bottom:10px;">
+        <div class="node-head"><div><div class="node-tag">nó · agêntico</div><div class="node-name">avaliar_informatividade</div></div></div>
+        <div class="node-desc">Lê <code>pergunta_atual</code> + a última entrada de <code>tentativas_pergunta_atual</code> e julga se a resposta de fato informa a pergunta (fugir do assunto, ser vaga/contraditória mesmo sem ser um "não sei" literal) — exige o LLM, não é regra fixa.</div>
+        <div class="io-row">
+          <div class="io"><b>lê</b><code>pergunta_atual</code>, <code>tentativas_pergunta_atual</code></div>
+          <div class="io"><b>escreve</b><code>respostas_ishikawa</code> (+1, com <code>tentativas</code>/<code>informativa</code>), avança <code>categoria_atual</code></div>
+        </div>
+        <div class="resolved-note"><span class="resolved-badge">✓ resolvido</span> <b>Camada 2 (julgamento, no máx. 2 tentativas):</b> informativa → grava e avança. Não informativa e é a 1ª tentativa → sinaliza ao operador na tela e volta pro <code>perguntar_operador</code> com a mesma pergunta (2ª e última chance). Não informativa e é a 2ª tentativa → desiste: grava as 2 tentativas com <code>informativa=False</code> e segue mesmo assim.</div>
+      </div>
+
+      <div class="connector branch">
+        <span class="lbl">não informativa, 1ª tentativa → volta pro perguntar_operador (mesma pergunta)</span>
+      </div>
+
+      <div class="connector branch">
+        <span class="lbl">informativa OU 2ª tentativa esgotada → ainda falta categoria? sim → volta pro formular_pergunta_ishikawa (próxima categoria)</span>
+      </div>
+    </div>
+
+    <div class="connector"><span class="lbl">6/6 categorias respondidas</span></div>
+
+    <div class="node agent">
+      <div class="node-head"><div><div class="node-tag">nó · agêntico · "orquestrador"</div><div class="node-name">orquestrar_analise</div></div></div>
+      <div class="node-desc">Analisa as 6 respostas do Ishikawa, identifica <code>categoria_principal</code> (com justificativa) e <code>categorias_descartadas</code> (com motivo), verificando inconsistências entre respostas.</div>
+      <div class="io-row">
+        <div class="io"><b>lê</b><code>respostas_ishikawa</code>, <code>nc_input</code></div>
+        <div class="io"><b>escreve</b><code>categoria_principal</code>, <code>categorias_descartadas</code></div>
+      </div>
+    </div>
+
+    <div class="connector"><svg width="18" height="24" viewBox="0 0 18 24"><path d="M9 0V18M2 12L9 20L16 12" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+    <div class="loop-wrap">
+      <span class="loop-title">↻ Fase 2 — 5 porquês, ancorado em categoria_principal — repete exatamente 5x</span>
+
+      <div class="node agent" style="margin-bottom:14px;">
+        <div class="node-head"><div><div class="node-tag">nó · agêntico</div><div class="node-name">formular_porque</div></div></div>
+        <div class="node-desc">1ª iteração: pergunta ancorada em <code>categoria_principal</code> (não no parâmetro cru). 2ª–5ª: pergunta com base na resposta anterior do operador. Pode chamar a tool.</div>
+        <div class="io-row">
+          <div class="io"><b>lê</b><code>nc_input</code>, <code>categoria_principal</code>, <code>cadeia_porques</code>, <code>messages</code></div>
+          <div class="io"><b>escreve</b><code>pergunta_atual</code>, <code>messages</code> (+tool_calls, se houver)</div>
+        </div>
+        <div class="resolved-note"><span class="resolved-badge">✓ resolvido</span> resposta "não sei"/vaga não é mais um caso não especificado — passa pela mesma validação em duas camadas de <code>perguntar_operador</code>/<code>avaliar_informatividade</code> descrita na Fase 1 (reusada aqui).</div>
+      </div>
+
+      <div class="gate" style="width:76px;height:76px;margin:0 auto 14px;"><span>tool_calls?</span></div>
+
+      <div class="side-by-side" style="margin-bottom:6px;">
+        <div class="node tool">
+          <div class="node-head"><div><div class="node-tag">sim → ferramenta</div><div class="node-name">usar_ferramenta</div></div></div>
+          <div class="node-desc"><code>consultar_leituras_biosensor(data_inicio, data_fim)</code> — mesma injeção de <code>batch_id</code> e validação de datas da Fase 1. No máx. 1x por porquê.</div>
+          <div class="io-row">
+            <div class="io"><b>lê</b><code>sensor_readings</code> (SQLite)</div>
+            <div class="io"><b>escreve</b><code>messages</code> (tool result) → volta pro formular_porque</div>
+          </div>
+        </div>
+        <div class="node human">
+          <div class="node-head"><div><div class="node-tag">não → human-in-the-loop</div><div class="node-name">perguntar_operador</div></div></div>
+          <div class="node-desc">Mesmo nó da Fase 1 (mesmo <code>interrupt()</code>/retomada, mesma Camada 1); aqui a Camada 2 (<code>avaliar_informatividade</code>) grava em <code>cadeia_porques</code>.</div>
+          <div class="io-row">
+            <div class="io"><b>lê</b><code>pergunta_atual</code></div>
+            <div class="io"><b>escreve</b><code>tentativas_pergunta_atual</code> (+1, se passar na Camada 1)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="connector"><svg width="18" height="24" viewBox="0 0 18 24"><path d="M9 0V18M2 12L9 20L16 12" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+      <div class="node agent" style="margin-bottom:10px;">
+        <div class="node-head"><div><div class="node-tag">nó · agêntico</div><div class="node-name">avaliar_informatividade</div></div></div>
+        <div class="node-desc">Mesmo nó/mesma regra da Fase 1 — no máx. 2 tentativas por porquê.</div>
+        <div class="io-row">
+          <div class="io"><b>escreve</b><code>cadeia_porques</code> (+1, com <code>tentativas</code>/<code>informativa</code>), <code>numero_porque += 1</code></div>
+        </div>
+      </div>
+
+      <div class="connector branch">
+        <span class="lbl">não informativa, 1ª tentativa → volta pro perguntar_operador (mesma pergunta)</span>
+      </div>
+
+      <div class="connector branch">
+        <span class="lbl">informativa OU 2ª tentativa esgotada → numero_porque ≤ 5 → volta pro formular_porque (próximo porquê)</span>
+      </div>
+    </div>
+
+    <div class="connector"><span class="lbl">numero_porque &gt; 5 (5ª resposta já registrada)</span></div>
+
+    <div class="node agent">
+      <div class="node-head"><div><div class="node-tag">nó · agêntico · "relatório"</div><div class="node-name">gerar_causa_raiz</div></div></div>
+      <div class="node-desc">Sintetiza <code>respostas_ishikawa</code> + <code>categoria_principal</code> + <code>categorias_descartadas</code> + <code>cadeia_porques</code> em <code>causa_raiz</code> + narrativa, estruturado por categoria; valida contra o schema <code>Diagnostico</code>.</div>
+      <div class="io-row">
+        <div class="io"><b>lê</b><code>nc_input</code>, <code>respostas_ishikawa</code>, <code>categoria_principal</code>, <code>categorias_descartadas</code>, <code>cadeia_porques</code></div>
+        <div class="io"><b>escreve</b><code>diagnostico</code> (ainda não salvo em arquivo — isso só acontece se o operador aprovar, ver abaixo)</div>
+      </div>
+      <div class="resolved-note"><span class="resolved-badge">✓ resolvido</span> formato e nome do arquivo decididos: <code>reports/{batch_id}_{timestamp}.json</code> (consumo por máquina) + <code>.html</code> (leitura humana, via Jinja2), gerados por <code>reports.py</code> — só no momento da aprovação, não aqui.</div>
+    </div>
+
+    <div class="connector"><svg width="18" height="24" viewBox="0 0 18 24"><path d="M9 0V18M2 12L9 20L16 12" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+    <div class="node human">
+      <div class="node-head"><div><div class="node-tag">human-in-the-loop</div><div class="node-name">Revisão do operador (API)</div></div></div>
+      <div class="node-desc"><code>GET /api/investigacoes/{thread_id}/revisao</code> devolve a cadeia completa (6 respostas Ishikawa + 5 porquês + <code>diagnostico</code> rascunhado) pro frontend exibir antes de qualquer arquivo ser gravado.</div>
+    </div>
+
+    <div class="gate" style="width:96px;height:96px;margin:6px auto;"><span>aprovar ou pedir ajuste?</span></div>
+
+    <div class="side-by-side" style="margin-bottom:6px;">
+      <div class="node det">
+        <div class="node-head"><div><div class="node-tag">aprovar</div><div class="node-name">Publica o relatório</div></div></div>
+        <div class="node-desc"><code>POST /api/investigacoes/{thread_id}/aprovar</code> — salva <code>reports/{batch_id}_{ts}.json</code> + <code>.html</code>, devolve os links ao operador. Fim do ciclo.</div>
+      </div>
+      <div class="node det">
+        <div class="node-head"><div><div class="node-tag">pedir ajuste</div><div class="node-name">Reabre um novo ciclo</div></div></div>
+        <div class="node-desc"><code>POST /api/investigacoes/{thread_id}/ajustar</code> — arquiva o ciclo atual (perguntas, respostas, diagnóstico) em <code>ciclos_anteriores</code>, e reinicia a partir de <code>preparar_contexto</code> (6 Ishikawa + 5 porquês de novo) para o mesmo lote.</div>
+      </div>
+    </div>
+
+    <div class="connector"><span class="lbl">pedir ajuste → volta pro topo (preparar_contexto), ciclo anterior preservado em ciclos_anteriores</span></div>
+
+    <div class="node det">
+      <div class="node-head"><div><div class="node-tag">saída</div><div class="node-name">Relatório de causa raiz (JSON + HTML)</div></div></div>
+      <div class="node-desc">Diagnóstico final aprovado, salvo em <code>reports/</code>; link exibido ao operador. Se houve "pedir ajuste", o relatório final referencia os <code>ciclos_anteriores</code> pra auditoria.</div>
+      <div class="resolved-note"><span class="resolved-badge">✓ resolvido</span> falha na chamada ao LLM (rede, rate limit, chave inválida/ausente): <code>config.py::get_llm()</code> já tenta um fallback em cadeia — Gemini (oficial, gratuito, testes/prototipagem) → Anthropic → OpenAI, cada camada só ativa se a respectiva chave estiver no <code>.env</code>. Só se todos os provedores configurados falharem é que o nó captura a falha e relança <code>FalhaLLMError</code>; <code>api.py</code> traduz isso em HTTP 503 com "Serviço de IA indisponível, recarregue a página." — sem retry automático em loop, a mensagem persiste até o operador recarregar mais tarde. Como o checkpointer só grava progresso após um nó terminar com sucesso, o <code>thread_id</code> fica naturalmente pausado no último ponto bem-sucedido — recarregar e repetir a ação resume dali, sem perder nada.</div>
+    </div>
+
+  </div>
+
+  <div class="gaps-summary">
+    <h2>Resumo dos pontos em aberto (0, + 8 resolvidos)</h2>
+    <ol style="opacity:0.6;"><li>Nenhum ponto em aberto no momento — todos os pontos identificados neste mapa já têm comportamento decidido (ver histórico de resoluções abaixo). O que falta é implementar (<code>nodes.py</code>/<code>graph.py</code>/<code>api.py</code> seguem stub), não decidir.</li></ol>
+    <p style="margin: 14px 0 0; font-size: 12.5px; color: #1D5137;"><span class="resolved-badge">✓ resolvido</span> "validação da entrada da própria ferramenta" — <code>batch_id</code> deixou de ser argumento do LLM: vem injetado do estado (<code>nc_input.batch_id</code>) via <code>Annotated[AgentState, InjectedState]</code>, travando a consulta no lote sob investigação. <code>data_inicio</code>/<code>data_fim</code> validadas com <code>datetime.fromisoformat(...)</code> — formato inválido ou janela invertida devolve erro claro ao LLM, não mais uma busca silenciosa sem resultado.</p>
+    <p style="margin: 6px 0 0; font-size: 12.5px; color: #1D5137;"><span class="resolved-badge">✓ resolvido</span> "múltiplos parâmetros fora da faixa, qual vira a 1ª pergunta" — Fase 1 (Ishikawa) mapeia contexto por categoria antes de qualquer "por quê".</p>
+    <p style="margin: 6px 0 0; font-size: 12.5px; color: #1D5137;"><span class="resolved-badge">✓ resolvido</span> "CLI sem lote elegível" — vira lista web sempre visível, sem caminho de erro a tratar.</p>
+    <p style="margin: 6px 0 0; font-size: 12.5px; color: #1D5137;"><span class="resolved-badge">✓ resolvido</span> "<code>input()</code> bloqueante" — vira <code>interrupt()</code> + checkpointer (<code>SqliteSaver</code>) + <code>Command(resume=...)</code>, compatível com uma API web.</p>
+    <p style="margin: 6px 0 0; font-size: 12.5px; color: #1D5137;"><span class="resolved-badge">✓ resolvido</span> "formato/nome do relatório" — JSON + HTML (Jinja2), <code>reports/{batch_id}_{ts}.{json,html}</code>, gerado só na aprovação; "pedir ajuste" preserva o ciclo anterior em <code>ciclos_anteriores</code>.</p>
+    <p style="margin: 6px 0 0; font-size: 12.5px; color: #1D5137;"><span class="resolved-badge">✓ resolvido</span> "resposta vazia/evasiva não validada" — Camada 1 determinística (<code>validar_resposta_operador</code>) rejeita vazio/frases evasivas fixas antes de a resposta virar uma tentativa, com alerta "Este tipo de resposta não é aceito".</p>
+    <p style="margin: 6px 0 0; font-size: 12.5px; color: #1D5137;"><span class="resolved-badge">✓ resolvido</span> "resposta vaga/não informativa não tratada" — Camada 2 agêntica (novo nó <code>avaliar_informatividade</code>) julga informatividade, dá até 2 tentativas por pergunta, sinaliza o operador e segue registrando as 2 tentativas se a 2ª também falhar.</p>
+    <p style="margin: 6px 0 0; font-size: 12.5px; color: #1D5137;"><span class="resolved-badge">✓ resolvido</span> "falha na chamada ao LLM sem tratamento" — <code>FalhaLLMError</code> por nó + HTTP 503 na API + checkpoint naturalmente pausado pra retry, sem lógica extra de "salvar progresso".</p>
+    <p style="margin: 12px 0 0; font-size: 12px; color: var(--ink-soft);">Nota: os testes (<code>test_graph.py</code> via harness de <code>main.py</code>, <code>Command(resume=...)</code> com 11 respostas fixas) têm mecanismo decidido — o que falta é escrever o código, não decidir o comportamento (não é mais um gap de design, ver tarefa #48).</p>
+  </div>
+
+  <footer class="credit">root-spector · fluxo técnico do agente · gerado a partir de specs/design.md (revisão: plataforma web + interrupt/checkpointer + loop de aprovação)</footer>
+
+</div>

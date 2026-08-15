@@ -1,0 +1,314 @@
+@import "./styles/tokens.css";
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 48px 24px 96px;
+}
+
+.masthead {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 36px;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  margin: 0;
+}
+
+h1 {
+  font-family: var(--font-serif);
+  font-size: clamp(26px, 3.6vw, 34px);
+  line-height: 1.15;
+  margin: 0;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+h2 {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  margin: 0 0 4px;
+  letter-spacing: -0.005em;
+}
+
+h3 {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: 28px 0 10px;
+}
+
+p {
+  line-height: 1.55;
+}
+
+.dek {
+  font-size: 15px;
+  color: var(--ink-soft);
+  margin: 4px 0 0;
+  max-width: 60ch;
+}
+
+.card {
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px 26px;
+}
+
+.card + .card {
+  margin-top: 16px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* tabela de lotes */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 14px;
+}
+
+thead th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-weight: 600;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* badges de status -- sempre em tons pastel */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  padding: 3px 9px;
+  border-radius: 100px;
+  white-space: nowrap;
+}
+
+.badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.badge--ok {
+  background: var(--ok-bg);
+  color: var(--ok-fg);
+}
+
+.badge--warn {
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+}
+
+.badge--critical {
+  background: var(--critical-bg);
+  color: var(--critical-fg);
+}
+
+.badge--neutral {
+  background: var(--neutral-bg);
+  color: var(--neutral-fg);
+}
+
+.muted {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+/* callout de causa raiz / destaque */
+.callout {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+
+.alert {
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.alert--critical {
+  background: var(--critical-bg);
+  color: var(--critical-fg);
+}
+
+/* listas de perguntas/respostas */
+.qa-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.qa-list li {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.qa-list .categoria {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  display: block;
+  margin-bottom: 2px;
+}
+
+/* formulário de resposta */
+textarea {
+  width: 100%;
+  font: inherit;
+  font-size: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper-raised);
+  color: var(--ink);
+  resize: vertical;
+}
+
+textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* botões */
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+button {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 9px 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+button.secondary {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+/* indicador de processamento -- chamadas ao LLM podem levar bom tempo;
+   sem isso a tela parece travada durante a espera */
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink-soft);
+  font-size: 13.5px;
+  margin-top: 14px;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* links de relatório */
+.report-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 16px 0 22px;
+}
+
+.report-links a {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+  padding: 8px 14px;
+  border-radius: 100px;
+  text-decoration: none;
+}
+
+.report-links a:hover {
+  text-decoration: underline;
+}

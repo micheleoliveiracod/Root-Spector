@@ -1,0 +1,80 @@
+# Regras do setor: bioprocessos / producao de bioinsumos.
+#
+# Para adaptar este agente a outro setor produtivo, troque este arquivo
+# (mantendo a mesma estrutura de chaves) -- o motor em root_cause_agent/
+# nao muda. Ver specs/design.md.
+
+# Thresholds de classification do compliance_score, replicando fielmente
+# ComplianceService._classify_score() do BiotecPredict
+# (backend/services/compliance_service.py, linhas ~84-90 -- o codigo que
+# roda de fato, nao a docstring desatualizada que dizia "WARNING 60-79").
+# classification NAO e uma coluna do banco: o agente recalcula a partir de
+# compliance_score usando estas faixas.
+classification_thresholds:
+  acceptable_min: 80
+  warning_min: 45
+  # abaixo de warning_min = CRITICAL
+
+# Faixas por parametro de biosensor, em dois niveis, espelhando os campos
+# reais ideal_min/ideal_max/min_value/max_value de get_sensor_metrics() do
+# BiotecPredict. "ideal" = otimo; "aceitavel" = tolerable (fora disso conta
+# como parametro_fora_da_faixa).
+#
+# Recalibradas em 2026-07-19 a partir do dataset real
+# data/simulacao_causa_raiz/csv/ (5 lotes aprovados/ideais + 10 lotes com
+# desvio de causa unica, gerados por gerar_dataset.py e validados contra o
+# ComplianceService/MLModel reais do BiotecPredict -- ver README daquela
+# pasta). "ideal" = faixa observada nos 5 lotes aprovados (so ruido normal
+# de processo); "aceitavel" = ideal com margem, larga o suficiente pra
+# nunca marcar um lote aprovado como fora da faixa, e ainda assim estreita
+# o bastante pra capturar o desvio injetado em cada um dos 10 lotes de
+# desvio (conferido lote a lote).
+parametros_biosensor:
+  temperature:
+    unidade: "C"
+    ideal_min: 24.5
+    ideal_max: 25.5
+    aceitavel_min: 22.5
+    aceitavel_max: 27.5
+  ph:
+    unidade: ""
+    ideal_min: 6.9
+    ideal_max: 7.1
+    aceitavel_min: 6.6
+    aceitavel_max: 7.4
+  dissolved_oxygen:
+    unidade: "%"
+    ideal_min: 79.0
+    ideal_max: 90.0
+    aceitavel_min: 69.0
+    aceitavel_max: 100.0
+  pressure:
+    unidade: "bar"
+    ideal_min: 5.0
+    ideal_max: 5.3
+    aceitavel_min: 4.5
+    aceitavel_max: 5.8
+  agitator_speed:
+    unidade: "RPM"
+    ideal_min: 238.0
+    ideal_max: 268.0
+    aceitavel_min: 208.0
+    aceitavel_max: 298.0
+
+# As 6 categorias do diagrama de Ishikawa (6M), sempre perguntadas nesta
+# ordem (Fase 1 da investigacao). "pergunta_modelo" e o ponto de partida
+# que formular_pergunta_ishikawa adapta ao contexto especifico da NC --
+# nao e repetida literalmente.
+categorias_ishikawa:
+  - categoria: "Metodo"
+    pergunta_modelo: "Houve alguma mudanca de procedimento ou receita neste lote?"
+  - categoria: "Maquina"
+    pergunta_modelo: "Algum equipamento deste lote (agitador, bomba, sensor) recebeu manutencao corretiva recentemente, ou esta com a manutencao preventiva atrasada?"
+  - categoria: "Material"
+    pergunta_modelo: "Os materiais/insumos usados neste lote sao do fornecedor e lote habituais? Algum insumo estava com cor, odor e aspecto diferentes do padrao?"
+  - categoria: "Mao de obra"
+    pergunta_modelo: "Houve alguma troca de equipe, treinamento pendente ou execucao fora do padrao neste lote?"
+  - categoria: "Meio ambiente"
+    pergunta_modelo: "Houve alguma condicao ambiental atipica (temperatura da sala, umidade, iluminacao, ventilacao, poluicao, energia, etc.) durante este lote?"
+  - categoria: "Medicao"
+    pergunta_modelo: "Os sensores usados neste lote estao com a calibracao em dia? Se nao, houve algum problema de leitura ou registro de dados extremos? Informe qual sensor, data e o valor registrado."

@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 📚 Documentação do Projeto
+    url: https://github.com/micheleoliveiracod/Root-Spector/blob/main/README.md
+    about: Consulte a documentação completa do projeto
+  - name: 📊 Project Board
+    url: https://github.com/users/micheleoliveiracod/projects/9
+    about: Visualize o backlog e progresso do projeto
+  - name: 🎯 Plano operacional (Gitflow)
+    url: https://github.com/micheleoliveiracod/Root-Spector/blob/main/docs/gitflow.md
+    about: Consulte milestones, branches e status de execução
