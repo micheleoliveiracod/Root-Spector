@@ -1,0 +1,39 @@
+# Mantém as dependências do projeto em dia -- pega deriva de versão (ex:
+# tests/e2e/package.json fixado numa versão do Playwright que passa a
+# incompatibilizar com o runner do GitHub Actions com o tempo, sem que
+# ninguém rode `npm install`/`pip install` de novo pra perceber) em dias,
+# via PR, em vez de silenciosamente por meses. Ver docs/prompts.md para o
+# histórico da decisão.
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: "npm"
+    directory: "/tests/e2e"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
