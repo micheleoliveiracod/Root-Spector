@@ -15,14 +15,22 @@ export default defineConfig({
   webServer: [
     {
       command: 'uvicorn backend.main:app --port 8000',
-      cwd: '..',
+      // Relativo à pasta deste arquivo (tests/e2e/) -- precisa subir 2
+      // níveis pra chegar na raiz do repo, não 1. "cwd: '..'" resolvia
+      // pra tests/ (existe, mas é o diretório errado: os caminhos
+      // relativos de BIOTECPREDICT_DB_PATH/CHECKPOINT_DB_PATH abaixo
+      // ficavam quebrados) -- e o mesmo erro no webServer seguinte
+      // (frontend) apontava pra um diretório que nem existe
+      // (tests/frontend/), o que faz o Node falhar com a mensagem
+      // enganosa "spawn /bin/sh ENOENT" em vez de um erro claro de
+      // "diretório não encontrado".
+      cwd: '../..',
       port: 8000,
       reuseExistingServer: !process.env.CI,
       env: {
-        // Espalha process.env primeiro -- sem isso, em alguns ambientes
-        // (confirmado no GitHub Actions) o processo filho perde PATH e
-        // outras variáveis herdadas, e o spawn do comando falha com
-        // "spawn /bin/sh ENOENT" antes mesmo do uvicorn rodar de verdade.
+        // Espalha process.env primeiro (boa prática documentada do
+        // Playwright pra webServer em array, ver playwright.dev/docs/test-webserver) --
+        // preserva PATH e outras variáveis herdadas do processo pai.
         ...process.env,
         LLM_PROVIDER: 'fake',
         BIOTECPREDICT_DB_PATH: 'tests/fixtures/biotecpredict_teste.db',
@@ -31,9 +39,10 @@ export default defineConfig({
     },
     {
       command: 'npm run dev -- --port 5173',
-      cwd: '../frontend',
+      cwd: '../../frontend',
       port: 5173,
       reuseExistingServer: !process.env.CI,
+      env: { ...process.env },
     },
   ],
 });
