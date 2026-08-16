@@ -19,6 +19,11 @@ export default defineConfig({
       port: 8000,
       reuseExistingServer: !process.env.CI,
       env: {
+        // Espalha process.env primeiro -- sem isso, em alguns ambientes
+        // (confirmado no GitHub Actions) o processo filho perde PATH e
+        // outras variáveis herdadas, e o spawn do comando falha com
+        // "spawn /bin/sh ENOENT" antes mesmo do uvicorn rodar de verdade.
+        ...process.env,
         LLM_PROVIDER: 'fake',
         BIOTECPREDICT_DB_PATH: 'tests/fixtures/biotecpredict_teste.db',
         CHECKPOINT_DB_PATH: 'data/checkpoints_e2e.db',
