@@ -44,3 +44,12 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# scripts/setup_github.py administra o GitHub (labels/milestones/issues/
+# board) e não faz parte do runtime do agente -- o corpo das issues em
+# texto livre passa do limite de linha às vezes, sem risco real. Mantém
+# as regras F/I/UP (bugs reais: import não usado, nome indefinido etc.)
+# ativas, só relaxa a checagem cosmética de comprimento de linha (E501)
+# neste arquivo.
+"scripts/setup_github.py" = ["E501"]
