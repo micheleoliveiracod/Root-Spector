@@ -1,6 +1,6 @@
-# Apresentação — Root-Spector (2 slides)
+# Apresentação: Root-Spector (2 slides)
 
-## Slide 1 — O problema e o agente
+## Slide 1: O problema e o agente
 
 **Problema**
 O tratamento de uma não conformidade de processo produtivo exige
@@ -26,19 +26,19 @@ respostas registradas, podendo solicitar ajuste, reabrindo um novo ciclo de
 investigação. Mas o histórico do primeiro ciclo fica salvo, para rastreabilidade e auditoria de todos os dados.
 
 **Case de referência**
-Biotecnologia — bioprocessos/produção de bioinsumos. Os dados de
+Biotecnologia, bioprocessos/produção de bioinsumos. Os dados de
 demonstração vêm de um dataset curado e versionado
 (`data/simulacao_causa_raiz/`), classificado pelo motor real do
 BiotecPredict (não inventado). O motor do agente foi desenhado para ser
 adaptável a outros setores produtivos, mediante alteração dos arquivos de
-configuração e de dados, sem alteração do código — o projeto, aliás,
+configuração e de dados, sem alteração do código, o projeto, aliás,
 começou desenhado para agronegócio/grãos e foi re-configurado para
 bioprocessos trocando só esses arquivos, validando esse requisito na
 prática.
 
 ---
 
-## Slide 2 — Entrada, saída e fluxo
+## Slide 2: Entrada, saída e fluxo
 
 **Entrada esperada** (linha de `batches`, schema real do BiotecPredict, lida
 de `data/biotecpredict.db`; lote 11 do dataset de demonstração atual)
@@ -55,10 +55,10 @@ de `data/biotecpredict.db`; lote 11 do dataset de demonstração atual)
 agente entrar em ação.
 
 **Saída esperada**
-`Diagnostico` estruturado — mapeamento Ishikawa (categoria principal +
+`Diagnostico` estruturado, mapeamento Ishikawa (categoria principal +
 categorias descartadas) + cadeia completa dos 5 Porquês (pergunta +
 resposta do operador + evidência, quando consultada) + causa raiz
-sintetizada + narrativa — salvo como relatório em **JSON** (consumo por
+sintetizada + narrativa, salvo como relatório em **JSON** (consumo por
 outros sistemas) e **HTML** (leitura humana, link exibido ao operador assim
 que o ciclo é concluído).
 
@@ -74,9 +74,9 @@ Revisão do operador → link do relatório já disponível | pedir ajuste (novo
 ```
 
 - `preparar_contexto`: identifica o(s) parâmetro(s) fora da faixa (determinístico).
-- `formular_pergunta_ishikawa`: nó LLM — pergunta de contexto por categoria (6x).
-- `orquestrar_analise`: nó LLM — identifica a categoria mais provável.
-- `formular_porque`: nó LLM — pergunta "por quê" ancorada na categoria (5x).
+- `formular_pergunta_ishikawa`: nó LLM, pergunta de contexto por categoria (6x).
+- `orquestrar_analise`: nó LLM, identifica a categoria mais provável.
+- `formular_porque`: nó LLM, pergunta "por quê" ancorada na categoria (5x).
 - `usar_ferramenta`: consulta o histórico de biosensor do lote via tool, se precisar de mais evidência.
 - `perguntar_operador`: interface web, human-in-the-loop, reusado nas duas fases.
 - `gerar_causa_raiz`: sintetiza tudo na causa raiz final e gera o relatório; operador revisa e pode pedir ajuste.

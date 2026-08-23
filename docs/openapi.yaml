@@ -56,7 +56,7 @@ paths:
       tags:
       - investigacoes
       summary: Enviar a resposta do operador à pergunta atual
-      description: '`Command(resume=resposta)` — retoma o grafo a partir do `interrupt()`
+      description: '`Command(resume=resposta)`, retoma o grafo a partir do `interrupt()`
         pausado. Se ainda houver perguntas, devolve a próxima (`{thread_id, fase,
         categoria|numero, pergunta, ...}`); ao concluir o 5º porquê, já gera `reports/*.json`+`.html`
         e devolve `{thread_id, status: ''pronto_para_revisao''}`. Devolve 503 (''Serviço
@@ -121,7 +121,7 @@ paths:
     post:
       tags:
       - investigacoes
-      summary: Pedir ajuste — arquivar o ciclo atual e reabrir um novo
+      summary: Pedir ajuste, arquivar o ciclo atual e reabrir um novo
       description: Move o diagnóstico atual para `ciclos_anteriores` (auditoria, nunca
         sobrescrito) e reinicia o grafo para o mesmo `batch_id`, devolvendo a 1ª pergunta
         do novo ciclo Ishikawa (mesmo formato de `iniciar`). Devolve 400 se não houver
