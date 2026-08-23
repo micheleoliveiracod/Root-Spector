@@ -1,8 +1,8 @@
-# PRD — Root-Spector
+# PRD: Root-Spector
 
 Documento de requisitos de produto, para leitura rápida do problema, do
 público, do escopo e dos critérios de sucesso. Não substitui os documentos
-técnicos canônicos — cada seção aponta para onde o detalhe completo vive
+técnicos canônicos, cada seção aponta para onde o detalhe completo vive
 (`specs/product.md`, `specs/requirements.md`, `specs/design.md`). Em caso
 de divergência, os arquivos em `specs/` são a fonte da verdade.
 
@@ -10,9 +10,9 @@ de divergência, os arquivos em `specs/` são a fonte da verdade.
 
 Root-Spector é um agente de IA (LangGraph) que conduz, em conjunto com um
 operador humano, a investigação de causa raiz de uma Não-Conformidade (NC)
-de processo produtivo — mapeando o contexto do desvio com um diagrama de
+de processo produtivo, mapeando o contexto do desvio com um diagrama de
 Ishikawa e aprofundando na categoria mais provável com o método dos 5
-Porquês — e produz um relatório estruturado (JSON + HTML) da causa raiz
+Porquês, e produz um relatório estruturado (JSON + HTML) da causa raiz
 identificada. É o complemento de causa raiz do
 [BiotecPredict](https://github.com/micheleoliveiracod/Projeto-avaliativo-M1-2-BiotecPredict)
 (projeto da mesma autora), que classifica lotes de bioprocesso por risco a
@@ -21,7 +21,7 @@ partir de dados de biosensores.
 ## 2. Problema
 
 Tratar uma NC de processo produtivo exige identificar a causa raiz do
-desvio — um passo tipicamente manual, sujeito a três limitações:
+desvio, um passo tipicamente manual, sujeito a três limitações:
 
 - **Inconsistência de método**: a investigação não segue um método
   estruturado de forma consistente; fica sujeita a quem conduz e a quanto
@@ -35,7 +35,7 @@ desvio — um passo tipicamente manual, sujeito a três limitações:
 
 Quanto mais lenta a investigação, maior o risco de o lote avançar no
 processo produtivo e se transformar em produto antes do problema ser
-endereçado — agilidade reduz essa janela de risco. Detalhamento completo
+endereçado, agilidade reduz essa janela de risco. Detalhamento completo
 em `specs/product.md` § Problema.
 
 ## 3. Objetivos
@@ -43,21 +43,21 @@ em `specs/product.md` § Problema.
 - Estruturar a investigação de causa raiz com um método de qualidade
   reconhecido (Ishikawa + 5 Porquês), não uma conversa livre.
 - Reduzir o tempo de condução da investigação, sem eliminar o julgamento
-  humano do operador — o agente facilita e acelera a coleta/síntese de
+  humano do operador, o agente facilita e acelera a coleta/síntese de
   informação; a validação da causa raiz continua sendo do operador.
 - Deixar rastreável cada pergunta, resposta e evidência consultada.
 - Validar, na prática (não só em teoria), que o motor do agente se adapta
-  a outro setor produtivo trocando somente `config/` e `data/` — este
+  a outro setor produtivo trocando somente `config/` e `data/`, este
   projeto começou desenhado para agronegócio/grãos e foi re-configurado
   para bioprocessos sem tocar em `root_cause_agent/` (ver
   `docs/prompts.md`).
 
 ## 4. Público-alvo
 
-- **Operadores de processo/qualidade** de manufatura de bioprocessos — o
+- **Operadores de processo/qualidade** de manufatura de bioprocessos, o
   usuário direto, que conduz a investigação pelo navegador.
 - **Analistas/engenheiros de qualidade** responsáveis por investigação de
-  NC — consomem o relatório final (JSON/HTML) como evidência estruturada.
+  NC, consomem o relatório final (JSON/HTML) como evidência estruturada.
 
 ## 5. Proposta de solução
 
@@ -75,7 +75,7 @@ Uma plataforma web local (FastAPI + React, uma única tela) que:
    julgamento do LLM) para manter a qualidade da investigação sem travar o
    fluxo indefinidamente.
 5. Sintetiza a cadeia completa numa causa raiz estruturada, gera o
-   relatório (JSON + HTML) e apresenta ao operador para revisão — que pode
+   relatório (JSON + HTML) e apresenta ao operador para revisão, que pode
    pedir ajuste, reabrindo um novo ciclo com o anterior preservado para
    auditoria.
 
@@ -99,7 +99,7 @@ Escopo desta entrega e `specs/requirements.md`):
 **Fora do escopo nesta entrega:**
 - Detecção automática da NC (já chega classificada como entrada).
 - Segundo agente (RAG) para recomendação de plano PDCA e fluxo de Garantia
-  da Qualidade — roadmap, ver § 12 abaixo.
+  da Qualidade, roadmap, ver § 12 abaixo.
 - Múltiplos parâmetros fora da faixa tratados como NCs separadas.
 - Adaptação simultânea a mais de um setor produtivo.
 - Parada antecipada dos loops (sempre 6 + 5 perguntas, mesmo se a causa
@@ -147,7 +147,7 @@ Detalhamento nó a nó em `docs/diagrama-fluxo.md`; cenários passo a passo
 ## 10. Critérios de sucesso / aceitação
 
 Este projeto é entregue como Mini-Projeto Avaliativo do Módulo 2 (IA para
-DEVs) — os critérios de sucesso são os de aceitação técnica, listados por
+DEVs), os critérios de sucesso são os de aceitação técnica, listados por
 completo em `specs/requirements.md` § Critérios de aceitação. Resumo:
 
 - Suíte de testes (pytest + Vitest + Playwright) verde, sem depender de um
@@ -161,25 +161,25 @@ completo em `specs/requirements.md` § Critérios de aceitação. Resumo:
   exigidos pelo rubric da disciplina.
 
 Não há metas quantitativas de negócio (ex.: "reduzir tempo de investigação
-em X%") nesta entrega — é um projeto acadêmico sem base de uso real para
+em X%") nesta entrega, é um projeto acadêmico sem base de uso real para
 medir contra; o roadmap (§ 12) é onde esse tipo de métrica passaria a
 fazer sentido, com uso em produção.
 
 ## 11. Riscos e limitações conhecidas
 
-- A classificação/detecção da NC não é feita por este agente — vem do
+- A classificação/detecção da NC não é feita por este agente, vem do
   BiotecPredict; o agente lê um arquivo de banco local (exportado/montado
   manualmente), não uma conexão ao vivo.
-- Cobre um parâmetro (ou par correlacionado) fora da faixa por lote —
+- Cobre um parâmetro (ou par correlacionado) fora da faixa por lote ,
   múltiplos parâmetros de causas independentes exigiriam ciclos separados.
 - Os loops sempre completam todas as perguntas, mesmo que a causa fique
-  óbvia antes — decisão deliberada de previsibilidade, não uma limitação
+  óbvia antes, decisão deliberada de previsibilidade, não uma limitação
   técnica.
-- Depende de pelo menos um provedor de LLM configurado e acessível — sem
+- Depende de pelo menos um provedor de LLM configurado e acessível, sem
   nenhum configurado ou todos falhando, a investigação fica bloqueada
   (com o progresso preservado no checkpoint, não perdido).
 - `data/biotecpredict.db` de demonstração é um dataset curado (ver
-  `specs/design.md` § Estratégia de dados) — validado contra o motor real
+  `specs/design.md` § Estratégia de dados), validado contra o motor real
   de classificação do BiotecPredict, mas não uma captura de uma instância
   de produção real.
 
@@ -189,16 +189,16 @@ Ver `specs/design.md` § Roadmap para o desenho completo: um segundo agente
 (RAG) consultando documentação da empresa/legislação/ANVISA/bibliografia
 para recomendar um plano PDCA (ação corretiva + Kaizen), avaliado pela
 Garantia da Qualidade em conjunto com a Coordenação da Produção, executado
-e verificado quanto à eficácia por reincidência — fechando um ciclo PDCA
+e verificado quanto à eficácia por reincidência, fechando um ciclo PDCA
 completo. É nesse estágio que métricas de negócio (tempo médio de
 investigação, taxa de reincidência) passariam a ser aplicáveis.
 
 ## 13. Referências
 
-- `specs/product.md` — visão de produto completa
-- `specs/requirements.md` — RF/RNF completos, entrada/saída, critérios de aceitação
-- `specs/design.md` — arquitetura, fluxo do grafo, estratégia de dados, roadmap
-- `docs/diagrama-fluxo.md` — diagramas Mermaid (grafo + sequência HTTP)
-- `docs/cenarios-de-uso.md` — cenários de uso passo a passo
-- `docs/openapi.yaml` — contrato da API
-- `docs/prompts.md` — histórico de decisões que moldaram este PRD
+- `specs/product.md`, visão de produto completa
+- `specs/requirements.md`, RF/RNF completos, entrada/saída, critérios de aceitação
+- `specs/design.md`, arquitetura, fluxo do grafo, estratégia de dados, roadmap
+- `docs/diagrama-fluxo.md`, diagramas Mermaid (grafo + sequência HTTP)
+- `docs/cenarios-de-uso.md`, cenários de uso passo a passo
+- `docs/openapi.yaml`, contrato da API
+- `docs/prompts.md`, histórico de decisões que moldaram este PRD

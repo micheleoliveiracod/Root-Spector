@@ -1,4 +1,4 @@
-# CI/CD — Root-Spector
+# CI/CD, Root-Spector
 
 Convenção de integração contínua do projeto. Ver `specs/gitflow.md` para o
 modelo de branches que esses workflows protegem, e `docs/gitflow.md` para o
@@ -8,49 +8,49 @@ status de implementação.
 
 ## Objetivo
 
-Garantir que nenhum código quebrado chegue em `develop`/`main` — lint e
+Garantir que nenhum código quebrado chegue em `develop`/`main`, lint e
 testes automatizados a cada push nas branches que **têm código pra
 testar**, com o resultado visível antes de qualquer merge/deploy.
 
 O gate automático roda em `feature/*` (onde o código do agente é
 escrito), `develop` (branch de integração) e `main` (onde o deploy
-acontece — ver `specs/deploy-producao/plano.md`). Fica de fora `docs/*`
-e `chore/*` — branches sem código de produto pra testar (`docs/*` é
+acontece, ver `specs/deploy-producao/plano.md`). Fica de fora `docs/*`
+e `chore/*`, branches sem código de produto pra testar (`docs/*` é
 specs/documentação pura; `chore/*` é configuração/infraestrutura de
 dados) rodariam a mesma suíte e sempre passariam, gastando minutos de CI
-à toa. `test/*`/`bugfix/*` seguem a mesma regra (sem gate próprio) — se
+à toa. `test/*`/`bugfix/*` seguem a mesma regra (sem gate próprio), se
 um dia precisarem, é só adicionar o padrão de branch na lista abaixo.
 
 Dado o tamanho do projeto (entrega individual, escopo deliberadamente
-simples — RNF5), o pipeline é **um único workflow**, sem Docker, sem
+simples, RNF5), o pipeline é **um único workflow**, sem Docker, sem
 cobertura mínima obrigatória: o objetivo é demonstrar o hábito de CI/CD do
 Gitflow, não construir uma esteira de produção completa. O E2E automatizado
-(decisão revista em 2026-07-18 — ver "Fora do escopo" abaixo) roda no mesmo
+(decisão revista em 2026-07-18, ver "Fora do escopo" abaixo) roda no mesmo
 workflow, contra uma fixture e um LLM fake, nunca contra dados/provedores
 reais.
 
 ---
 
-## Workflow: CI — Lint & Testes
+## Workflow: CI, Lint & Testes
 
-**Arquivo:** `.github/workflows/ci.yml` — implementado e verificado
+**Arquivo:** `.github/workflows/ci.yml`, implementado e verificado
 localmente (`docs/gitflow.md` M4); commit/push formal ainda pendente, como
 o resto do projeto além de M1.
 
 **Dispara em `push`, só nas 3 branches abaixo (nenhuma outra):**
-- `feature/*` — valida o código assim que é empurrado, antes mesmo de
+- `feature/*`, valida o código assim que é empurrado, antes mesmo de
   abrir PR pra `develop`.
-- `develop` — valida o estado da branch de integração depois de cada
-  merge (de qualquer família — mesmo as sem gate próprio, como `docs/*`/
+- `develop`, valida o estado da branch de integração depois de cada
+  merge (de qualquer família, mesmo as sem gate próprio, como `docs/*`/
   `chore/*`, acabam validadas aqui uma vez, já integradas ao resto).
-- `main` — valida antes/durante o deploy (`release/*`/`hotfix/*` →
+- `main`, valida antes/durante o deploy (`release/*`/`hotfix/*` →
   `main`); é o último gate antes de qualquer coisa ir pro Render/Vercel
   (ver `specs/deploy-producao/plano.md`).
 
 Deliberadamente **não** dispara em `push` em `docs/*` nem `chore/*`
-(sem código de produto — sempre passaria, gastando CI à toa) nem em
+(sem código de produto, sempre passaria, gastando CI à toa) nem em
 evento `pull_request` isolado (quando a PR é aberta, o GitHub já mostra
-o resultado do push mais recente daquele commit como check da PR — não
+o resultado do push mais recente daquele commit como check da PR, não
 precisa de um segundo disparo pelo mesmo SHA).
 
 ```yaml
@@ -64,11 +64,11 @@ on:
 | Job | Ferramenta | O que valida |
 |---|---|---|
 | `lint` | `ruff check .` | Estilo e erros estáticos do Python |
-| `test` | `pytest` | `tests/test_tools.py`, `tests/test_graph.py`, `tests/test_config.py` (fallback Gemini→Groq→Anthropic→OpenAI, mockado), `tests/test_backend.py` (rotas do `backend/main.py` via `TestClient` + contrato OpenAPI via `openapi-spec-validator`) — usando exclusivamente `tests/fixtures/biotecpredict_teste.db`, nunca `data/biotecpredict.db`, e sem chamar um provedor de LLM real |
+| `test` | `pytest` | `tests/test_tools.py`, `tests/test_graph.py`, `tests/test_config.py` (fallback Gemini→Groq→Anthropic→OpenAI, mockado), `tests/test_backend.py` (rotas do `backend/main.py` via `TestClient` + contrato OpenAPI via `openapi-spec-validator`), usando exclusivamente `tests/fixtures/biotecpredict_teste.db`, nunca `data/biotecpredict.db`, e sem chamar um provedor de LLM real |
 | `frontend-test` | `npm run test` (Vitest + React Testing Library) | Componentes de `frontend/src/components/` (render + interação básica, `api.ts` mockado) |
-| `e2e` | `npx playwright test` (`tests/e2e/`) | Fluxo completo pelo navegador: lista de lotes → 11 perguntas → revisão (com link do relatório já gerado) → pedir ajuste. Backend e frontend sobem automaticamente (`webServer` do `playwright.config.ts`), sempre contra a fixture de teste e um LLM fake (`LLM_PROVIDER=fake`) — roda igual local e no CI, mesmo comando |
+| `e2e` | `npx playwright test` (`tests/e2e/`) | Fluxo completo pelo navegador: lista de lotes → 11 perguntas → revisão (com link do relatório já gerado) → pedir ajuste. Backend e frontend sobem automaticamente (`webServer` do `playwright.config.ts`), sempre contra a fixture de teste e um LLM fake (`LLM_PROVIDER=fake`), roda igual local e no CI, mesmo comando |
 
-**Passos (jobs Python — `lint`/`test`):** checkout → setup Python 3.11 →
+**Passos (jobs Python, `lint`/`test`):** checkout → setup Python 3.11 →
 `pip install -e ".[dev]"` → rodar a ferramenta.
 **Passos (`frontend-test`):** checkout → setup Node 20 → `npm ci` em
 `frontend/` → `npm run test`.
@@ -81,13 +81,13 @@ publicado como artefato do job.
 
 **Regra de merge:** um PR de `feature/*` pra `develop` só é mergeado com
 o CI verde do push mais recente daquele commit (automático, via o
-workflow acima). PRs de `docs/*`/`chore/*` não têm CI automático — o
+workflow acima). PRs de `docs/*`/`chore/*` não têm CI automático, o
 merge depende só de revisão manual (checklist do PR, ver
 `specs/gitflow.md`).
 O merge de `release/*`/`hotfix/*` → `main` **dispara este workflow** (é
-um `push` em `main`) — precisa estar verde antes do deploy de verdade
+um `push` em `main`), precisa estar verde antes do deploy de verdade
 acontecer. Sem branch protection paga, toda regra de merge é seguida
-manualmente antes de qualquer merge de qualquer forma — mas o workflow
+manualmente antes de qualquer merge de qualquer forma, mas o workflow
 roda de verdade em `feature/*`/`develop`/`main` e o resultado (✅/❌)
 fica visível no PR/na aba Actions.
 
@@ -111,25 +111,25 @@ select = ["E", "F", "I", "UP"]
 
 ## Fora do escopo desta entrega
 
-- Deploy automatizado (CD) dentro deste workflow — o projeto roda
+- Deploy automatizado (CD) dentro deste workflow, o projeto roda
   localmente, via `uvicorn` + `npm run dev` ou via `deploy/` (Docker +
   docker-compose, ver `specs/structure.md`). O `push` em `main` já
   dispara o gate de lint/testes (acima), mas nenhum passo de deploy de
-  verdade (Render/Vercel/Supabase) está implementado ainda — plano
+  verdade (Render/Vercel/Supabase) está implementado ainda, plano
   separado, fora do escopo avaliado, em `specs/deploy-producao/plano.md`.
-- Cobertura mínima obrigatória / Codecov — os critérios de aceitação
+- Cobertura mínima obrigatória / Codecov, os critérios de aceitação
   (`specs/requirements.md`) definem o que precisa passar, não uma métrica
   de cobertura.
-- Automação do Project Board via workflow (`add-to-project`/`move-card`) —
+- Automação do Project Board via workflow (`add-to-project`/`move-card`) ,
   a movimentação dos cards é manual (ver `specs/gitflow.md` § Kanban),
   já que é entrega individual e o volume de issues é pequeno.
 - Chamada real a um provedor de LLM durante qualquer teste automatizado
-  (unitário, de backend ou E2E) — sempre mockado/fake, tanto por custo
+  (unitário, de backend ou E2E), sempre mockado/fake, tanto por custo
   quanto por determinismo no CI.
 
 **Decisão revista em 2026-07-18:** a versão anterior deste documento listava
 "testes E2E automatizados" como fora de escopo (verificação manual apenas).
-Isso foi revertido — o job `e2e` (Playwright, tabela acima) agora roda de
+Isso foi revertido, o job `e2e` (Playwright, tabela acima) agora roda de
 verdade, local e no CI, com o mesmo comando.
 
 ---
@@ -144,7 +144,7 @@ npm run test --prefix frontend
 npx playwright test --config tests/e2e/playwright.config.ts
 ```
 
-**Visualizar status:** aba *Actions* do repositório, workflow "CI — Lint & Testes".
+**Visualizar status:** aba *Actions* do repositório, workflow "CI, Lint & Testes".
 
 ---
 
@@ -158,9 +158,9 @@ npx playwright test --config tests/e2e/playwright.config.ts
    conferir se `api.ts` está mockado no teste, não chamando o backend real.
 4. Falha de E2E → rodar `npx playwright test --debug` dentro de `tests/e2e/` pra
    abrir o trace viewer; no CI, baixar o artefato `playwright-report` do job
-   que falhou. Confirmar que `LLM_PROVIDER=fake` está setado — sem isso a
+   que falhou. Confirmar que `LLM_PROVIDER=fake` está setado, sem isso a
    suíte tentaria chamar um provedor real.
 5. CI não dispara → conferir se é um `push` em `feature/*`, `develop` ou
    `main`; `docs/*`/`chore/*` nunca disparam (de propósito, sem código
    pra testar), e abrir uma PR sozinha também não dispara nada por conta
-   própria — precisa de um push numa das 3 branches acima.
+   própria, precisa de um push numa das 3 branches acima.

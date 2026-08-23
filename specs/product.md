@@ -1,11 +1,11 @@
-# Produto: Root-Spector — Investigação de Causa Raiz de Não Conformidades
+# Produto: Root-Spector, Investigação de Causa Raiz de Não Conformidades
 
 ## Visão do Produto
 
 Agente de IA (LangGraph) que conduz, em conjunto com um operador humano, a
 investigação de causa raiz de uma não conformidade (NC) de processo
-produtivo — mapeando o contexto do desvio com um diagrama de Ishikawa e
-aprofundando na categoria mais provável com o método dos 5 Porquês —, e
+produtivo, mapeando o contexto do desvio com um diagrama de Ishikawa e
+aprofundando na categoria mais provável com o método dos 5 Porquês, e
 produz um relatório estruturado da causa raiz identificada.
 
 > ⚠️ O produto **não substitui o especialista de qualidade**. O agente
@@ -21,7 +21,7 @@ Tratar uma não conformidade de processo produtivo exige identificar a causa
 raiz do desvio, e essa investigação costuma depender de um especialista que
 cruza manualmente o evento com o histórico do processo:
 
-- A investigação não segue um método estruturado de forma consistente —
+- A investigação não segue um método estruturado de forma consistente ,
   fica sujeita a quem conduz e a quanto tempo essa pessoa tem disponível.
 - Cruzar o desvio com o histórico de sensores é manual e demorado.
 - O registro da análise (perguntas feitas, respostas obtidas, raciocínio)
@@ -31,11 +31,11 @@ cruza manualmente o evento com o histórico do processo:
   sistemático de priorizar por onde começar antes de aprofundar.
 - Um colaborador da qualidade investigando a NC de um processo operacional
   realizado por outro colaborador carrega um viés interpessoal difícil de
-  eliminar — um agente de IA traz imparcialidade e impessoalidade a essa
+  eliminar, um agente de IA traz imparcialidade e impessoalidade a essa
   investigação, por não ser parte da equipe operacional.
 - Quanto mais lenta a investigação e o tratamento da causa, maior o risco
   de o lote seguir avançando no processo produtivo e se transformar em
-  produto antes do problema ser endereçado — aumentando o desperdício.
+  produto antes do problema ser endereçado, aumentando o desperdício.
   Agilidade no processo de investigação reduz essa janela de risco.
 
 ---
@@ -52,8 +52,8 @@ Uma plataforma web local que:
   identificada.
 - Consulta o histórico de leituras de biosensor do lote como evidência,
   quando a pergunta em curso se beneficia de dado bruto.
-- Valida a resposta do operador em duas camadas — rejeita respostas vazias
-  ou evasivas, e dá até 2 chances quando uma resposta não é informativa —
+- Valida a resposta do operador em duas camadas, rejeita respostas vazias
+  ou evasivas, e dá até 2 chances quando uma resposta não é informativa ,
   para manter a qualidade da investigação sem travar o fluxo indefinidamente.
 - Sintetiza a cadeia completa numa causa raiz estruturada, gera o relatório
   e apresenta ao operador pra revisão, que pode pedir ajuste (reabrindo um
@@ -78,7 +78,7 @@ Uma plataforma web local que:
   humano do operador.
 - Deixar rastreável cada pergunta, resposta e evidência consultada.
 - Adaptar-se a outros setores produtivos trocando apenas `config/` e
-  `data/` — o motor do agente (`root_cause_agent/`) não muda.
+  `data/`, o motor do agente (`root_cause_agent/`) não muda.
 
 ---
 
@@ -87,7 +87,7 @@ Uma plataforma web local que:
 **Dentro do escopo:**
 - Leitura de lotes reprovados/classificados a partir de
   `data/biotecpredict.db` (schema real do BiotecPredict, classificado pelo
-  motor real do BiotecPredict — ver `specs/design.md` § Estratégia de
+  motor real do BiotecPredict, ver `specs/design.md` § Estratégia de
   dados para a proveniência).
 - Mapeamento Ishikawa (6 categorias fixas) + 5 Porquês (ancorado na
   categoria mais provável), conduzidos via interface web com
@@ -103,11 +103,11 @@ Uma plataforma web local que:
 - Fallback de LLM em cadeia (Gemini → Groq → Anthropic → OpenAI) para
   resiliência a falhas de rede/rate limit/chave.
 
-**Fora do escopo (nesta entrega — ver `specs/requirements.md` para a lista
+**Fora do escopo (nesta entrega, ver `specs/requirements.md` para a lista
 completa):**
 - Detecção automática da NC (já chega classificada como entrada).
 - Segundo agente (RAG) para recomendação de plano PDCA e fluxo de Garantia
-  da Qualidade — roadmap, ver `specs/design.md` § Roadmap.
+  da Qualidade, roadmap, ver `specs/design.md` § Roadmap.
 - Múltiplos parâmetros fora da faixa simultaneamente tratados como NCs
   separadas.
 - Adaptação simultânea a mais de um setor produtivo nesta entrega.
@@ -141,9 +141,9 @@ ambos confirmados no código-fonte real:
 | `compliance_score` | 80–100 | ACCEPTABLE |
 | `compliance_score` | 45–79 | WARNING |
 | `compliance_score` | 0–44 | CRITICAL |
-| `risk_prediction` | — | LOW_RISK / MEDIUM_RISK / HIGH_RISK (saída de ML, sinal independente) |
+| `risk_prediction` |, | LOW_RISK / MEDIUM_RISK / HIGH_RISK (saída de ML, sinal independente) |
 
-Lotes `WARNING`/`CRITICAL` são os elegíveis para investigação — é dessa
+Lotes `WARNING`/`CRITICAL` são os elegíveis para investigação, é dessa
 lista, já classificada, que o operador escolhe o lote.
 
 ---
@@ -165,17 +165,17 @@ Para cada investigação concluída, o sistema produz um `Diagnostico`
 
 ## Fonte de Dados
 
-**Demonstração:** `data/biotecpredict.db` — nunca versionado, colocado
+**Demonstração:** `data/biotecpredict.db`, nunca versionado, colocado
 manualmente em `data/`, montado a partir do dataset curado e versionado
 `data/simulacao_causa_raiz/` (15 lotes: 5 ideais + 10 com um desvio de
 causa física única cada), classificado pelo motor real (não reimplementado)
-do BiotecPredict — ver `specs/design.md` § Estratégia de dados para a
+do BiotecPredict, ver `specs/design.md` § Estratégia de dados para a
 proveniência completa. `docs/demo/gabarito-testes.md` tem o roteiro de
 respostas esperadas pros dois lotes elegíveis do dataset atual.
 
-**Teste:** `tests/fixtures/biotecpredict_teste.db` — fixture sintética e
+**Teste:** `tests/fixtures/biotecpredict_teste.db`, fixture sintética e
 determinística, arquivo estático e versionado, usada exclusivamente pelos
-testes automatizados — nunca pela aplicação em execução.
+testes automatizados, nunca pela aplicação em execução.
 
 ---
 
@@ -185,6 +185,6 @@ Ver `specs/design.md` § Roadmap para o desenho completo: um segundo agente
 (RAG) consultando documentação da empresa/legislação/ANVISA/bibliografia
 para recomendar um plano PDCA (ação corretiva + Kaizen), avaliado pela
 Garantia da Qualidade em conjunto com a Coordenação da Produção, executado
-e verificado quanto à eficácia por reincidência — fechando um ciclo PDCA
+e verificado quanto à eficácia por reincidência, fechando um ciclo PDCA
 completo. Exige infraestrutura (ingestão de documentos, embeddings, vector
 store) fora do escopo desta entrega.

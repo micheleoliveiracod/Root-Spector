@@ -1,4 +1,4 @@
-# Diagrama de fluxo — Root-Spector
+# Diagrama de fluxo: Root-Spector
 
 Duas visões complementares do mesmo sistema: a topologia interna do grafo
 LangGraph (`root_cause_agent/graph.py`) e a sequência de chamadas HTTP
@@ -8,7 +8,7 @@ completo das rotas e `specs/design.md` para o detalhamento textual.
 
 ## 1. Grafo do agente (LangGraph)
 
-Espelha exatamente os nós/arestas de `graph.py` — cores indicam o tipo de
+Espelha exatamente os nós/arestas de `graph.py`, cores indicam o tipo de
 cada nó (a mesma legenda usada em `docs/apresentacao.html`).
 
 ```mermaid
@@ -17,13 +17,13 @@ flowchart TD
 
     PC["preparar_contexto"] --> FPI
 
-    subgraph Fase1["Fase 1 — Ishikawa (6 categorias, sempre nesta ordem)"]
+    subgraph Fase1["Fase 1, Ishikawa (6 categorias, sempre nesta ordem)"]
         FPI["formular_pergunta_ishikawa"]
         PO["perguntar_operador"]
         AI["avaliar_informatividade"]
     end
 
-    subgraph Fase2["Fase 2 — 5 Porquês (ancorado na categoria_principal)"]
+    subgraph Fase2["Fase 2, 5 Porquês (ancorado na categoria_principal)"]
         FP["formular_porque"]
     end
 
@@ -61,7 +61,7 @@ flowchart TD
 
 **Legenda:** azul = determinístico/workflow · roxo = agêntico (chama o
 LLM) · amarelo = ferramenta · verde = human-in-the-loop (`interrupt()`).
-`usar_ferramenta` é compartilhado pelas duas fases — `rotear_apos_ferramenta`
+`usar_ferramenta` é compartilhado pelas duas fases, `rotear_apos_ferramenta`
 decide para onde voltar (`categoria_principal is None` → ainda em
 Ishikawa). `avaliar_informatividade` é quem decide se a cadeia avança: se a
 resposta não for informativa e ainda for a 1ª tentativa, volta para
@@ -82,7 +82,7 @@ sequenceDiagram
     Operador->>FE: escolhe um lote elegível (WARNING/CRITICAL)
     FE->>API: POST /api/investigacoes/{batch_id}/iniciar
     API->>G: invoke({batch_id}, thread_id=batch_id)
-    G-->>API: interrupt() — 1ª pergunta (Ishikawa, categoria 1/6)
+    G-->>API: interrupt(), 1ª pergunta (Ishikawa, categoria 1/6)
     API-->>FE: {thread_id, fase, categoria, pergunta, nc}
     FE-->>Operador: pergunta + histórico de parâmetros do lote
 
@@ -94,7 +94,7 @@ sequenceDiagram
             G-->>API: interrupt() de novo, mesma pergunta
             API-->>FE: {..., erro: "Este tipo de resposta não é aceito."}
         else próxima pergunta
-            G-->>API: interrupt() — próxima pergunta
+            G-->>API: interrupt(), próxima pergunta
             API-->>FE: {thread_id, fase, pergunta, ...}
         else 5º porquê concluído
             G-->>API: diagnóstico pronto
@@ -112,14 +112,14 @@ sequenceDiagram
         FE->>API: POST /api/investigacoes/{thread_id}/ajustar
         API->>API: arquiva o diagnóstico em ciclos_anteriores
         API->>G: reinicia o grafo (mesmo batch_id)
-        G-->>API: interrupt() — 1ª pergunta do novo ciclo
+        G-->>API: interrupt(), 1ª pergunta do novo ciclo
         API-->>FE: {thread_id, fase: "ishikawa", ...}
     end
 ```
 
-**Nota — falha de LLM:** se todos os provedores configurados (Gemini →
+**Nota (falha de LLM):** se todos os provedores configurados (Gemini →
 Groq → Anthropic → OpenAI) falharem, `iniciar`/`responder`/`ajustar`
 capturam `FalhaLLMError` e devolvem `HTTP 503` com "Serviço de IA
-indisponível, recarregue a página." — o checkpoint do `thread_id`
+indisponível, recarregue a página.", o checkpoint do `thread_id`
 permanece pausado no último ponto bem-sucedido (nenhum progresso é
 perdido; ver `specs/design.md` § Tratamento de falha na chamada ao LLM).

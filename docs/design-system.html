@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Root-Spector · Design System</title>
+<style>
+  :root {
+    --paper: #f3f6f5; --paper-raised: #ffffff; --ink: #14201f; --ink-soft: #47534f;
+    --line: #d8e0dd; --accent: #0e8a82; --accent-ink: #08514c; --accent-soft: #e1f1ee;
+    --shadow: 0 1px 2px rgba(20, 33, 32, 0.06), 0 8px 24px rgba(20, 33, 32, 0.06);
+    --ok-bg: #e4f2e9; --ok-fg: #226a45;
+    --warn-bg: #f6eedd; --warn-fg: #8a6423;
+    --critical-bg: #fbeae6; --critical-fg: #a23b2e;
+    --neutral-bg: #edefee; --neutral-fg: #666f6c;
+    --font-serif: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, "Noto Serif", serif;
+    --font-sans: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    --radius: 10px; --radius-sm: 6px;
+    --gap: #b4402f; --gap-soft: #fbeae6; --gap-ink: #8c2f22;
+    --planned: #7b63c9; --planned-soft: #ece8fa; --planned-ink: #4a3b8f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #10171a; --paper-raised: #16201f; --ink: #e7edea; --ink-soft: #a7b4af;
+      --line: #253230; --accent: #38b4a9; --accent-ink: #9be0d6; --accent-soft: #12302d;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
+      --ok-bg: #16302b; --ok-fg: #6fcb93;
+      --warn-bg: #2e2a1b; --warn-fg: #d8c57e;
+      --critical-bg: #2e1d1a; --critical-fg: #e0796a;
+      --neutral-bg: #1e2624; --neutral-fg: #93a19c;
+      --gap: #e0796a; --gap-soft: #2e1d1a; --gap-ink: #f0a296;
+      --planned: #9b86e0; --planned-soft: #241f38; --planned-ink: #c9bdf0;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 920px; margin: 0 auto; padding: 48px 24px 100px; }
+  .eyebrow {
+    font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--accent-ink); margin: 0 0 6px;
+  }
+  h1 {
+    font-family: var(--font-serif); font-size: clamp(26px, 3.6vw, 36px);
+    margin: 0 0 10px; letter-spacing: -0.01em; text-wrap: balance;
+  }
+  .dek { font-size: 15.5px; line-height: 1.6; color: var(--ink-soft); max-width: 68ch; margin: 0 0 36px; }
+  h2 {
+    font-family: var(--font-serif); font-size: 22px; margin: 48px 0 6px;
+    padding-top: 24px; border-top: 1px solid var(--line); letter-spacing: -0.005em;
+  }
+  h2:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+  .section-note { font-size: 14px; color: var(--ink-soft); line-height: 1.6; margin: 0 0 20px; max-width: 68ch; }
+  h3 {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--ink-soft); margin: 28px 0 10px;
+  }
+  p { line-height: 1.6; }
+  code {
+    font-family: var(--font-mono); font-size: 0.92em; background: var(--accent-soft);
+    color: var(--accent-ink); padding: 1px 5px; border-radius: 4px;
+  }
+
+  /* grade de amostras reutilizada em varias secoes */
+  .sample-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; margin: 16px 0; }
+  .sample {
+    border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised);
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  .sample .swatch { height: 56px; }
+  .sample .meta { padding: 10px 12px; }
+  .sample .name { font-family: var(--font-mono); font-size: 12px; font-weight: 700; }
+  .sample .hex { font-family: var(--font-mono); font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+  .sample .use { font-size: 12px; color: var(--ink-soft); margin-top: 6px; line-height: 1.4; }
+
+  .type-sample { display: flex; align-items: baseline; gap: 18px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .type-sample:last-child { border-bottom: none; }
+  .type-sample .label {
+    flex: none; width: 150px; font-family: var(--font-mono); font-size: 11px;
+    color: var(--ink-soft); letter-spacing: 0.03em;
+  }
+
+  .card { background: var(--paper-raised); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px 26px; }
+  .card + .card { margin-top: 16px; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono);
+    font-size: 11px; letter-spacing: 0.02em; padding: 3px 9px; border-radius: 100px; white-space: nowrap;
+  }
+  .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+  .badge--ok { background: var(--ok-bg); color: var(--ok-fg); }
+  .badge--warn { background: var(--warn-bg); color: var(--warn-fg); }
+  .badge--critical { background: var(--critical-bg); color: var(--critical-fg); }
+  .badge--neutral { background: var(--neutral-bg); color: var(--neutral-fg); }
+
+  .resolved-badge {
+    display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono);
+    font-size: 10px; letter-spacing: 0.02em; font-weight: 700; color: #226a45;
+    background: #e4f2e9; border: 1px solid #2e8f5c; padding: 3px 9px; border-radius: 100px;
+  }
+  .gap-badge {
+    display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono);
+    font-size: 10px; letter-spacing: 0.02em; font-weight: 700; color: var(--gap-ink);
+    background: var(--gap-soft); border: 1px solid var(--gap); padding: 3px 9px; border-radius: 100px;
+  }
+  .planned-badge {
+    display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono);
+    font-size: 10px; letter-spacing: 0.02em; font-weight: 700; color: var(--planned-ink);
+    background: var(--planned-soft); border: 1px solid var(--planned); padding: 3px 9px; border-radius: 100px;
+  }
+
+  .callout { background: var(--accent-soft); color: var(--accent-ink); border-radius: var(--radius-sm); padding: 14px 16px; font-size: 14.5px; line-height: 1.6; }
+  .alert { border-radius: var(--radius-sm); padding: 12px 16px; font-size: 14px; }
+  .alert--critical { background: var(--critical-bg); color: var(--critical-fg); }
+
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  button.demo {
+    font: inherit; font-size: 14px; font-weight: 600; padding: 9px 18px; border-radius: var(--radius-sm);
+    border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: default;
+  }
+  button.demo.secondary { background: transparent; color: var(--ink); border-color: var(--line); }
+
+  textarea.demo {
+    width: 100%; font: inherit; font-size: 14px; padding: 10px 12px; border: 1px solid var(--line);
+    border-radius: var(--radius-sm); background: var(--paper-raised); color: var(--ink); resize: vertical;
+  }
+
+  .report-link-demo {
+    font-family: var(--font-mono); font-size: 13px; color: var(--accent-ink); background: var(--accent-soft);
+    padding: 8px 14px; border-radius: 100px; text-decoration: none; display: inline-block;
+  }
+
+  .node-demo {
+    position: relative; background: var(--paper-raised); border: 1.5px solid var(--line);
+    border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); max-width: 320px;
+  }
+  .node-demo.det { border-left: 4px solid var(--ink-soft); }
+  .node-demo.agent { border-left: 4px solid var(--accent); }
+  .node-demo.human { border-left: 4px solid #b4842a; }
+  .node-demo.tool { border-left: 4px solid #3b6fb0; }
+  .node-demo.planned { border-left-style: dashed; border-left-color: var(--planned); }
+  .node-demo .tag { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 700; color: var(--accent-ink); }
+  .node-demo .name { font-weight: 800; font-size: 15px; margin-top: 2px; }
+
+  .gateway-demo {
+    width: 64px; height: 64px; transform: rotate(45deg); border: 2px solid var(--ink-soft);
+    border-radius: 10px; background: var(--paper-raised); display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--shadow);
+  }
+  .gateway-demo span { transform: rotate(-45deg); font-size: 18px; font-weight: 800; }
+
+  .evt-demo {
+    width: 58px; height: 58px; border-radius: 50%; border: 2px solid var(--accent); color: var(--accent);
+    display: flex; align-items: center; justify-content: center; text-align: center; font-size: 9px;
+    font-weight: 700; line-height: 1.2; padding: 4px;
+  }
+
+  .row-demo { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+
+  .usage-table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 12px 0 28px; }
+  .usage-table th { text-align: left; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-soft); padding: 8px 12px; border-bottom: 1px solid var(--line); }
+  .usage-table td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .usage-table tr:last-child td { border-bottom: none; }
+
+  .rule-list { display: flex; flex-direction: column; gap: 10px; margin: 12px 0 28px; padding: 0; list-style: none; }
+  .rule-list li {
+    background: var(--paper-raised); border: 1px solid var(--line); border-left: 3px solid var(--accent);
+    border-radius: var(--radius-sm); padding: 12px 14px; font-size: 13.5px; line-height: 1.5;
+  }
+
+  footer.credit { font-family: var(--font-mono); font-size: 11px; color: var(--ink-soft); text-align: center; margin-top: 60px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <p class="eyebrow">Root-Spector · Design System</p>
+  <h1>Sistema de design da plataforma</h1>
+  <p class="dek">Registro das decisões visuais tomadas na Fase 1: paleta, tipografia, espaçamento e componentes. Cobre as 3 superfícies que compartilham a mesma linguagem: o frontend do produto, o relatório HTML gerado pelo agente e os documentos técnicos desta pasta. Nenhuma dessas superfícies foi alterada para gerar este documento, ele só descreve o que já existe.</p>
+
+  <h2>Onde esta linguagem visual aparece</h2>
+  <p class="section-note">As 3 superfícies usam os mesmos tokens de cor e tipografia, mas cada uma mantém sua própria folha de estilo (não há um pacote de CSS compartilhado entre elas hoje).</p>
+  <table class="usage-table">
+    <tr><th>Superfície</th><th>Onde vive</th><th>Papel</th></tr>
+    <tr><td>Produto (frontend)</td><td><code>frontend/src/styles/tokens.css</code> + <code>frontend/src/index.css</code></td><td>Interface real: lista de lotes, perguntas, revisão</td></tr>
+    <tr><td>Relatório gerado</td><td><code>root_cause_agent/reports.py</code> (template Jinja2 embutido)</td><td>Relatório HTML final, entregue ao operador</td></tr>
+    <tr><td>Documentação técnica</td><td><code>docs/*.html</code> (este arquivo incluído)</td><td>Mapeamento de processo, fluxo do agente, checklist, apresentação</td></tr>
+  </table>
+
+  <h2>Princípios</h2>
+  <ul class="rule-list">
+    <li><strong>Cores de status sempre em tom pastel.</strong> Nunca vermelho, amarelo ou verde saturados. Fundo claro com texto de contraste legível, mesmo par de cores em qualquer componente que precise indicar situação (aceitável, atenção, crítico, neutro).</li>
+    <li><strong>3 famílias tipográficas, cada uma com um papel fixo.</strong> Serifada para títulos, monoespaçada para rótulos/tags/código, sem serifa para o corpo do texto. Nunca usar a família errada para o papel errado.</li>
+    <li><strong>Modo escuro automático, nunca manual.</strong> Todas as 3 superfícies usam <code>@media (prefers-color-scheme: dark)</code>, sem botão de alternância. Segue a preferência do sistema operacional do usuário.</li>
+    <li><strong>Superfícies elevadas com sombra suave.</strong> Cartões (<code>.card</code>) usam borda de 1px mais sombra difusa, nunca bordas grossas ou sombras duras.</li>
+    <li><strong>Cantos arredondados em 2 tamanhos só.</strong> 10px para cartões e contêineres, 6px para elementos menores (botões, campos, alertas).</li>
+  </ul>
+
+  <h2>Cores</h2>
+  <p class="section-note">Valores em modo claro. Cada token tem um par equivalente em modo escuro, ajustado automaticamente pelo navegador.</p>
+
+  <h3>Superfície e texto</h3>
+  <div class="sample-grid">
+    <div class="sample"><div class="swatch" style="background:#f3f6f5;"></div><div class="meta"><div class="name">--paper</div><div class="hex">#f3f6f5</div><div class="use">Fundo da página</div></div></div>
+    <div class="sample"><div class="swatch" style="background:#ffffff; border-bottom:1px solid #d8e0dd;"></div><div class="meta"><div class="name">--paper-raised</div><div class="hex">#ffffff</div><div class="use">Cartões, superfícies elevadas</div></div></div>
+    <div class="sample"><div class="swatch" style="background:#14201f;"></div><div class="meta"><div class="name">--ink</div><div class="hex">#14201f</div><div class="use">Texto principal</div></div></div>
+    <div class="sample"><div class="swatch" style="background:#47534f;"></div><div class="meta"><div class="name">--ink-soft</div><div class="hex">#47534f</div><div class="use">Texto secundário, legendas</div></div></div>
+    <div class="sample"><div class="swatch" style="background:#d8e0dd;"></div><div class="meta"><div class="name">--line</div><div class="hex">#d8e0dd</div><div class="use">Bordas e divisores</div></div></div>
+  </div>
+
+  <h3>Cor de destaque</h3>
+  <div class="sample-grid">
+    <div class="sample"><div class="swatch" style="background:#0e8a82;"></div><div class="meta"><div class="name">--accent</div><div class="hex">#0e8a82</div><div class="use">Botão primário, foco, ícones ativos</div></div></div>
+    <div class="sample"><div class="swatch" style="background:#08514c;"></div><div class="meta"><div class="name">--accent-ink</div><div class="hex">#08514c</div><div class="use">Texto sobre fundo accent-soft</div></div></div>
+    <div class="sample"><div class="swatch" style="background:#e1f1ee;"></div><div class="meta"><div class="name">--accent-soft</div><div class="hex">#e1f1ee</div><div class="use">Fundo de destaque (callout, links de relatório)</div></div></div>
+  </div>
+
+  <h3>Cores semânticas (sempre em par fundo + texto)</h3>
+  <div class="sample-grid">
+    <div class="sample"><div class="swatch" style="background:#e4f2e9;"></div><div class="meta"><div class="name">ok</div><div class="hex">#e4f2e9 / #226a45</div><div class="use">ACCEPTABLE, LOW_RISK, resolvido</div></div></div>
+    <div class="sample"><div class="swatch" style="background:#f6eedd;"></div><div class="meta"><div class="name">warn</div><div class="hex">#f6eedd / #8a6423</div><div class="use">WARNING, MEDIUM_RISK</div></div></div>
+    <div class="sample"><div class="swatch" style="background:#fbeae6;"></div><div class="meta"><div class="name">critical</div><div class="hex">#fbeae6 / #a23b2e</div><div class="use">CRITICAL, HIGH_RISK, erro</div></div></div>
+    <div class="sample"><div class="swatch" style="background:#edefee;"></div><div class="meta"><div class="name">neutral</div><div class="hex">#edefee / #666f6c</div><div class="use">Sem classificação aplicável</div></div></div>
+  </div>
+
+  <h3>Cores de anotação (uso exclusivo em docs/*.html)</h3>
+  <div class="sample-grid">
+    <div class="sample"><div class="swatch" style="background:#e4f2e9;"></div><div class="meta"><div class="name">resolvido</div><div class="hex">verde</div><div class="use">Decisão de design já fechada</div></div></div>
+    <div class="sample"><div class="swatch" style="background:#fbeae6;"></div><div class="meta"><div class="name">em aberto</div><div class="hex">vermelho</div><div class="use">Comportamento ainda não decidido</div></div></div>
+    <div class="sample"><div class="swatch" style="background:#ece8fa;"></div><div class="meta"><div class="name">planejado</div><div class="hex">roxo</div><div class="use">Fase 2, ainda não implementado</div></div></div>
+  </div>
+
+  <h2>Tipografia</h2>
+  <div class="card">
+    <div class="type-sample">
+      <div class="label">--font-serif<br>h1, h2 do relatório</div>
+      <div style="font-family: var(--font-serif); font-size: 28px;">Relatório de causa raiz</div>
+    </div>
+    <div class="type-sample">
+      <div class="label">--font-sans<br>corpo do texto</div>
+      <div style="font-family: var(--font-sans); font-size: 15px;">O agente investiga a não conformidade em conjunto com o operador.</div>
+    </div>
+    <div class="type-sample">
+      <div class="label">--font-mono<br>rótulos, tags, código</div>
+      <div style="font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase;">categoria_principal</div>
+    </div>
+  </div>
+  <p class="section-note">Pilha completa: serifada é <code>Charter, "Iowan Old Style", "Palatino Linotype", Georgia, "Noto Serif", serif</code>. Sem serifa é <code>-apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif</code>. Monoespaçada é <code>ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace</code>. Todas dependem só de fontes já instaladas no sistema, sem carregar fonte nenhuma pela rede.</p>
+
+  <h2>Espaçamento e forma</h2>
+  <table class="usage-table">
+    <tr><th>Token</th><th>Valor</th><th>Uso</th></tr>
+    <tr><td><code>--radius</code></td><td>10px</td><td>Cartões e contêineres</td></tr>
+    <tr><td><code>--radius-sm</code></td><td>6px</td><td>Botões, campos, alertas, callouts</td></tr>
+    <tr><td><code>--shadow</code></td><td>2 camadas, difusa</td><td>Toda superfície elevada (<code>.card</code>, nós do fluxograma)</td></tr>
+    <tr><td>Largura de página</td><td>720px (produto/relatório) · 920 a 1500px (documentos técnicos)</td><td>Produto e relatório priorizam leitura corrida; documentos técnicos precisam de mais espaço para os diagramas</td></tr>
+  </table>
+
+  <h2>Componentes</h2>
+
+  <h3>Cartão</h3>
+  <div class="card">Bloco de conteúdo padrão. Fundo elevado, borda de 1px, sombra suave, cantos em 10px.</div>
+
+  <h3>Badges de status</h3>
+  <div class="row-demo">
+    <span class="badge badge--ok">ACCEPTABLE</span>
+    <span class="badge badge--warn">WARNING</span>
+    <span class="badge badge--critical">CRITICAL</span>
+    <span class="badge badge--neutral">N/A</span>
+  </div>
+
+  <h3>Badges de anotação (documentos técnicos)</h3>
+  <div class="row-demo">
+    <span class="resolved-badge">✓ resolvido</span>
+    <span class="gap-badge">⚠ em aberto</span>
+    <span class="planned-badge">◇ planejado, fase 2</span>
+  </div>
+
+  <h3>Callout e alerta</h3>
+  <div class="callout" style="margin-bottom: 12px;"><strong>Causa raiz:</strong> destaque de conteúdo central, fundo accent-soft.</div>
+  <div class="alert alert--critical">Alerta de erro ou bloqueio, mesmo par de cores do badge crítico.</div>
+
+  <h3>Botões</h3>
+  <div class="btn-row">
+    <button class="demo">Ação primária</button>
+    <button class="demo secondary">Ação secundária</button>
+  </div>
+
+  <h3>Campo de texto</h3>
+  <textarea class="demo" rows="2" readonly>Campo de resposta do operador, foco com contorno na cor de destaque.</textarea>
+
+  <h3>Link de relatório</h3>
+  <a class="report-link-demo" href="#" onclick="return false;">relatorio.html</a>
+
+  <h3>Nós do fluxograma (documentos técnicos)</h3>
+  <div class="sample-grid" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));">
+    <div class="node-demo det"><div class="tag" style="color: var(--ink-soft);">determinístico</div><div class="name">preparar_contexto</div></div>
+    <div class="node-demo agent"><div class="tag">agêntico</div><div class="name">orquestrar_analise</div></div>
+    <div class="node-demo human" style="border-left-color: #b4842a;"><div class="tag" style="color: #b4842a;">human-in-the-loop</div><div class="name">perguntar_operador</div></div>
+    <div class="node-demo tool" style="border-left-color: #3b6fb0;"><div class="tag" style="color: #3b6fb0;">ferramenta</div><div class="name">usar_ferramenta</div></div>
+    <div class="node-demo agent planned"><div class="tag" style="color: var(--planned-ink);">planejado, fase 2</div><div class="name">recomendar_tratativa</div></div>
+  </div>
+  <p class="section-note">A cor da borda esquerda indica o tipo do nó: cinza para determinístico, verde para agêntico, âmbar para human-in-the-loop, azul para ferramenta. Borda tracejada em roxo marca um nó planejado para a Fase 2, ainda não implementado.</p>
+
+  <h3>Portão de decisão (gateway) e evento (BPMN)</h3>
+  <div class="row-demo">
+    <div class="gateway-demo"><span>?</span></div>
+    <div class="evt-demo">fim<br>do ciclo</div>
+  </div>
+  <p class="section-note">O losango marca uma decisão condicional no fluxo. O círculo marca início ou fim de processo, usado só no mapeamento BPMN (<code>mapeamento-processo.html</code>), não no fluxo técnico nó a nó.</p>
+
+  <h2>Regras específicas por superfície</h2>
+  <table class="usage-table">
+    <tr><th>Regra</th><th>Onde se aplica</th></tr>
+    <tr><td>Página com largura máxima de 720px, texto corrido</td><td>Produto e relatório gerado</td></tr>
+    <tr><td>Legenda no topo explicando cada cor/forma usada no diagrama</td><td>Todos os documentos técnicos com diagrama</td></tr>
+    <tr><td>Badges de anotação (resolvido, em aberto, planejado) só aparecem em documentos técnicos, nunca no produto ou no relatório</td><td><code>docs/*.html</code></td></tr>
+    <tr><td>Nenhuma fonte é carregada pela rede, só pilhas de fontes do sistema</td><td>Todas as 3 superfícies</td></tr>
+    <tr><td>Nenhuma biblioteca de CSS externa (sem Bootstrap, Tailwind ou similar), CSS simples em cada superfície</td><td>Todas as 3 superfícies</td></tr>
+  </table>
+
+  <h2>Manutenção</h2>
+  <p class="section-note">Os tokens de cor e tipografia do produto vivem em <code>frontend/src/styles/tokens.css</code>. O relatório gerado (<code>root_cause_agent/reports.py</code>) e os documentos desta pasta mantêm sua própria cópia dos mesmos valores, sem importar um arquivo compartilhado. Ao mudar um token aqui, é preciso replicar a mudança nos 3 lugares para manter a consistência.</p>
+
+  <footer class="credit">root-spector · design system · registra as decisões visuais da fase 1, sem alterar nenhuma das 3 superfícies</footer>
+
+</div>
+</body>
+</html>

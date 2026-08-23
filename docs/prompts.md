@@ -2,7 +2,7 @@
 
 Registro dos principais prompts usados com o assistente de IA (Claude Code)
 para planejar, projetar e implementar o Root-Spector. Prompts
-editados/resumidos para clareza, mantendo a intenção original — focado no
+editados/resumidos para clareza, mantendo a intenção original, focado no
 escopo, na arquitetura, nos processos/ferramentas e nas decisões de
 execução que construíram o resultado final entregue.
 
@@ -46,14 +46,14 @@ execução que construíram o resultado final entregue.
 
 7. *"Vamos criar branches de desenvolvimento (máximo 5), issues, milestones
    e quadro kanban. Vamos planejar isso localmente primeiro."* + *"Quadro
-   kanban: Backlog, Fazendo, Revisando, Concluído — quero poucas etapas e
+   kanban: Backlog, Fazendo, Revisando, Concluído, quero poucas etapas e
    confiança de que são boas etapas."*
    → Gerou `docs/gitflow.md` (v1): 5 branches de feature ligadas a 5
    milestones, kanban de 4 colunas, convenção de commit simples.
 
 8. *"Vamos ter branch develop, CI/CD na develop, e só mergear pra main se
    passar. Seguir fielmente as regras do Gitflow, padrões de commit,
-   semântica de PR — mesmo o projeto sendo pequeno, porque aprendemos isso
+   semântica de PR, mesmo o projeto sendo pequeno, porque aprendemos isso
    no curso."*
    → Reescreveu `docs/gitflow.md` (v2) para o modelo Gitflow clássico
    completo: `main`/`develop`/`feature/*`/`release/*`/`hotfix/*`, gate de
@@ -85,10 +85,10 @@ execução que construíram o resultado final entregue.
     arquivo JSON de exemplo solto. **Erro cometido nesta rodada** (corrigido
     no ponto seguinte): concluiu, com base só nos dois arquivos de modelo,
     que `ACCEPTABLE`/`WARNING`/`CRITICAL` do README "não existiam no
-    código" — afirmação incorreta, corrigida pela usuária.
+    código", afirmação incorreta, corrigida pela usuária.
 
 11. *Correção da usuária:* **"A análise está incorreta... são dois campos
-    diferentes, e ambos são reais"** — apontou que `risk_prediction`
+    diferentes, e ambos são reais"**, apontou que `risk_prediction`
     (ML, `backend/ml/model.py`/`ml_service.py`) e `classification`
     (`ACCEPTABLE`/`WARNING`/`CRITICAL`, calculada por
     `backend/services/compliance_service.py`, exposta em
@@ -98,7 +98,7 @@ execução que construíram o resultado final entregue.
     no repositório pra verificar antes de corrigir qualquer doc. Confirmou:
     a correção da usuária estava certa em tudo, incluindo um detalhe que
     nem ela tinha certeza (inconsistência real de threshold *dentro* do
-    próprio BiotecPredict — uma docstring diz "WARNING 60-79", a que roda
+    próprio BiotecPredict, uma docstring diz "WARNING 60-79", a que roda
     de fato usa `>=45`). Corrigiu `specs/requirements.md`, `specs/design.md`,
     `README.md`, o artefato publicado do checklist/fluxo, e a memória
     `reference_biotecpredict_repo.md`, deixando explícito que `compliance_score`
@@ -125,7 +125,7 @@ execução que construíram o resultado final entregue.
     o método dos 5 Porquês**. O assistente buscou `get_sensor_metrics()`
     (`compliance_service.py`) pra confirmar exatamente que dado já vem
     pronto do BiotecPredict (`average`/`min`/`max`/`ideal_min`/`ideal_max`/
-    `acceptable_min`/`acceptable_max` por sensor — mas sem apontar
+    `acceptable_min`/`acceptable_max` por sensor, mas sem apontar
     explicitamente qual sensor violou a faixa, exigindo comparação
     client-side).
 
@@ -153,7 +153,7 @@ execução que construíram o resultado final entregue.
     operador, como um mapeamento de processo produtivo mesmo?"* + *"Sim,
     pode criar um artefato visual tipo BPMN."*
     → Identificou que nenhum arquivo tinha um mapeamento de processo formal
-    (raias por ator) — o que existia era só o fluxo técnico do grafo. Gerou
+    (raias por ator), o que existia era só o fluxo técnico do grafo. Gerou
     um artefato BPMN novo (raias Biorreator/Sensores, BiotecPredict,
     Root-Spector, Operador) mostrando o processo produtivo de ponta a
     ponta, não só os nós do LangGraph.
@@ -210,7 +210,7 @@ execução que construíram o resultado final entregue.
     implementação desta entrega ou fica só documentado? (2) "Orquestrador"
     e "Agente de Relatório" viram agentes/grafos separados (fiel ao
     artigo) ou nós do mesmo grafo (mais simples)? A usuária confirmou:
-    entra na implementação agora, e como nós do mesmo grafo — não
+    entra na implementação agora, e como nós do mesmo grafo, não
     replicar a arquitetura multiagente do artigo, só a metodologia.
     Levou à reescrita de `specs/design.md` (novo método, novos nós
     `formular_pergunta_ishikawa`/`orquestrar_analise`, nova seção "Decisão
@@ -254,7 +254,7 @@ execução que construíram o resultado final entregue.
 
 23. *"Remova as informações de contexto interno da entrega; mantenha a
     linguagem formal, direta e objetiva. Atualize todos os arquivos do
-    repositório com o novo escopo — temos arquivos desatualizados. O
+    repositório com o novo escopo, temos arquivos desatualizados. O
     agente recebe os resultados dos lotes analisados pelo BiotecPredict e
     classifica quais têm risco alto/médio, para o operador escolher qual
     investigar. O banco de dados eu já coloquei em `data/`, é esse que
@@ -279,13 +279,13 @@ execução que construíram o resultado final entregue.
     aceitar resposta vazia nem evasiva ('não sei'), sinalizando 'Este tipo
     de resposta não é aceito'. Se a resposta não for inválida mas o agente
     considerar não informativa, isso deve ser registrado junto com a
-    resposta, sinalizado ao operador, e ele ganha uma nova chance — só 2
+    resposta, sinalizado ao operador, e ele ganha uma nova chance, só 2
     chances por pergunta. Na 2ª, se ainda não for informativa, o agente
     segue para a próxima pergunta e registra as 2 respostas não
     informativas."*
     → Desenhada a validação da resposta do operador em duas camadas:
     Camada 1, determinística (`tools.py::validar_resposta_operador`, função
-    Python simples, não uma `@tool` do LLM — checar vazio/frase evasiva
+    Python simples, não uma `@tool` do LLM, checar vazio/frase evasiva
     fixa não exige julgamento de modelo), tentativas ilimitadas, nunca
     conta como uma resposta real. Camada 2, agêntica (novo nó
     `avaliar_informatividade`), julga se a resposta de fato informa a
@@ -302,7 +302,7 @@ execução que construíram o resultado final entregue.
     cada nó agêntico ao capturar falha de rede/rate limit/chave inválida na
     chamada ao LLM; a API traduz isso em HTTP 503 com a mensagem definida.
     Como o `SqliteSaver` só grava um novo checkpoint após um nó terminar
-    com sucesso, a exceção nunca chega a ser persistida — o `thread_id` já
+    com sucesso, a exceção nunca chega a ser persistida, o `thread_id` já
     fica naturalmente pausado no último ponto bem-sucedido, sem nenhuma
     lógica extra de "salvar progresso". Ver `specs/design.md` §
     Tratamento de falha na chamada ao LLM.
@@ -313,7 +313,7 @@ execução que construíram o resultado final entregue.
     → Implementado em `config.py::get_llm()`: cadeia Gemini (oficial,
     gratuito, testes/prototipagem) → Anthropic → OpenAI via
     `ChatModel.with_fallbacks(...)`, cada camada só ativada se a respectiva
-    chave (`ANTHROPIC_API_KEY`/`OPENAI_API_KEY`) estiver no `.env` — rodar
+    chave (`ANTHROPIC_API_KEY`/`OPENAI_API_KEY`) estiver no `.env`, rodar
     só com a chave do Gemini continua funcionando sem exigir as outras
     duas. Só se todos os provedores configurados falharem é que
     `FalhaLLMError`/HTTP 503 entram em ação; sem retry automático em loop,
@@ -321,7 +321,7 @@ execução que construíram o resultado final entregue.
     Adicionadas dependências `langchain-anthropic`/`langchain-openai`
     (`pyproject.toml`) e variáveis correspondentes (`.env.example`). A
     cadeia ganhou depois um 2º provedor gratuito, Groq, entre Gemini e
-    Anthropic — mesmo padrão de ativação condicional pela chave.
+    Anthropic, mesmo padrão de ativação condicional pela chave.
 
 27. *"Implementa as duas correções [na validação de entrada da tool]."*
     → `consultar_leituras_biosensor` (`tools.py`) deixou de receber
@@ -345,17 +345,17 @@ execução que construíram o resultado final entregue.
     `test/`). Segundo ajuste, depois de consultar o artigo original de
     Vincent Driessen ("A successful Git branching model", nvie.com): o
     Gitflow clássico **não define** categorias de branch por tipo de
-    conteúdo — "feature branch" é o termo genérico pra qualquer branch de
+    conteúdo, "feature branch" é o termo genérico pra qualquer branch de
     trabalho que não seja `release-*`/`hotfix-*`. Revertido para
     `feature/*` uniforme, com a distinção de tipo (docs/testes/config)
     movida pro **tipo do commit** (Conventional Commits), não pro prefixo
     da branch. `specs/product.md`, `specs/tech.md`, `specs/structure.md` e
-    `specs/ci-cd.md` — cópias de referência do BiotecPredict que ainda
-    descreviam FastAPI+SQLAlchemy+RandomForest+Docker+TailwindCSS — foram
+    `specs/ci-cd.md`, cópias de referência do BiotecPredict que ainda
+    descreviam FastAPI+SQLAlchemy+RandomForest+Docker+TailwindCSS, foram
     reescritas para o escopo real do Root-Spector.
     `specs/gitflow.md` virou a convenção estável (regras, citando a fonte
     oficial), e `docs/gitflow.md` o plano operacional (milestones, branches
-    concretas, checklist de issues) que aplica essa convenção — divisão que
+    concretas, checklist de issues) que aplica essa convenção, divisão que
     evita duplicar/divergir as regras entre os dois arquivos.
 
 29. *"Eu quero rodar ci/cd apenas nas branches de feature/, bugfix/ e
@@ -365,10 +365,10 @@ execução que construíram o resultado final entregue.
     com destino `develop` (cobre PRs de `feature/*`/`bugfix/*`/`hotfix/*`
     na prática, já que são as únicas branches que abrem PR contra
     `develop`). Push direto nas branches de trabalho não dispara mais nada
-    — só a abertura/atualização do PR. `release/*`→`main` deixou de
+   , só a abertura/atualização do PR. `release/*`→`main` deixou de
     disparar o workflow automaticamente nesta entrega (verificação manual,
     já que o PR de origem já passou pelo CI ao entrar em `develop`).
-    `bugfix/*` era uma branch nova, não estava no modelo — adicionada em
+    `bugfix/*` era uma branch nova, não estava no modelo, adicionada em
     `specs/gitflow.md` como extensão explícita (não faz parte do artigo
     original de Driessen, mas é prática comum: corrige bug encontrado
     *durante* o desenvolvimento, a partir de `develop`, distinta de
@@ -377,8 +377,8 @@ execução que construíram o resultado final entregue.
 30. *"Temos um arquivo gitflow.md dentro de docs/ e dentro de specs/,
     unifique os dois eliminando informações redundantes."*
     → `docs/gitflow.md` (plano operacional) tinha voltado a explicar por
-    extenso "por que `feature/*` uniforme" — quase um parágrafo repetido
-    do que já está em `specs/gitflow.md` (convenção) — e uma seção de
+    extenso "por que `feature/*` uniforme", quase um parágrafo repetido
+    do que já está em `specs/gitflow.md` (convenção), e uma seção de
     CI/CD que restatava (e estava desatualizada em relação a) os triggers
     já descritos em `specs/ci-cd.md`. Aparado para uma linha de referência
     em cada caso; `docs/gitflow.md` ficou só com o que é genuinamente
@@ -393,7 +393,7 @@ execução que construíram o resultado final entregue.
     (citação do artigo original de Driessen, nota de terminologia sobre o
     que "feature branch" significa academicamente, justificativa de que
     `bugfix/*` "não está no artigo original mas é prática comum"). Cortado
-    tudo isso — ficou só o que aplica ao projeto: quais branches existem,
+    tudo isso, ficou só o que aplica ao projeto: quais branches existem,
     de onde nascem, pra onde vão, e a convenção de commits/PRs/Kanban.
     Removida também a seção "Fonte" (citação acadêmica isolada, sem
     função de aplicação).
@@ -401,8 +401,8 @@ execução que construíram o resultado final entregue.
 32. *"Não precisamos mais do script para gerar banco de dados, o banco já
     está pronto, remova do escopo do projeto esta função."*
     → O script gerador de banco de dados foi removido do escopo naquele
-    momento. `tests/fixtures/biotecpredict_teste.db` — já gerado
-    anteriormente — passa a ser um arquivo estático versionado (o
+    momento. `tests/fixtures/biotecpredict_teste.db`, já gerado
+    anteriormente, passa a ser um arquivo estático versionado (o
     `.gitignore` tinha uma regra `tests/fixtures/*.db` assumindo que o
     arquivo seria regerado por script; removida, senão os testes
     quebrariam em qualquer clone novo do repositório, sem como recriar a
@@ -410,7 +410,7 @@ execução que construíram o resultado final entregue.
     (RNF4), `specs/structure.md`, `specs/tech.md`, `specs/product.md`,
     `docs/gitflow.md` (checklist M2), `README.md`.
 
-33. *"No docs/gitflow.md — o plano operacional, todas as branches estão
+33. *"No docs/gitflow.md, o plano operacional, todas as branches estão
     como feature, mas elas não são todas features, ajuste isso
     corretamente com o tipo de arquivo que vamos subir em cada branch,
     seguindo as convenções do gitflow."*
@@ -419,7 +419,7 @@ execução que construíram o resultado final entregue.
     Driessen). Desta vez, decisão definitiva na direção oposta: branches
     de trabalho passam a usar `docs/*`, `chore/*`, `feature/*`, `test/*`
     conforme o tipo de arquivo predominante, mesma taxonomia dos tipos de
-    commit — `feature/*` reservado só pra M3 (código novo do agente).
+    commit, `feature/*` reservado só pra M3 (código novo do agente).
     Atualizado `specs/gitflow.md` (tabela + descrição do modelo de
     branches), `specs/ci-cd.md` (triggers/regra de merge/troubleshooting
     citavam só feature/bugfix/hotfix) e `docs/gitflow.md` (tabela de
@@ -431,7 +431,7 @@ execução que construíram o resultado final entregue.
     relacionados."*
     → Revisão de `docs/gitflow.md` encontrou 4 lacunas de conexão: (1) não
     ficava explícito que cada item de checklist não marcado vira 1 issue,
-    atribuída ao milestone e rotulada com a label de tipo correspondente —
+    atribuída ao milestone e rotulada com a label de tipo correspondente ,
     itens já marcados não geram issue retroativa; (2) não ficava explícito
     que o PR de cada branch fecha *todas* as issues do seu milestone via
     "Closes #N"; (3) "Release" (branch `release/v1.0-entrega`) não estava
@@ -453,7 +453,7 @@ execução que construíram o resultado final entregue.
     → 6 labels de etapa (1 por milestone, dentro do limite de 10),
     complementares às labels de tipo já previstas: `m1: especificação`,
     `m2: dados & config`, `m3: implementação`, `m4: testes`, `m5:
-    documentação`, `release` — cada uma com cor própria (azul → verde →
+    documentação`, `release`, cada uma com cor própria (azul → verde →
     roxo → amarelo → laranja → vermelho, progressão visual da 1ª etapa até
     a entrega). Toda issue passa a ganhar 2 labels: tipo + etapa. Adicionado
     em `docs/gitflow.md`: nova seção "Labels de etapa" e "Passo zero" item
@@ -462,11 +462,11 @@ execução que construíram o resultado final entregue.
 36. *"O prompt vai subir por GitHub na documentação final, mude ele para a
     branch de documentação, e para a issue final."*
     → `docs/prompts.md` estava atribuído a M1 (`docs/especificacao-e-
-    arquitetura`) como "inicial" — mas é um log vivo, atualizado a cada
+    arquitetura`) como "inicial", mas é um log vivo, atualizado a cada
     decisão do projeto inteiro, então marcar a conclusão dele em M1 não
     refletia a realidade. Removido de M1 (tabela de branches e checklist);
     mantido só em M5 (`docs/documentacao-final`), como a última issue do
-    milestone — só fecha depois de todas as outras, já que o log só está
+    milestone, só fecha depois de todas as outras, já que o log só está
     completo no fim do projeto.
 
 37. *"Crie um script para automatizar o plano operacional descrito no
@@ -474,21 +474,21 @@ execução que construíram o resultado final entregue.
     junto do projeto sim, faz parte da execução."*
     → `scripts/setup_github.py`: automatiza labels, milestones, issues
     (conectadas a milestone + label de tipo + etapa na criação) e o board
-    do GitHub Projects (renomeia Status, adiciona cada issue em Backlog) —
+    do GitHub Projects (renomeia Status, adiciona cada issue em Backlog) ,
     idempotente, sem nenhum `git commit`. Branches (vazias, sem conteúdo)
     ficam atrás da flag `--branches`, desligada por padrão. Passou por uma
     correção de rumo: a primeira versão tentava commitar arquivos reais em
     cada branch, mas a usuária confirmou que o script deveria ficar
     restrito só à estrutura do GitHub, não a commits de código. Movido de
     scratchpad temporário pra `scripts/setup_github.py` (dentro do
-    repositório) a pedido explícito — "faz parte da execução" — com
+    repositório) a pedido explícito, "faz parte da execução", com
     `specs/structure.md` e `docs/gitflow.md` atualizados de acordo.
 
 38. *"O script não cria as issues das etapas M1 e M2, precisa criar, mesmo
     que já tenha feito estas etapas, precisamos executar o projeto no
     github, então tudo tem que ser feito para todas as etapas."*
     → `scripts/setup_github.py` passou a criar issue pra **todo** item do
-    checklist (M1 a Release), não só os pendentes — incluindo os 7 itens
+    checklist (M1 a Release), não só os pendentes, incluindo os 7 itens
     de M1, os 3 de M2, e os 5 já feitos de M3 (`models.py`, `state.py`,
     `config.py`, `tools.py`, `pyproject.toml`), que antes ficavam de fora
     por já estarem `[x]`. Cada issue ganhou uma flag `done`: as feitas são
@@ -502,7 +502,7 @@ execução que construíram o resultado final entregue.
     escopo-avaliacao/."*
     → Lido o PDF oficial (§3, §5.1, critério 4 e checklist final) pra
     confirmar os elementos exigidos: problema, proposta do agente,
-    entrada, saída, ferramenta utilizada e fluxo geral — em até 2 slides.
+    entrada, saída, ferramenta utilizada e fluxo geral, em até 2 slides.
     Criado um deck real de 2 slides (não um documento rolável), navegação
     por clique/setas do teclado, scroll-snap, com "ferramenta utilizada"
     destacada como bloco próprio (o PDF cobra isso explicitamente em 3
@@ -513,7 +513,7 @@ execução que construíram o resultado final entregue.
 40. *"Adicione mais uma informação, onde é workflow, onde o processo é
     agêntico, onde chama a tool, e o fallback."*
     → Fluxo do slide 2 ganhou legenda de 4 cores (workflow/agêntico/
-    ferramenta/operador) aplicada a cada nó do pipeline — `preparar_contexto`
+    ferramenta/operador) aplicada a cada nó do pipeline, `preparar_contexto`
     marcado como workflow, os 4 nós de LLM como agêntico, Ishikawa e 5
     Porquês com a nota "↳ pode chamar a ferramenta" (são os únicos que
     chamam a tool), e os dois pontos de interação como operador. Adicionado
@@ -536,9 +536,9 @@ execução que construíram o resultado final entregue.
     título da sequência ainda dizia `Backlog → Fazendo → Revisando →
     Concluído` (português), mas os bullets logo abaixo já tinham sido
     corrigidos pra `In Progress`/`In Review`/`Done` (inglês) numa edição
-    anterior — sobrou só o título desatualizado. Corrigido pra bater com
+    anterior, sobrou só o título desatualizado. Corrigido pra bater com
     o board real. `docs/gitflow.md` também tinha `Fazendo`/`Revisando`/
-    `Concluído` na descrição de como as issues se movem pelo board —
+    `Concluído` na descrição de como as issues se movem pelo board ,
     corrigido pros nomes reais. `scripts/setup_github.py` já usava
     `Backlog`/`Done` desde o ponto anterior, não precisou de mudança.
 
@@ -558,13 +558,13 @@ execução que construíram o resultado final entregue.
     Porque a issues não dá pra corrigir se criar errado.*"
     → `ISSUES` compactada de 34 pra 19, agrupando itens relacionados do
     checklist numa única issue (ex: `models.py`+`state.py`+`config.py`+
-    `pyproject.toml` viraram 1 issue de M3 em vez de 4) — máximo 5 por
+    `pyproject.toml` viraram 1 issue de M3 em vez de 4), máximo 5 por
     milestone (M3), várias com 2-3. Ganhou um 4º campo (`detail`) com a
     lista dos itens agrupados, incluída no corpo da issue. Nova função
     `validate_data()`, 100% local (nenhuma chamada de rede), rodando antes
     de qualquer coisa em `main()`: confere se todo milestone/label
     referenciado existe de verdade, se não há título de issue duplicado, e
-    se nenhum milestone passou de 5 issues — pega erro de copiar/colar
+    se nenhum milestone passou de 5 issues, pega erro de copiar/colar
     antes de criar qualquer coisa. Complementa o que `--dry-run` já fazia
     (mostrar o comando `gh issue create` completo, sem executar).
     `docs/gitflow.md` atualizado (contagem de issues, menção à validação).
@@ -573,11 +573,11 @@ execução que construíram o resultado final entregue.
     nova estratégia."*
     → A seção "Issues por milestone" de `docs/gitflow.md` ainda listava o
     checklist antigo, granular (34 itens soltos), sem refletir o
-    agrupamento em 19 issues feito no ponto anterior — ficou desatualizada
+    agrupamento em 19 issues feito no ponto anterior, ficou desatualizada
     assim que o script mudou. Reestruturada: cada `###` de milestone agora
     lista as issues de verdade (título em negrito, batendo com
     `scripts/setup_github.py::ISSUES`), com os itens de checklist
-    originais como sub-bullets dentro de cada uma — preserva o detalhe
+    originais como sub-bullets dentro de cada uma, preserva o detalhe
     fino pra acompanhamento, mas deixa claro que não é mais 1 item = 1
     issue.
 
@@ -586,7 +586,7 @@ execução que construíram o resultado final entregue.
     → Revisão linha a linha do script contra `docs/gitflow.md` e
     `specs/gitflow.md`. A maior parte já batia (ISSUES com 19 itens,
     contagem por milestone 3+2+5+3+3+3, comentário acima de ISSUES já
-    mencionava a compactação) — mas o **docstring do módulo**, no topo do
+    mencionava a compactação), mas o **docstring do módulo**, no topo do
     arquivo, ainda descrevia o comportamento anterior à compactação pra
     19/máximo-5. Corrigido. Sintaxe e dry-run revalidados depois da
     mudança.
@@ -611,7 +611,7 @@ execução que construíram o resultado final entregue.
     title, contexto, escopo, criterios), com `build_issue_body()` gerando
     o corpo no padrão convencional (`## Contexto` / `## Escopo` /
     `## Critérios de Aceite` / `## Branch`, esta última derivada de um
-    novo dict `MILESTONE_BRANCH`). `ensure_issues()` deixou de só criar —
+    novo dict `MILESTONE_BRANCH`). `ensure_issues()` deixou de só criar ,
     agora também sincroniza (`gh issue edit`) o corpo de toda issue já
     existente, tornando o texto das issues idempotente junto com o resto.
     Rodado `--dry-run` pra conferir os 19 corpos gerados, depois execução
@@ -619,7 +619,7 @@ execução que construíram o resultado final entregue.
     recriação. Também corrigida a descrição do fluxo de release em
     `specs/gitflow.md` (bullet `release/*`) e `docs/gitflow.md` (tabela
     Branches × Milestones, seção de conexões, checklist da issue de
-    merge): `main` nunca recebe commit/push direto — o merge de
+    merge): `main` nunca recebe commit/push direto, o merge de
     `release/v1.0-entrega` acontece exclusivamente via Pull Request, com
     back-merge também via PR em `develop`.
 
@@ -631,9 +631,9 @@ execução que construíram o resultado final entregue.
     tinha sido implementado ainda, foi uma correção estrutural pura, sem
     código pra mover: criado o pacote `backend/` na raiz do repositório,
     espelhando a separação backend/frontend que o BiotecPredict já usa.
-    `root_cause_agent/` continua sendo o motor do agente puro — sem
+    `root_cause_agent/` continua sendo o motor do agente puro, sem
     nenhuma dependência de FastAPI, importável e executável sozinho via o
-    harness `main.py` —; `backend/` importa `root_cause_agent` como
+    harness `main.py`; `backend/` importa `root_cause_agent` como
     biblioteca (nunca o contrário) e expõe o grafo por HTTP. `reports.py`
     permanece em `root_cause_agent/` (serialização do `Diagnostico`,
     agnóstica de framework web). Atualizados: `specs/structure.md`,
@@ -646,16 +646,16 @@ execução que construíram o resultado final entregue.
     agente. Testes para o fallback, precisamos colocar testes E2E para
     fazer localmente e no GitHub Actions."*
     → **Achado antes de implementar:** os workflows existentes em
-    `.github/workflows/` não eram do Root-Spector — referenciavam um
+    `.github/workflows/` não eram do Root-Spector, referenciavam um
     `requirements.txt` (pip puro), `flake8`/`black`/`isort`/ESLint (o
     projeto usa `ruff`), uma coleção Postman de outro projeto, deploy via
     `docker-compose`, e um Project board diferente do real. Batiam com o
     que `specs/ci-cd.md` já documentava como decisão própria (1 workflow,
-    sem Docker/CD/E2E) — o oposto do que estava nos arquivos. Perguntado à
+    sem Docker/CD/E2E), o oposto do que estava nos arquivos. Perguntado à
     usuária o que fazer: escolheu **substituir tudo** e usar **Playwright**
     pro E2E (em vez de Cypress, que o arquivo antigo usava). Os arquivos
     irrelevantes foram apagados; `ci.yml` reescrito do zero com 4 jobs:
-    `lint` (ruff), `test` (pytest — agente + backend), `frontend-test`
+    `lint` (ruff), `test` (pytest, agente + backend), `frontend-test`
     (Vitest), `e2e` (Playwright, depende dos dois anteriores passarem).
     Criados: `tests/test_config.py` (fallback de LLM mockado via
     `pytest-mock`), `tests/test_backend.py` (rotas de `backend/main.py`
@@ -663,7 +663,7 @@ execução que construíram o resultado final entregue.
     `openapi-spec-validator`), e a suíte E2E em Playwright (Node, próprio
     `package.json`/`playwright.config.ts` com `webServer` subindo
     backend+frontend automaticamente, sempre contra a fixture de teste e
-    `LLM_PROVIDER=fake` — nunca um provedor real, por custo e
+    `LLM_PROVIDER=fake`, nunca um provedor real, por custo e
     determinismo). `pyproject.toml` ganhou `pytest-mock` e
     `openapi-spec-validator` como dev deps. Atualizados `specs/ci-cd.md`
     (reverte a decisão anterior de "sem E2E automatizado"), `specs/tech.md`,
@@ -682,7 +682,7 @@ execução que construíram o resultado final entregue.
   (via `git/trees` da API do GitHub)* → confirmou o schema SQLAlchemy real:
   `batches` (id, upload_date, status, compliance_score, risk_prediction) e
   `sensor_readings` (id, batch_id, temperature, ph, dissolved_oxygen,
-  pressure, agitator_speed, recorded_at). Insuficiente por si só — levou ao
+  pressure, agitator_speed, recorded_at). Insuficiente por si só, levou ao
   erro registrado no item 10 do Planejamento, por não checar a camada de
   serviço/API.
 
@@ -694,7 +694,7 @@ execução que construíram o resultado final entregue.
 - *WebFetch em `get_sensor_metrics()` (mesmo arquivo), depois do pivô pro
   método 5 Porquês* → confirmou o formato exato do que o BiotecPredict já
   entrega por sensor (estatísticas agregadas + faixas ideal/aceitável), e
-  que ele **não** aponta explicitamente qual sensor violou a faixa —
+  que ele **não** aponta explicitamente qual sensor violou a faixa ,
   informação que definiu que `preparar_contexto` precisa fazer essa
   comparação ele mesmo antes de montar a `NaoConformidade`.
 
