@@ -9,8 +9,17 @@ status de implementação.
 ## Objetivo
 
 Garantir que nenhum código quebrado chegue em `develop`/`main` — lint e
-testes automatizados a cada push/PR, com o resultado visível antes de
-qualquer merge.
+testes automatizados a cada push nas branches que **têm código pra
+testar**, com o resultado visível antes de qualquer merge/deploy.
+
+O gate automático roda em `feature/*` (onde o código do agente é
+escrito), `develop` (branch de integração) e `main` (onde o deploy
+acontece — ver `specs/deploy-producao/plano.md`). Fica de fora `docs/*`
+e `chore/*` — branches sem código de produto pra testar (`docs/*` é
+specs/documentação pura; `chore/*` é configuração/infraestrutura de
+dados) rodariam a mesma suíte e sempre passariam, gastando minutos de CI
+à toa. `test/*`/`bugfix/*` seguem a mesma regra (sem gate próprio) — se
+um dia precisarem, é só adicionar o padrão de branch na lista abaixo.
 
 Dado o tamanho do projeto (entrega individual, escopo deliberadamente
 simples — RNF5), o pipeline é **um único workflow**, sem Docker, sem
@@ -28,27 +37,26 @@ reais.
 localmente (`docs/gitflow.md` M4); commit/push formal ainda pendente, como
 o resto do projeto além de M1.
 
-**Dispara em:**
-- `push` na branch `develop` (valida o estado da branch de integração após
-  cada merge).
-- `pull_request` com destino `develop` — cobre, na prática, qualquer PR
-  vindo de `docs/*`, `chore/*`, `feature/*`, `test/*` ou `bugfix/*` (ver
-  `specs/gitflow.md`), já que essas são as únicas branches que abrem PR
-  contra `develop`.
+**Dispara em `push`, só nas 3 branches abaixo (nenhuma outra):**
+- `feature/*` — valida o código assim que é empurrado, antes mesmo de
+  abrir PR pra `develop`.
+- `develop` — valida o estado da branch de integração depois de cada
+  merge (de qualquer família — mesmo as sem gate próprio, como `docs/*`/
+  `chore/*`, acabam validadas aqui uma vez, já integradas ao resto).
+- `main` — valida antes/durante o deploy (`release/*`/`hotfix/*` →
+  `main`); é o último gate antes de qualquer coisa ir pro Render/Vercel
+  (ver `specs/deploy-producao/plano.md`).
 
-Deliberadamente **não** dispara em `push` direto nas branches de trabalho
-(`docs/*`, `chore/*`, `feature/*`, `test/*`, `bugfix/*`) — os testes só
-rodam a partir da abertura do PR (evento `pull_request`, que também reroda
-a cada novo commit no PR via `synchronize`), não a cada commit local ainda
-sem PR. Também não dispara automaticamente em `release/*`/`main` nesta
-entrega — ver "Regra de merge" abaixo.
+Deliberadamente **não** dispara em `push` em `docs/*` nem `chore/*`
+(sem código de produto — sempre passaria, gastando CI à toa) nem em
+evento `pull_request` isolado (quando a PR é aberta, o GitHub já mostra
+o resultado do push mais recente daquele commit como check da PR — não
+precisa de um segundo disparo pelo mesmo SHA).
 
 ```yaml
 on:
   push:
-    branches: [develop]
-  pull_request:
-    branches: [develop]
+    branches: ["feature/**", "develop", "main"]
 ```
 
 **Jobs:**
@@ -71,16 +79,17 @@ navegador do Playwright (`npx playwright install --with-deps chromium`) →
 `npx playwright test`; em caso de falha, o relatório HTML do Playwright é
 publicado como artefato do job.
 
-**Regra de merge:** um PR de `docs/*`, `chore/*`, `feature/*`, `test/*` ou
-`bugfix/*` para `develop` só é mergeado com o CI verde (automático, via o
-workflow acima).
-O merge de `release/*`/`hotfix/*` → `main` **não** dispara este workflow
-nesta entrega — como o PR de origem já passou pelo CI ao entrar em
-`develop`, a verificação em `main` fica manual (conferir que a branch de
-release/hotfix não introduziu nada de novo além de ajustes finais). Sem
-branch protection paga, toda regra de merge é seguida manualmente antes de
-qualquer merge de qualquer forma — mas o workflow roda de verdade nos casos
-acima e o resultado (✅/❌) fica visível no PR.
+**Regra de merge:** um PR de `feature/*` pra `develop` só é mergeado com
+o CI verde do push mais recente daquele commit (automático, via o
+workflow acima). PRs de `docs/*`/`chore/*` não têm CI automático — o
+merge depende só de revisão manual (checklist do PR, ver
+`specs/gitflow.md`).
+O merge de `release/*`/`hotfix/*` → `main` **dispara este workflow** (é
+um `push` em `main`) — precisa estar verde antes do deploy de verdade
+acontecer. Sem branch protection paga, toda regra de merge é seguida
+manualmente antes de qualquer merge de qualquer forma — mas o workflow
+roda de verdade em `feature/*`/`develop`/`main` e o resultado (✅/❌)
+fica visível no PR/na aba Actions.
 
 ---
 
@@ -102,10 +111,12 @@ select = ["E", "F", "I", "UP"]
 
 ## Fora do escopo desta entrega
 
-- Deploy automatizado (CD) — o projeto roda localmente, via `uvicorn` +
-  `npm run dev` ou via `deploy/` (Docker + docker-compose, ver
-  `specs/structure.md`); não há pipeline de CD nem ambiente de produção
-  hospedado a publicar.
+- Deploy automatizado (CD) dentro deste workflow — o projeto roda
+  localmente, via `uvicorn` + `npm run dev` ou via `deploy/` (Docker +
+  docker-compose, ver `specs/structure.md`). O `push` em `main` já
+  dispara o gate de lint/testes (acima), mas nenhum passo de deploy de
+  verdade (Render/Vercel/Supabase) está implementado ainda — plano
+  separado, fora do escopo avaliado, em `specs/deploy-producao/plano.md`.
 - Cobertura mínima obrigatória / Codecov — os critérios de aceitação
   (`specs/requirements.md`) definem o que precisa passar, não uma métrica
   de cobertura.
@@ -149,7 +160,7 @@ npx playwright test --config tests/e2e/playwright.config.ts
    abrir o trace viewer; no CI, baixar o artefato `playwright-report` do job
    que falhou. Confirmar que `LLM_PROVIDER=fake` está setado — sem isso a
    suíte tentaria chamar um provedor real.
-5. CI não dispara → conferir se é um `push` em `develop` ou um `pull_request`
-   com destino `develop`; push direto em qualquer branch de trabalho
-   (`docs/*`/`chore/*`/`feature/*`/`test/*`/`bugfix/*`) não dispara nada —
-   é preciso abrir o PR.
+5. CI não dispara → conferir se é um `push` em `feature/*`, `develop` ou
+   `main`; `docs/*`/`chore/*` nunca disparam (de propósito, sem código
+   pra testar), e abrir uma PR sozinha também não dispara nada por conta
+   própria — precisa de um push numa das 3 branches acima.

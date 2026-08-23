@@ -25,21 +25,24 @@ aplica **as regras ao projeto**.
   pronto-para-produção (aqui: pronto-para-submissão). Só recebe merge de
   `release/*` ou `hotfix/*`.
 - **`develop`** — branch de integração. `HEAD` reflete o estado mais
-  recente do desenvolvimento para a próxima entrega. É onde o **CI roda a
-  cada push/PR** (ver `specs/ci-cd.md`).
+  recente do desenvolvimento para a próxima entrega. **CI roda a cada
+  push em `develop`** (ver `specs/ci-cd.md`).
 - **`docs/*`, `chore/*`, `feature/*`, `test/*`** — todas nascem de
-  `develop`, voltam pra `develop` via PR com CI verde, são apagadas depois
-  do merge. O prefixo segue o tipo predominante do conteúdo da branch, a
-  mesma taxonomia da Convenção de commits abaixo: `docs/*` para
-  specs/documentação, `chore/*` para configuração/infraestrutura de dados,
-  `feature/*` para código novo do agente, `test/*` para testes e CI (ver a
-  tabela em `docs/gitflow.md` para qual branch cobre qual milestone).
-- **`bugfix/*`** — nasce de `develop`, volta pra `develop` via PR com CI
-  verde, mesma regra das anteriores. Reservada pra corrigir um bug
-  encontrado *durante o desenvolvimento* (antes de qualquer release) —
-  separado do trabalho planejado dos milestones e de uma correção
-  emergencial *depois* de já estar em produção (`hotfix/*`, que nasce de
-  `main`, não de `develop`).
+  `develop`, voltam pra `develop` via PR, são apagadas depois do merge.
+  **Só `feature/*` dispara CI automático** (lint+testes a cada push, ver
+  `specs/ci-cd.md`) — `docs/*`/`chore/*` mergeiam com revisão manual, sem
+  código de produto pra justificar rodar a suíte à toa. O prefixo segue o
+  tipo predominante do conteúdo da branch, a mesma taxonomia da Convenção
+  de commits abaixo: `docs/*` para specs/documentação, `chore/*` para
+  configuração/infraestrutura de dados, `feature/*` para código novo do
+  agente, `test/*` para testes e CI (ver a tabela em `docs/gitflow.md`
+  para qual branch cobre qual milestone).
+- **`bugfix/*`** — nasce de `develop`, volta pra `develop` via PR, sem CI
+  automático (mesma regra de `docs/*`/`chore/*`/`test/*` acima).
+  Reservada pra corrigir um bug encontrado *durante o desenvolvimento*
+  (antes de qualquer release) — separado do trabalho planejado dos
+  milestones e de uma correção emergencial *depois* de já estar em
+  produção (`hotfix/*`, que nasce de `main`, não de `develop`).
 - **`release/*`** — nasce de `develop` quando o projeto estiver pronto pra
   ser entregue. Só correções finais pequenas e ajustes de documentação são
   permitidos aqui (nada de feature nova). Ao final, faz merge em **`main`
@@ -47,8 +50,12 @@ aplica **as regras ao projeto**.
   `v1.0-entrega`). **`main` nunca recebe commit ou push direto** — o merge
   é sempre via Pull Request (`release/*` → `main`), mesmo sendo entrega
   individual (checkpoint de autorrevisão antes de fechar, ver § Kanban).
+  O merge em si é um `push` em `main`, então **dispara CI de novo** — o
+  último gate antes de qualquer deploy de verdade (ver
+  `specs/deploy-producao/plano.md`).
 - **`hotfix/*`** — só se algo quebrar depois de já ter ido pra `main`.
-  Nasce de `main`, corrige, faz merge em **`main` e em `develop`**.
+  Nasce de `main`, corrige, faz merge em **`main` e em `develop`** —
+  mesmo gate de CI em `main` do item acima se aplica aqui também.
 
 **Regra de merge:** sempre `--no-ff` (commit de merge explícito, sem
 fast-forward e sem squash) — é assim que o Gitflow preserva no histórico o
@@ -96,7 +103,8 @@ formato de cada branch que existiu.
   Comando(s) pra verificar localmente.
 
   ## Checklist
-  - [ ] CI verde (lint + testes)
+  - [ ] CI verde (lint + testes) — só aplicável a `feature/*`; outras
+        famílias de branch conferem manualmente (ver `specs/ci-cd.md`)
   - [ ] Critérios de aceitação relevantes em specs/requirements.md conferidos
   - [ ] docs/prompts.md atualizado se algum prompt novo foi usado
   ```
@@ -106,6 +114,13 @@ formato de cada branch que existiu.
 
 ## Kanban (GitHub Projects, 4 colunas)
 
+> **Nota histórica (Fase 2, 23/08/26):** esta seção descreve a estrutura
+> do quadro **durante a Fase 1** — válida até a entrega, preservada aqui
+> sem alteração (o histórico de cards concluídos da Fase 1 continua na
+> coluna `Done`, intocado). O board real (mesmo Project, reaproveitado)
+> ganhou 2 colunas novas pra atender o PDF da Fase 2 — ver
+> `specs/fase02/gitflow.md` § Kanban pra estrutura atual.
+
 Nomes padrão do template do projeto (não renomeados — ver
 `specs/ci-cd.md` § Fora do escopo):
 
@@ -114,12 +129,14 @@ Nomes padrão do template do projeto (não renomeados — ver
 - **Backlog** — issue existe, ainda não começou.
 - **In Progress** — branch de trabalho aberta (a partir de `develop`), código
   sendo escrito.
-- **In Review** — PR aberto pra `develop`, CI rodando/verde; conferir
-  contra os critérios de aceitação do `specs/requirements.md` e contra a
-  issue antes de dar merge (checkpoint de autorrevisão, já que é entrega
-  individual e o rubric é fixo, sem meio-termo).
-- **Done** — PR mergeado em `develop` (ou, no passo final,
-  `release/*` mergeado em `main`).
+- **In Review** — PR aberto pra `develop` (CI rodando/verde quando a
+  branch for `feature/*`; revisão manual sem CI pras demais famílias);
+  conferir contra os critérios de aceitação do `specs/requirements.md` e
+  contra a issue antes de dar merge (checkpoint de autorrevisão, já que é
+  entrega individual e o rubric é fixo, sem meio-termo).
+- **Done** — PR mergeado em `develop` (ou, no passo final, `release/*`
+  mergeado em `main` — esse merge dispara CI de novo, gate final antes
+  do deploy).
 
 Cada issue vira um card, movido manualmente entre colunas conforme o
 progresso (ver `specs/ci-cd.md` § Fora do escopo — sem automação de board
