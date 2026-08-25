@@ -149,6 +149,14 @@ _TEMPLATE_HTML = Template(
       </tbody>
     </table>
 
+    {% if d.recomendacao_tratativa %}
+    <h2>Recomendação de tratativa</h2>
+    <div class="callout">{{ d.recomendacao_tratativa }}</div>
+    {% if d.fontes_rag %}
+    <p class="muted">Fontes consultadas: {{ d.fontes_rag | join(", ") }}</p>
+    {% endif %}
+    {% endif %}
+
     {% if d.ciclos_anteriores %}
     <h2>Ciclos anteriores ({{ d.ciclos_anteriores | length }})</h2>
     {% for c in d.ciclos_anteriores %}

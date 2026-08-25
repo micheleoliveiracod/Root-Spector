@@ -31,6 +31,8 @@ def build_graph(checkpoint_db_path: str | None = None):
     g.add_node("orquestrar_analise", nodes.orquestrar_analise)
     g.add_node("formular_porque", nodes.formular_porque)
     g.add_node("gerar_causa_raiz", nodes.gerar_causa_raiz)
+    g.add_node("pre_busca_rag", nodes.pre_busca_rag)
+    g.add_node("recomendar_tratativa", nodes.recomendar_tratativa)
 
     g.set_entry_point("preparar_contexto")
     g.add_edge("preparar_contexto", "formular_pergunta_ishikawa")
@@ -67,8 +69,26 @@ def build_graph(checkpoint_db_path: str | None = None):
         },
     )
 
+    # Fan-out: 2 ramos independentes a partir de orquestrar_analise
+    # (categoria_principal já definida) -- formular_porque (loop dos 5
+    # Porquês, com o operador) e pre_busca_rag (busca na base de
+    # conhecimento, determinística, sem depender do loop). LangGraph
+    # executa os 2 no mesmo superstep (paralelismo real, não disfarçado de
+    # sequencial) -- ver specs/fase02/design.md § Grafo.
+    #
+    # NÃO existe aresta pre_busca_rag -> recomendar_tratativa: um join
+    # explícito do LangGraph exige que os 2 ramos completem no mesmo
+    # superstep, mas o ramo formular_porque atravessa vários interrupt()
+    # (uma pergunta ao operador por vez, em invokes separados) enquanto
+    # pre_busca_rag termina no primeiro superstep -- um join formal
+    # dispararia recomendar_tratativa cedo demais, com o diagnóstico ainda
+    # None (bug encontrado e corrigido nesta branch). candidatos_rag já
+    # fica pronto no estado bem antes de gerar_causa_raiz terminar;
+    # recomendar_tratativa só precisa ser sequencial depois dele.
     g.add_edge("orquestrar_analise", "formular_porque")
-    g.add_edge("gerar_causa_raiz", END)
+    g.add_edge("orquestrar_analise", "pre_busca_rag")
+    g.add_edge("gerar_causa_raiz", "recomendar_tratativa")
+    g.add_edge("recomendar_tratativa", END)
 
     path = checkpoint_db_path if checkpoint_db_path is not None else str(CHECKPOINT_DB_PATH)
     if path != ":memory:":

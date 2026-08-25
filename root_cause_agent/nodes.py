@@ -24,6 +24,7 @@ from root_cause_agent.models import (
     RespostaIshikawa,
     RiskPrediction,
 )
+from root_cause_agent.rag import buscar_candidatos
 from root_cause_agent.state import CATEGORIAS_ISHIKAWA_ORDEM, AgentState
 from root_cause_agent.tools import TOOLS, validar_resposta_operador
 
@@ -170,6 +171,8 @@ def preparar_contexto(state: AgentState) -> dict:
         "numero_porque": 1,
         "pergunta_atual": None,
         "tentativas_pergunta_atual": [],
+        "candidatos_rag": [],
+        "recomendacao_tratativa": None,
         "diagnostico": None,
         "ciclos_anteriores": state.get("ciclos_anteriores", []),
         "messages": _limpar_mensagens(state) if state.get("messages") else [],
@@ -257,6 +260,20 @@ def orquestrar_analise(state: AgentState) -> dict:
     }
 
 
+def pre_busca_rag(state: AgentState) -> dict:
+    """Ramo paralelo a formular_porque, disparado junto a partir de
+    orquestrar_analise (fan-out em graph.py) -- só depende de
+    categoria_principal, não da cadeia de 5 Porquês, então roda
+    independentemente do loop com o operador. Determinístico: busca por
+    similaridade na base de conhecimento (root_cause_agent/rag.py), sem
+    chamar o LLM, só levanta candidatos (recomendar_tratativa é quem
+    sintetiza a recomendação, depois que os dois ramos convergem)."""
+    candidatos = buscar_candidatos(
+        state["categoria_principal"].categoria, _resumo_nc(state["nc_input"])
+    )
+    return {"candidatos_rag": candidatos}
+
+
 def formular_porque(state: AgentState) -> dict:
     numero = state["numero_porque"]
     if numero == 1:
@@ -315,6 +332,54 @@ def gerar_causa_raiz(state: AgentState) -> dict:
         gerado_em=datetime.now(UTC),
     )
     return {"diagnostico": diagnostico}
+
+
+def recomendar_tratativa(state: AgentState) -> dict:
+    """Converge os 2 ramos paralelos (gerar_causa_raiz, ao fim do loop dos
+    5 Porquês, e pre_busca_rag) -- ver specs/fase02/design.md § Grafo.
+    Recebe o Diagnostico completo (causa raiz + narrativa) e os candidatos
+    do RAG (chunks relevantes, não documentos inteiros), sintetiza uma
+    recomendação textual de tratativa. Atualiza o Diagnostico já produzido
+    por gerar_causa_raiz em vez de criar um novo (model_copy), porque os
+    demais campos (nc, respostas_ishikawa, cadeia_de_porques etc.) não
+    mudam aqui."""
+
+    class _Recomendacao(BaseModel):
+        recomendacao_tratativa: str
+
+    candidatos = state["candidatos_rag"]
+    diagnostico = state["diagnostico"]
+
+    if candidatos:
+        contexto_rag = "\n".join(f"- ({c.fonte}) {c.texto}" for c in candidatos)
+    else:
+        contexto_rag = "(nenhum candidato relevante encontrado na base de conhecimento)"
+
+    instrucao = (
+        "Recomende a tratativa (ação corretiva + preventiva, metodologia "
+        "CAPA/PDCA) para esta não-conformidade de bioprocesso, a partir da "
+        "causa raiz já identificada e dos trechos de referência recuperados "
+        "da base de conhecimento abaixo. Seja objetivo, cite a metodologia "
+        "quando pertinente, e não invente prática que não esteja nos "
+        "trechos fornecidos ou na causa raiz."
+    )
+    contexto = (
+        f"Causa raiz: {diagnostico.causa_raiz}\nNarrativa: {diagnostico.narrativa}\n\n"
+        f"Trechos de referência:\n{contexto_rag}"
+    )
+    resultado = _invocar_ou_falhar(
+        get_llm().with_structured_output(_Recomendacao).invoke,
+        [SystemMessage(content=instrucao), HumanMessage(content=contexto)],
+    )
+
+    fontes = sorted({c.fonte for c in candidatos})
+    diagnostico_atualizado = diagnostico.model_copy(
+        update={
+            "recomendacao_tratativa": resultado.recomendacao_tratativa,
+            "fontes_rag": fontes,
+        }
+    )
+    return {"diagnostico": diagnostico_atualizado}
 
 
 # ------------------------------------------------------- human-in-the-loop --
