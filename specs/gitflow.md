@@ -96,8 +96,17 @@ formato de cada branch que existiu.
   ## Contexto
   Qual milestone/issue isso resolve.
 
+  ## Camadas impactadas
+  Quais partes da arquitetura essa branch tocou (marcar as que se aplicam):
+  - [ ] Agente (`root_cause_agent/`: state, models, tools, nodes, graph)
+  - [ ] Backend (`backend/`)
+  - [ ] Frontend (`frontend/`)
+  - [ ] Testes (`tests/`)
+  - [ ] Documentação (`docs/`, `specs/`)
+  - [ ] Configuração (`config/`, `pyproject.toml`, CI)
+
   ## O que mudou
-  Lista curta das mudanças.
+  Lista curta das mudanças, arquivo por arquivo ou por camada.
 
   ## Como testar
   Comando(s) pra verificar localmente.
@@ -107,6 +116,9 @@ formato de cada branch que existiu.
         famílias de branch conferem manualmente (ver `specs/ci-cd.md`)
   - [ ] Critérios de aceitação relevantes em specs/requirements.md conferidos
   - [ ] docs/prompts.md atualizado se algum prompt novo foi usado
+
+  ## Observações
+  Riscos, limitações técnicas ou próximos passos relevantes, se houver.
   ```
 - **Merge:** `--no-ff`, nunca squash, mantém o histórico fiel ao Gitflow.
 

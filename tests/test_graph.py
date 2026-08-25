@@ -28,6 +28,11 @@ def test_ciclo_completo_produz_diagnostico_valido(fake_llm):
     assert diagnostico.categoria_principal is not None
     assert diagnostico.causa_raiz
     assert diagnostico.ciclos_anteriores == []
+    # Fase 2 -- RAG (specs/fase02/design.md § Grafo): pre_busca_rag e
+    # recomendar_tratativa rodam depois do loop dos 5 Porquês, o
+    # Diagnostico final já sai com a recomendação e as fontes consultadas.
+    assert diagnostico.recomendacao_tratativa
+    assert diagnostico.fontes_rag
 
 
 def test_lote_aceitavel_nao_identifica_parametro_fora_da_faixa(fake_llm):

@@ -67,6 +67,8 @@ def test_investigacao_completa_ate_revisao_com_relatorio_ja_gerado(client):
     corpo = r.json()
     assert len(corpo["respostas_ishikawa"]) == 6
     assert len(corpo["cadeia_de_porques"]) == 5
+    assert corpo["recomendacao_tratativa"]
+    assert corpo["fontes_rag"]
 
     links = corpo["relatorio"]
     assert links["json"].startswith("/reports/511_")

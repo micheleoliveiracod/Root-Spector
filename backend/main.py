@@ -191,7 +191,8 @@ def responder(thread_id: str, corpo: RespostaOperador):
     summary="Consultar o diagnóstico concluído para revisão",
     description=(
         "Devolve a cadeia Ishikawa + 5 Porquês, `categoria_principal`, "
-        "`categorias_descartadas`, `causa_raiz`, `narrativa` e os links "
+        "`categorias_descartadas`, `causa_raiz`, `narrativa`, "
+        "`recomendacao_tratativa` + `fontes_rag` (Fase 2, RAG) e os links "
         "`relatorio.json`/`relatorio.html` já gerados. Devolve 400 se o "
         "ciclo ainda não chegou à revisão (5º porquê ainda não "
         "respondido)."
@@ -210,6 +211,8 @@ def revisao(thread_id: str):
         "cadeia_de_porques": [p.model_dump() for p in diagnostico.cadeia_de_porques],
         "causa_raiz": diagnostico.causa_raiz,
         "narrativa": diagnostico.narrativa,
+        "recomendacao_tratativa": diagnostico.recomendacao_tratativa,
+        "fontes_rag": diagnostico.fontes_rag,
         "relatorio": {
             "json": estado["relatorio_json"],
             "html": estado["relatorio_html"],
