@@ -26,9 +26,18 @@ from root_cause_agent.models import (
 )
 from root_cause_agent.rag import buscar_candidatos
 from root_cause_agent.state import CATEGORIAS_ISHIKAWA_ORDEM, AgentState
-from root_cause_agent.tools import TOOLS, validar_resposta_operador
+from root_cause_agent.tools import TAMANHO_MAXIMO_RESPOSTA, TOOLS, validar_resposta_operador
 
 PARAMETROS_BIOSENSOR = ["temperature", "ph", "dissolved_oxygen", "pressure", "agitator_speed"]
+
+# Guardrail (Fase 2, governança, ver specs/fase02/design.md § Governança):
+# limite de respostas rejeitadas pela Camada 1 (validar_resposta_operador)
+# para uma única pergunta. Sem esse limite, um operador ou um cliente
+# automatizado poderia manter a investigação presa indefinidamente numa
+# mesma pergunta, mandando resposta inválida repetidas vezes -- cada
+# tentativa não custa chamada de LLM, mas ainda assim consome uma
+# investigação inteira sem nunca progredir.
+MAX_TENTATIVAS_CAMADA_1 = 5
 
 
 class FalhaLLMError(Exception):
@@ -36,6 +45,13 @@ class FalhaLLMError(Exception):
     cadeia de fallback configurada (Gemini -> Anthropic -> OpenAI). A API
     (backend/main.py) traduz isso em HTTP 503 -- ver specs/design.md §
     Tratamento de falha na chamada ao LLM."""
+
+
+class LimiteTentativasExcedidoError(Exception):
+    """Levantada quando o operador (ou um cliente automatizado) excede
+    MAX_TENTATIVAS_CAMADA_1 respostas rejeitadas pela Camada 1 de validação
+    para uma única pergunta. A API (backend/main.py) traduz isso em HTTP
+    429 -- ver specs/fase02/design.md § Governança."""
 
 
 def _invocar_ou_falhar(fn, *args, **kwargs):
@@ -384,22 +400,37 @@ def recomendar_tratativa(state: AgentState) -> dict:
 
 # ------------------------------------------------------- human-in-the-loop --
 
+def _erro_camada_1(resposta: str) -> str:
+    if len(resposta) > TAMANHO_MAXIMO_RESPOSTA:
+        return f"Resposta longa demais (máximo de {TAMANHO_MAXIMO_RESPOSTA} caracteres)."
+    return "Este tipo de resposta não é aceito."
+
+
 def perguntar_operador(state: AgentState) -> dict:
     """Mostra pergunta_atual e pausa via interrupt() -- a API captura a
     resposta e retoma via Command(resume=...). Camada 1 (determinística,
-    tools.py::validar_resposta_operador): resposta vazia/evasiva -> chama
-    interrupt() de novo com um sinal de erro, sem avançar o grafo e sem
-    contar como tentativa (tentativas ilimitadas nesta camada)."""
+    tools.py::validar_resposta_operador): resposta vazia, longa demais ou
+    evasiva -> chama interrupt() de novo com um sinal de erro, sem avançar
+    o grafo. Guardrail MAX_TENTATIVAS_CAMADA_1 (Fase 2, governança): a
+    partir da tentativa que excede o limite, levanta
+    LimiteTentativasExcedidoError em vez de pedir de novo indefinidamente."""
     pergunta = state["pergunta_atual"]
     nc = state["nc_input"].model_dump(mode="json")
     payload = {"pergunta": pergunta, "nc": nc, **_progresso_pergunta(state)}
     resposta = interrupt(payload)
+    tentativas_camada_1 = 0
     while not validar_resposta_operador(resposta):
+        tentativas_camada_1 += 1
+        if tentativas_camada_1 >= MAX_TENTATIVAS_CAMADA_1:
+            raise LimiteTentativasExcedidoError(
+                f"Limite de {MAX_TENTATIVAS_CAMADA_1} respostas rejeitadas "
+                "atingido para esta pergunta."
+            )
         payload = {
             "pergunta": pergunta,
             "nc": nc,
             **_progresso_pergunta(state),
-            "erro": "Este tipo de resposta não é aceito.",
+            "erro": _erro_camada_1(resposta),
         }
         resposta = interrupt(payload)
     return {"tentativas_pergunta_atual": state["tentativas_pergunta_atual"] + [resposta]}
