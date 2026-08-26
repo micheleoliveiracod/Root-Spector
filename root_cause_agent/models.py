@@ -18,6 +18,7 @@ __all__ = [
     "CategoriaDescartada",
     "CicloAnterior",
     "CandidatoRAG",
+    "CasoSemelhante",
     "Diagnostico",
 ]
 
@@ -140,6 +141,20 @@ class CandidatoRAG(BaseModel):
     fonte: str
 
 
+class CasoSemelhante(BaseModel):
+    """Um caso anterior semelhante ao lote em investigação -- mesma
+    categoria Ishikawa principal e ao menos 1 parâmetro de biosensor fora
+    da faixa em comum, recuperado de reports/*.json pela tool
+    `consultar_recorrencia` (root_cause_agent/tools.py). Populado por
+    recomendar_tratativa só quando o LLM decide chamar a tool (ver
+    specs/fase02/design.md § Tool `consultar_recorrencia`)."""
+
+    batch_id: int
+    categoria_principal: str
+    causa_raiz: str
+    gerado_em: datetime
+
+
 class Diagnostico(BaseModel):
     """Saída estruturada final -- o que gerar_causa_raiz produz e
     recomendar_tratativa complementa, validada e salva (JSON + HTML) em
@@ -159,4 +174,8 @@ class Diagnostico(BaseModel):
     # sempre preenchida a partir daqui em diante.
     recomendacao_tratativa: str | None = None
     fontes_rag: list[str] = Field(default_factory=list)
+    # Fase 2 -- tool `consultar_recorrencia` (specs/fase02/design.md § Tool
+    # `consultar_recorrencia`). Lista vazia = primeiro caso (ou a tool não
+    # foi chamada pelo LLM); preenchida = recorrência rastreável.
+    casos_semelhantes: list[CasoSemelhante] = Field(default_factory=list)
     gerado_em: datetime
