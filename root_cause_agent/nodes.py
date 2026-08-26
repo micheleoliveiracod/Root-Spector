@@ -26,7 +26,13 @@ from root_cause_agent.models import (
 )
 from root_cause_agent.rag import buscar_candidatos
 from root_cause_agent.state import CATEGORIAS_ISHIKAWA_ORDEM, AgentState
-from root_cause_agent.tools import TAMANHO_MAXIMO_RESPOSTA, TOOLS, validar_resposta_operador
+from root_cause_agent.tools import (
+    TAMANHO_MAXIMO_RESPOSTA,
+    TOOLS,
+    buscar_casos_semelhantes,
+    consultar_recorrencia,
+    validar_resposta_operador,
+)
 
 PARAMETROS_BIOSENSOR = ["temperature", "ph", "dissolved_oxygen", "pressure", "agitator_speed"]
 
@@ -350,15 +356,38 @@ def gerar_causa_raiz(state: AgentState) -> dict:
     return {"diagnostico": diagnostico}
 
 
+def _consultar_recorrencia_se_llm_decidir(state: AgentState) -> list:
+    """Tool genuína (specs/fase02/design.md § Tool `consultar_recorrencia`):
+    a decisão de checar recorrência é do LLM, não uma automação embutida no
+    nó -- diferente de pre_busca_rag/buscar_candidatos, chamada sempre.
+    categoria_principal/parametros_fora_da_faixa vêm do estado via
+    InjectedState (a tool nem aceita argumento do LLM), então o único grau
+    de liberdade do modelo é chamar ou não chamar."""
+    instrucao = (
+        "Antes de recomendar a tratativa para esta não-conformidade de "
+        "bioprocesso, avalie se vale a pena checar se um caso semelhante já "
+        "ocorreu antes. Use a ferramenta disponível se achar relevante -- "
+        "ela já sabe qual é o lote e a categoria, não recebe parâmetro seu."
+    )
+    resposta = _invocar_ou_falhar(
+        get_llm().bind_tools([consultar_recorrencia]).invoke,
+        [SystemMessage(content=instrucao), HumanMessage(content=_resumo_nc(state["nc_input"]))],
+    )
+    if not getattr(resposta, "tool_calls", None):
+        return []
+    return buscar_casos_semelhantes(state)
+
+
 def recomendar_tratativa(state: AgentState) -> dict:
     """Converge os 2 ramos paralelos (gerar_causa_raiz, ao fim do loop dos
     5 Porquês, e pre_busca_rag) -- ver specs/fase02/design.md § Grafo.
     Recebe o Diagnostico completo (causa raiz + narrativa) e os candidatos
-    do RAG (chunks relevantes, não documentos inteiros), sintetiza uma
-    recomendação textual de tratativa. Atualiza o Diagnostico já produzido
-    por gerar_causa_raiz em vez de criar um novo (model_copy), porque os
-    demais campos (nc, respostas_ishikawa, cadeia_de_porques etc.) não
-    mudam aqui."""
+    do RAG (chunks relevantes, não documentos inteiros), consulta a
+    recorrência (tool `consultar_recorrencia`, decidida pelo LLM) e
+    sintetiza uma recomendação textual de tratativa. Atualiza o Diagnostico
+    já produzido por gerar_causa_raiz em vez de criar um novo (model_copy),
+    porque os demais campos (nc, respostas_ishikawa, cadeia_de_porques
+    etc.) não mudam aqui."""
 
     class _Recomendacao(BaseModel):
         recomendacao_tratativa: str
@@ -371,17 +400,27 @@ def recomendar_tratativa(state: AgentState) -> dict:
     else:
         contexto_rag = "(nenhum candidato relevante encontrado na base de conhecimento)"
 
+    casos_semelhantes = _consultar_recorrencia_se_llm_decidir(state)
+    if casos_semelhantes:
+        contexto_recorrencia = "\n".join(
+            f"- Lote {c.batch_id} ({c.gerado_em.date()}): {c.causa_raiz}" for c in casos_semelhantes
+        )
+    else:
+        contexto_recorrencia = "(nenhuma recorrência conhecida)"
+
     instrucao = (
         "Recomende a tratativa (ação corretiva + preventiva, metodologia "
         "CAPA/PDCA) para esta não-conformidade de bioprocesso, a partir da "
-        "causa raiz já identificada e dos trechos de referência recuperados "
-        "da base de conhecimento abaixo. Seja objetivo, cite a metodologia "
-        "quando pertinente, e não invente prática que não esteja nos "
-        "trechos fornecidos ou na causa raiz."
+        "causa raiz já identificada, dos trechos de referência recuperados "
+        "da base de conhecimento e de casos semelhantes anteriores (se "
+        "houver) abaixo. Diga se o caso é inédito ou recorrente. Seja "
+        "objetivo, cite a metodologia quando pertinente, e não invente "
+        "prática que não esteja nos trechos fornecidos ou na causa raiz."
     )
     contexto = (
         f"Causa raiz: {diagnostico.causa_raiz}\nNarrativa: {diagnostico.narrativa}\n\n"
-        f"Trechos de referência:\n{contexto_rag}"
+        f"Trechos de referência:\n{contexto_rag}\n\n"
+        f"Casos semelhantes anteriores:\n{contexto_recorrencia}"
     )
     resultado = _invocar_ou_falhar(
         get_llm().with_structured_output(_Recomendacao).invoke,
@@ -393,6 +432,7 @@ def recomendar_tratativa(state: AgentState) -> dict:
         update={
             "recomendacao_tratativa": resultado.recomendacao_tratativa,
             "fontes_rag": fontes,
+            "casos_semelhantes": casos_semelhantes,
         }
     )
     return {"diagnostico": diagnostico_atualizado}
