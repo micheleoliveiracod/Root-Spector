@@ -11,7 +11,8 @@ from typing import Annotated
 from langchain_core.tools import tool
 from langgraph.prebuilt import InjectedState
 
-from root_cause_agent.config import DB_PATH
+from root_cause_agent.config import DB_PATH, REPORTS_DIR
+from root_cause_agent.models import CasoSemelhante, Diagnostico
 from root_cause_agent.state import AgentState
 
 # Frases evasivas conhecidas que não respondem a pergunta de verdade --
@@ -127,6 +128,74 @@ def consultar_leituras_biosensor(
         for r in rows
     ]
     return f"{len(rows)} leituras do lote {batch_id}:\n" + "\n".join(linhas)
+
+
+def _diagnosticos_salvos(excluir_batch_id: int) -> list[Diagnostico]:
+    """Lê e valida cada reports/*.json (config.REPORTS_DIR) como um
+    Diagnostico, pulando arquivos que não existem/não parseiam (ex.
+    relatório corrompido ou de um schema muito antigo) -- exclui o próprio
+    lote em investigação, nunca compara um caso com ele mesmo."""
+    if not REPORTS_DIR.exists():
+        return []
+    diagnosticos = []
+    for caminho in sorted(REPORTS_DIR.glob("*.json")):
+        try:
+            diagnostico = Diagnostico.model_validate_json(caminho.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if diagnostico.nc.batch_id != excluir_batch_id:
+            diagnosticos.append(diagnostico)
+    return diagnosticos
+
+
+def buscar_casos_semelhantes(state: AgentState) -> list[CasoSemelhante]:
+    """Varre reports/*.json procurando investigações anteriores com a
+    mesma categoria_principal e ao menos 1 parametro_fora_da_faixa em
+    comum com o lote atual, excluindo o próprio lote -- compartilhada pela
+    tool `consultar_recorrencia` (texto pro LLM) e por
+    nodes.py::recomendar_tratativa (lista estruturada pro Diagnostico
+    final), ver specs/fase02/design.md § Tool `consultar_recorrencia`."""
+    categoria = state["categoria_principal"].categoria
+    parametros_atuais = set(state["nc_input"].parametros_fora_da_faixa)
+    batch_id_atual = state["nc_input"].batch_id
+
+    semelhantes = []
+    for diagnostico in _diagnosticos_salvos(batch_id_atual):
+        mesma_categoria = diagnostico.categoria_principal.categoria == categoria
+        parametros_em_comum = parametros_atuais & set(diagnostico.nc.parametros_fora_da_faixa)
+        if mesma_categoria and parametros_em_comum:
+            semelhantes.append(
+                CasoSemelhante(
+                    batch_id=diagnostico.nc.batch_id,
+                    categoria_principal=diagnostico.categoria_principal.categoria,
+                    causa_raiz=diagnostico.causa_raiz,
+                    gerado_em=diagnostico.gerado_em,
+                )
+            )
+    return semelhantes
+
+
+@tool
+def consultar_recorrencia(state: Annotated[AgentState, InjectedState]) -> str:
+    """Verifica se esta não-conformidade já ocorreu antes, buscando em
+    relatórios de investigações anteriores por casos com a mesma categoria
+    Ishikawa principal e ao menos 1 parâmetro de biosensor fora da faixa em
+    comum. Use antes de recomendar a tratativa, para informar no relatório
+    se o caso é inédito ou recorrente."""
+    # Assim como batch_id em consultar_leituras_biosensor, categoria e
+    # parâmetros vêm do estado via InjectedState -- o LLM decide SE chama
+    # a tool, não O QUE ela busca.
+    casos = buscar_casos_semelhantes(state)
+    if not casos:
+        return "Nenhum caso semelhante encontrado -- esta não-conformidade parece inédita."
+    linhas = [
+        f"- Lote {c.batch_id} ({c.categoria_principal}, {c.gerado_em.date()}): {c.causa_raiz}"
+        for c in casos
+    ]
+    return (
+        f"{len(casos)} caso(s) semelhante(s) encontrado(s) em investigações anteriores:\n"
+        + "\n".join(linhas)
+    )
 
 
 TOOLS = [consultar_leituras_biosensor]
