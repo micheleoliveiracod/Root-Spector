@@ -3,7 +3,11 @@ bancos e carga das regras do setor. Ver specs/design.md."""
 
 from __future__ import annotations
 
+import json
+import logging
 import os
+import sys
+from datetime import UTC, datetime
 from functools import lru_cache
 from pathlib import Path
 
@@ -19,6 +23,66 @@ CHECKPOINT_DB_PATH = Path(
     os.getenv("CHECKPOINT_DB_PATH", str(REPO_ROOT / "data" / "checkpoints.db"))
 )
 REPORTS_DIR = Path(os.getenv("REPORTS_DIR", str(REPO_ROOT / "reports")))
+
+# Observabilidade (Fase 2, specs/fase02/design.md § Observabilidade) --
+# sinal 1: logging estruturado (JSON), 1 registro por nó do grafo
+# executado (thread_id, batch_id, nome do nó, duração). Sinal 2: trace do
+# LangSmith, ativado via a env var opcional LANGSMITH_TRACING (lida
+# diretamente pelo langsmith/langchain-core a partir do ambiente, sem
+# código adicional aqui além do load_dotenv() já existente -- ver .env.example.
+NOME_LOGGER = "root_cause_agent"
+
+
+class _FormatadorJSON(logging.Formatter):
+    """1 linha de JSON por registro -- sem dependência nova (stdlib
+    logging), ver specs/fase02/design.md § Observabilidade."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        payload = {
+            "timestamp": datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
+            "nivel": record.levelname,
+            "mensagem": record.getMessage(),
+        }
+        payload.update(getattr(record, "dados_estruturados", {}))
+        return json.dumps(payload, ensure_ascii=False)
+
+
+def configurar_logging() -> logging.Logger:
+    """Configura o logger `root_cause_agent` com saída JSON em stdout --
+    idempotente (chamar de novo não duplica o handler), chamado no startup
+    de graph.py e backend/main.py. A checagem de idempotência procura
+    especificamente por um handler já formatado com _FormatadorJSON, não
+    por `logger.handlers` estar vazio -- outras ferramentas (ex. o plugin
+    de logging do pytest) podem anexar handlers próprios ao mesmo logger,
+    principalmente depois que propagate=False é ligado abaixo."""
+    logger = logging.getLogger(NOME_LOGGER)
+    ja_configurado = any(isinstance(h.formatter, _FormatadorJSON) for h in logger.handlers)
+    if not ja_configurado:
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(_FormatadorJSON())
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
+        logger.propagate = False
+    return logger
+
+
+def log_no_executado(
+    no: str, thread_id: str | None, batch_id: int | None, duracao_s: float
+) -> None:
+    """Emite o registro estruturado de sinal 1 (specs/fase02/design.md §
+    Observabilidade) para 1 execução de nó do grafo -- ver
+    graph.py::_com_log_estruturado."""
+    logging.getLogger(NOME_LOGGER).info(
+        "no_executado",
+        extra={
+            "dados_estruturados": {
+                "thread_id": thread_id,
+                "batch_id": batch_id,
+                "no": no,
+                "duracao_s": round(duracao_s, 4),
+            }
+        },
+    )
 
 
 @lru_cache
