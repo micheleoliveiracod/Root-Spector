@@ -157,6 +157,19 @@ _TEMPLATE_HTML = Template(
     {% endif %}
     {% endif %}
 
+    {% if d.casos_semelhantes %}
+    <h2>Recorrência</h2>
+    <table>
+      <thead><tr><th>Lote</th><th>Categoria</th><th>Causa raiz</th><th>Gerado em</th></tr></thead>
+      <tbody>
+      {% for c in d.casos_semelhantes %}
+      <tr><td>{{ c.batch_id }}</td><td>{{ c.categoria_principal }}</td>
+          <td>{{ c.causa_raiz }}</td><td>{{ c.gerado_em }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
     {% if d.ciclos_anteriores %}
     <h2>Ciclos anteriores ({{ d.ciclos_anteriores | length }})</h2>
     {% for c in d.ciclos_anteriores %}
