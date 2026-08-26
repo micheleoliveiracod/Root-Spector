@@ -33,6 +33,11 @@ def test_ciclo_completo_produz_diagnostico_valido(fake_llm):
     # Diagnostico final já sai com a recomendação e as fontes consultadas.
     assert diagnostico.recomendacao_tratativa
     assert diagnostico.fontes_rag
+    # Fase 2 -- tool `consultar_recorrencia` (specs/fase02/design.md §
+    # Tool `consultar_recorrencia`): reports/ isolado (tests/conftest.py)
+    # está vazio por padrão, então nenhuma recorrência é esperada aqui --
+    # ver tests/test_tool_recorrencia.py para os casos com correspondência.
+    assert diagnostico.casos_semelhantes == []
 
 
 def test_lote_aceitavel_nao_identifica_parametro_fora_da_faixa(fake_llm):

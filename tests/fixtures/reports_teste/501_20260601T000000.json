@@ -1,0 +1,27 @@
+{
+  "nc": {
+    "batch_id": 501,
+    "upload_date": "2026-07-01T00:00:00Z",
+    "compliance_score": 40.0,
+    "classification": "CRITICAL",
+    "risk_prediction": "HIGH_RISK",
+    "sensor_metrics": {},
+    "parametros_fora_da_faixa": [
+      "agitator_speed"
+    ]
+  },
+  "respostas_ishikawa": [],
+  "categoria_principal": {
+    "categoria": "Maquina",
+    "justificativa": "teste"
+  },
+  "categorias_descartadas": [],
+  "cadeia_de_porques": [],
+  "causa_raiz": "Falha de calibração do agitador.",
+  "narrativa": "narrativa de teste",
+  "ciclos_anteriores": [],
+  "recomendacao_tratativa": null,
+  "fontes_rag": [],
+  "casos_semelhantes": [],
+  "gerado_em": "2026-06-01T00:00:00Z"
+}

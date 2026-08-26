@@ -13,16 +13,24 @@ FIXTURE_DB = Path(__file__).parent / "fixtures" / "biotecpredict_teste.db"
 
 
 @pytest.fixture(autouse=True)
-def usar_fixture_db(monkeypatch):
+def usar_fixture_db(monkeypatch, tmp_path):
     """`tools.py` e `nodes.py` importam DB_PATH com `from ... import
     DB_PATH`, então o patch precisa mirar o nome já vinculado em cada
     módulo, não só `config.DB_PATH`. `backend/main.py` importa DB_PATH do
     mesmo jeito -- ver o fixture `client` em test_backend.py, que corrige
-    isso no momento certo (após importar o módulo pela 1ª vez)."""
+    isso no momento certo (após importar o módulo pela 1ª vez).
+
+    Também isola tools.REPORTS_DIR num diretório vazio por padrão -- sem
+    isso, a tool `consultar_recorrencia` (chamada por recomendar_tratativa
+    sempre que o fake LLM decide chamá-la) varreria os reports/*.json REAIS
+    do repositório durante os testes, tornando-os não determinísticos.
+    Testes que precisam de relatórios de fixture (test_tool_recorrencia.py)
+    sobrescrevem isso explicitamente."""
     from root_cause_agent import nodes, tools
 
     monkeypatch.setattr(tools, "DB_PATH", FIXTURE_DB)
     monkeypatch.setattr(nodes, "DB_PATH", FIXTURE_DB)
+    monkeypatch.setattr(tools, "REPORTS_DIR", tmp_path / "reports_vazio_por_padrao")
 
 
 @pytest.fixture
