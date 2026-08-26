@@ -8,7 +8,11 @@ from __future__ import annotations
 import pytest
 
 from root_cause_agent.models import Classification, NaoConformidade, RiskPrediction
-from root_cause_agent.tools import consultar_leituras_biosensor, validar_resposta_operador
+from root_cause_agent.tools import (
+    TAMANHO_MAXIMO_RESPOSTA,
+    consultar_leituras_biosensor,
+    validar_resposta_operador,
+)
 
 
 def _estado(batch_id: int) -> dict:
@@ -82,4 +86,17 @@ def test_validar_resposta_operador_rejeita_vazia_ou_evasiva(resposta):
     ["sim", "não", "a manutenção estava atrasada", "Sim, seguimos o procedimento padrão"],
 )
 def test_validar_resposta_operador_aceita_respostas_curtas_legitimas(resposta):
+    assert validar_resposta_operador(resposta) is True
+
+
+def test_validar_resposta_operador_rejeita_acima_do_limite_de_tamanho():
+    """Guardrail (Fase 2, governança): resposta acima de
+    TAMANHO_MAXIMO_RESPOSTA caracteres é rejeitada, mesmo que não seja
+    vazia nem bata com nenhuma frase evasiva conhecida."""
+    resposta = "a" * (TAMANHO_MAXIMO_RESPOSTA + 1)
+    assert validar_resposta_operador(resposta) is False
+
+
+def test_validar_resposta_operador_aceita_ate_o_limite_de_tamanho():
+    resposta = "a" * TAMANHO_MAXIMO_RESPOSTA
     assert validar_resposta_operador(resposta) is True

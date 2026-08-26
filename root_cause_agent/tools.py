@@ -38,22 +38,33 @@ RESPOSTAS_EVASIVAS_CONHECIDAS = {
     "-",
 }
 
+# Guardrail (Fase 2, governança, ver specs/fase02/design.md § Governança):
+# limite de tamanho da resposta do operador. Nenhuma resposta legítima a
+# uma pergunta de contexto (Ishikawa) ou de aprofundamento (5 Porquês)
+# precisa de mais do que alguns parágrafos -- um valor muito acima disso é
+# tratado como abuso (custo de contexto inflado, ou tentativa de
+# sobrecarregar o prompt), não como uma resposta detalhada legítima.
+TAMANHO_MAXIMO_RESPOSTA = 2000
+
 
 def validar_resposta_operador(resposta: str) -> bool:
     """Camada 1 de validação (determinística) da resposta do operador em
-    perguntar_operador: rejeita vazio/só espaço e uma lista fixa de frases
-    evasivas conhecidas. Retorna True se a resposta pode seguir para a
-    Camada 2 (julgamento de informatividade pelo LLM, em
-    avaliar_informatividade).
+    perguntar_operador: rejeita vazio/só espaço, resposta acima de
+    TAMANHO_MAXIMO_RESPOSTA caracteres, e uma lista fixa de frases evasivas
+    conhecidas. Retorna True se a resposta pode seguir para a Camada 2
+    (julgamento de informatividade pelo LLM, em avaliar_informatividade).
 
     Deliberadamente uma função Python simples, não uma @tool vinculada ao
-    LLM: decidir se uma string está vazia ou bate com uma lista fixa não
-    exige julgamento de modelo, então não há razão para pagar uma chamada de
-    LLM por isso -- mesmo princípio de separação workflow/agente do resto do
-    grafo (ver specs/design.md § Por que isso é um agente).
+    LLM: decidir se uma string está vazia, longa demais ou bate com uma
+    lista fixa não exige julgamento de modelo, então não há razão para
+    pagar uma chamada de LLM por isso -- mesmo princípio de separação
+    workflow/agente do resto do grafo (ver specs/design.md § Por que isso é
+    um agente).
     """
     texto = resposta.strip().lower()
     if not texto:
+        return False
+    if len(resposta) > TAMANHO_MAXIMO_RESPOSTA:
         return False
     return texto not in RESPOSTAS_EVASIVAS_CONHECIDAS
 

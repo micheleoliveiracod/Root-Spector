@@ -18,14 +18,28 @@ para o contrato completo):
 capturam `FalhaLLMError` (root_cause_agent.nodes) e respondem HTTP 503 com
 "Serviço de IA indisponível, recarregue a página.", sem deixar a exceção
 crua vazar pro frontend (ver specs/design.md § Tratamento de falha no LLM).
+`responder` também captura `LimiteTentativasExcedidoError`
+(root_cause_agent.nodes) e responde HTTP 429, guardrail contra um
+operador ou cliente automatizado que insista em respostas rejeitadas pela
+Camada 1 de validação indefinidamente (ver specs/fase02/design.md §
+Governança).
+
+CORS restrito via `CORS_ALLOWED_ORIGINS` (env var, lista separada por
+vírgula; padrão `*` em desenvolvimento local) e limite de taxa
+(`limitar_taxa`, dependency aplicada a toda a API, 20 requisições por
+minuto por IP, sem efeito quando `LLM_PROVIDER=fake`) completam os
+guardrails de governança desta fase (ver docs/GOVERNANCA.md).
 """
 
 from __future__ import annotations
 
+import os
 import sqlite3
+import time
+from collections import defaultdict, deque
 from datetime import UTC, datetime
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from langgraph.types import Command
@@ -34,10 +48,52 @@ from pydantic import BaseModel
 from root_cause_agent.config import DB_PATH, REPORTS_DIR, carregar_regras_setor
 from root_cause_agent.graph import build_graph
 from root_cause_agent.models import CicloAnterior, Classification
-from root_cause_agent.nodes import FalhaLLMError, calcular_sensor_metrics
+from root_cause_agent.nodes import (
+    FalhaLLMError,
+    LimiteTentativasExcedidoError,
+    calcular_sensor_metrics,
+)
 from root_cause_agent.reports import salvar_relatorio
 
 MENSAGEM_LLM_INDISPONIVEL = "Serviço de IA indisponível, recarregue a página."
+MENSAGEM_LIMITE_TENTATIVAS = (
+    "Limite de respostas rejeitadas atingido para esta pergunta, "
+    "investigação encerrada."
+)
+MENSAGEM_LIMITE_TAXA = "Limite de requisições excedido, tente novamente em instantes."
+
+# Guardrail (Fase 2, governança, ver specs/fase02/design.md § Governança):
+# limite de taxa por IP, aplicado a toda a API. Contador em memória por
+# processo (sem dependência nova, sem infraestrutura externa), suficiente
+# pro escopo deste projeto -- um deploy com múltiplos processos/réplicas
+# precisaria de um contador compartilhado (ex: Redis), fora do escopo
+# atual. Sem efeito quando LLM_PROVIDER=fake, sinal já usado em todo o
+# projeto pra suíte de testes/E2E, que faz várias requisições em sequência
+# sem intenção de abuso.
+LIMITE_REQUISICOES_POR_JANELA = 20
+JANELA_LIMITE_TAXA_SEGUNDOS = 60
+_requisicoes_por_ip: dict[str, deque[float]] = defaultdict(deque)
+
+
+def limitar_taxa(request: Request) -> None:
+    if os.getenv("LLM_PROVIDER") == "fake":
+        return
+    ip = request.client.host if request.client else "desconhecido"
+    agora = time.monotonic()
+    janela = _requisicoes_por_ip[ip]
+    while janela and agora - janela[0] > JANELA_LIMITE_TAXA_SEGUNDOS:
+        janela.popleft()
+    if len(janela) >= LIMITE_REQUISICOES_POR_JANELA:
+        raise HTTPException(429, MENSAGEM_LIMITE_TAXA)
+    janela.append(agora)
+
+
+def _origens_cors() -> list[str]:
+    origens = os.getenv("CORS_ALLOWED_ORIGINS", "*")
+    if origens == "*":
+        return ["*"]
+    return [origem.strip() for origem in origens.split(",") if origem.strip()]
+
 
 app = FastAPI(
     title="Root-Spector API",
@@ -48,10 +104,11 @@ app = FastAPI(
         "Contrato completo em `specs/design.md` § Interface; diagrama do "
         "fluxo em `docs/diagrama-fluxo.md`."
     ),
+    dependencies=[Depends(limitar_taxa)],
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_origens_cors(),
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -163,7 +220,9 @@ def iniciar_investigacao(batch_id: int):
         "ao concluir o 5º porquê, já gera `reports/*.json`+`.html` e "
         "devolve `{thread_id, status: 'pronto_para_revisao'}`. Devolve "
         f"503 ('{MENSAGEM_LLM_INDISPONIVEL}') se todos os provedores de "
-        "LLM configurados falharem."
+        f"LLM configurados falharem, ou 429 ('{MENSAGEM_LIMITE_TENTATIVAS}') "
+        "se o limite de respostas rejeitadas pela Camada 1 de validação for "
+        "excedido (guardrail, ver root_cause_agent/nodes.py::MAX_TENTATIVAS_CAMADA_1)."
     ),
 )
 def responder(thread_id: str, corpo: RespostaOperador):
@@ -171,6 +230,8 @@ def responder(thread_id: str, corpo: RespostaOperador):
         resultado = grafo.invoke(Command(resume=corpo.resposta), config=_config(thread_id))
     except FalhaLLMError as exc:
         raise HTTPException(503, MENSAGEM_LLM_INDISPONIVEL) from exc
+    except LimiteTentativasExcedidoError as exc:
+        raise HTTPException(429, MENSAGEM_LIMITE_TENTATIVAS) from exc
     if "__interrupt__" in resultado:
         return _payload_pergunta(thread_id, resultado)
 
