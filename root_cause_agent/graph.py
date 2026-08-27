@@ -5,34 +5,69 @@ Porquês)."""
 from __future__ import annotations
 
 import sqlite3
+import time
+from typing import Optional
 
+from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 
 from root_cause_agent import models, nodes
-from root_cause_agent.config import CHECKPOINT_DB_PATH
+from root_cause_agent.config import CHECKPOINT_DB_PATH, configurar_logging, log_no_executado
 from root_cause_agent.state import AgentState
 from root_cause_agent.tools import TOOLS
+
+
+def _com_log_estruturado(nome: str, no):
+    """Envolve um nó (função simples ou um Runnable como ToolNode, que
+    expõe .invoke em vez de ser diretamente chamável) para emitir 1 log
+    estruturado por execução -- sinal 1 de observabilidade
+    (specs/fase02/design.md § Observabilidade). O wrapper aceita
+    `config: RunnableConfig` como 2º parâmetro, o que faz o LangGraph
+    injetar automaticamente o config do invoke() em andamento (é de lá que
+    vem thread_id, não do AgentState); o nó original continua recebendo só
+    `state`, sem precisar mudar assinatura. GraphInterrupt (perguntar_operador
+    pausando pra esperar o operador) propaga normalmente através do
+    `finally` -- ainda assim gera um log, com a duração até a pausa."""
+    chamar = no.invoke if hasattr(no, "invoke") else no
+
+    def envolto(state: AgentState, config: Optional[RunnableConfig] = None) -> dict:  # noqa: UP045
+        inicio = time.monotonic()
+        try:
+            return chamar(state)
+        finally:
+            duracao = time.monotonic() - inicio
+            thread_id = ((config or {}).get("configurable") or {}).get("thread_id")
+            log_no_executado(nome, thread_id, state.get("batch_id"), duracao)
+
+    return envolto
 
 
 def build_graph(checkpoint_db_path: str | None = None):
     """Compila o grafo com um checkpointer SqliteSaver -- por padrão
     data/checkpoints.db (config.CHECKPOINT_DB_PATH), ou ":memory:"/outro
     caminho para testes/harness isolados."""
+    configurar_logging()
     g = StateGraph(AgentState)
 
-    g.add_node("preparar_contexto", nodes.preparar_contexto)
-    g.add_node("formular_pergunta_ishikawa", nodes.formular_pergunta_ishikawa)
-    g.add_node("usar_ferramenta", ToolNode(TOOLS))
-    g.add_node("perguntar_operador", nodes.perguntar_operador)
-    g.add_node("avaliar_informatividade", nodes.avaliar_informatividade)
-    g.add_node("orquestrar_analise", nodes.orquestrar_analise)
-    g.add_node("formular_porque", nodes.formular_porque)
-    g.add_node("gerar_causa_raiz", nodes.gerar_causa_raiz)
-    g.add_node("pre_busca_rag", nodes.pre_busca_rag)
-    g.add_node("recomendar_tratativa", nodes.recomendar_tratativa)
+    # Todo nó passa por _com_log_estruturado (sinal 1 de observabilidade,
+    # specs/fase02/design.md § Observabilidade) -- 1 log por execução.
+    nos = {
+        "preparar_contexto": nodes.preparar_contexto,
+        "formular_pergunta_ishikawa": nodes.formular_pergunta_ishikawa,
+        "usar_ferramenta": ToolNode(TOOLS),
+        "perguntar_operador": nodes.perguntar_operador,
+        "avaliar_informatividade": nodes.avaliar_informatividade,
+        "orquestrar_analise": nodes.orquestrar_analise,
+        "formular_porque": nodes.formular_porque,
+        "gerar_causa_raiz": nodes.gerar_causa_raiz,
+        "pre_busca_rag": nodes.pre_busca_rag,
+        "recomendar_tratativa": nodes.recomendar_tratativa,
+    }
+    for nome, no in nos.items():
+        g.add_node(nome, _com_log_estruturado(nome, no))
 
     g.set_entry_point("preparar_contexto")
     g.add_edge("preparar_contexto", "formular_pergunta_ishikawa")

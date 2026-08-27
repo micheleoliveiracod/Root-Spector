@@ -5,6 +5,7 @@ Ver specs/design.md."""
 from __future__ import annotations
 
 import sqlite3
+import time
 from datetime import datetime
 from typing import Annotated
 
@@ -46,6 +47,16 @@ RESPOSTAS_EVASIVAS_CONHECIDAS = {
 # tratado como abuso (custo de contexto inflado, ou tentativa de
 # sobrecarregar o prompt), não como uma resposta detalhada legítima.
 TAMANHO_MAXIMO_RESPOSTA = 2000
+
+# Guardrail (Fase 2, observabilidade, ver specs/fase02/design.md §
+# Observabilidade): timeout explícito e retry na consulta SQL de
+# consultar_leituras_biosensor, protegendo contra banco travado por outro
+# processo ou arquivo corrompido (reforça RNF6) -- sem isso, a chamada
+# ficaria bloqueada indefinidamente ou propagaria uma exceção crua pro
+# LLM em vez de uma mensagem de erro tratável.
+TIMEOUT_CONSULTA_SQL = 5.0  # segundos que o sqlite3 espera por um lock antes de desistir
+MAX_TENTATIVAS_CONSULTA_SQL = 2
+INTERVALO_ENTRE_TENTATIVAS = 0.5  # segundos, entre a 1ª e a última tentativa
 
 
 def validar_resposta_operador(resposta: str) -> bool:
@@ -103,17 +114,28 @@ def consultar_leituras_biosensor(
     if inicio > fim:
         return f"data_inicio ({data_inicio}) é depois de data_fim ({data_fim}) -- inverta a janela."
 
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    try:
-        rows = conn.execute(
-            "SELECT temperature, ph, dissolved_oxygen, pressure, agitator_speed, recorded_at "
-            "FROM sensor_readings WHERE batch_id = ? AND recorded_at BETWEEN ? AND ? "
-            "ORDER BY recorded_at",
-            (batch_id, data_inicio, data_fim),
-        ).fetchall()
-    finally:
-        conn.close()
+    rows = None
+    for tentativa in range(1, MAX_TENTATIVAS_CONSULTA_SQL + 1):
+        try:
+            conn = sqlite3.connect(DB_PATH, timeout=TIMEOUT_CONSULTA_SQL)
+            conn.row_factory = sqlite3.Row
+            try:
+                rows = conn.execute(
+                    "SELECT temperature, ph, dissolved_oxygen, pressure, agitator_speed, "
+                    "recorded_at FROM sensor_readings WHERE batch_id = ? "
+                    "AND recorded_at BETWEEN ? AND ? ORDER BY recorded_at",
+                    (batch_id, data_inicio, data_fim),
+                ).fetchall()
+            finally:
+                conn.close()
+            break
+        except sqlite3.OperationalError as exc:
+            if tentativa >= MAX_TENTATIVAS_CONSULTA_SQL:
+                return (
+                    f"Banco de dados indisponível (timeout de {TIMEOUT_CONSULTA_SQL:.0f}s "
+                    f"excedido após {tentativa} tentativa(s)): {exc}. Tente novamente em instantes."
+                )
+            time.sleep(INTERVALO_ENTRE_TENTATIVAS)
 
     if not rows:
         return (
