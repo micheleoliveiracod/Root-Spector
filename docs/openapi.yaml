@@ -12,9 +12,11 @@ paths:
       - lotes
       summary: Listar lotes classificados pelo BiotecPredict
       description: Lê `batches` (status COMPLETED, compliance_score não nulo) e devolve
-        cada lote com `classification` recalculada, `elegivel` (WARNING/CRITICAL)
-        e `parametros_fora_da_faixa` (calculado a partir de `sensor_readings`, vazio
-        para lotes ACCEPTABLE).
+        cada lote com `classification` recalculada, `elegivel` (WARNING/CRITICAL de
+        `classification`, ou `risk_prediction` diferente de LOW_RISK, ou parâmetro
+        de biosensor fora da faixa) e `parametros_fora_da_faixa` (calculado a partir
+        de `sensor_readings`, vazio quando os dois primeiros sinais já indicam que
+        está tudo bem).
       operationId: listar_lotes_api_lotes_get
       responses:
         '200':
