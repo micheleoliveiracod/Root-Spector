@@ -47,7 +47,7 @@ from pydantic import BaseModel
 
 from root_cause_agent.config import DB_PATH, REPORTS_DIR, carregar_regras_setor
 from root_cause_agent.graph import build_graph
-from root_cause_agent.models import CicloAnterior, Classification
+from root_cause_agent.models import CicloAnterior, Classification, RiskPrediction
 from root_cause_agent.nodes import (
     FalhaLLMError,
     LimiteTentativasExcedidoError,
@@ -145,8 +145,11 @@ def _payload_pergunta(thread_id: str, resultado: dict) -> dict:
     description=(
         "Lê `batches` (status COMPLETED, compliance_score não nulo) e "
         "devolve cada lote com `classification` recalculada, `elegivel` "
-        "(WARNING/CRITICAL) e `parametros_fora_da_faixa` (calculado a "
-        "partir de `sensor_readings`, vazio para lotes ACCEPTABLE)."
+        "(WARNING/CRITICAL de `classification`, ou `risk_prediction` "
+        "diferente de LOW_RISK, ou parâmetro de biosensor fora da faixa) "
+        "e `parametros_fora_da_faixa` (calculado a partir de "
+        "`sensor_readings`, vazio quando os dois primeiros sinais já "
+        "indicam que está tudo bem)."
     ),
 )
 def listar_lotes():
@@ -163,15 +166,33 @@ def listar_lotes():
         lotes = []
         for r in rows:
             classification = _classificar(r["compliance_score"])
-            elegivel = classification != Classification.ACCEPTABLE
+            risk_prediction = RiskPrediction(r["risk_prediction"])
+
+            # `classification` e `risk_prediction` já vêm do SELECT acima,
+            # sem custo extra. `parametros_fora_da_faixa` exige 1 consulta
+            # adicional por lote em sensor_readings, então só calculamos
+            # quando pelo menos um dos dois primeiros sinais já não está
+            # bem -- um lote pode ter compliance_score ACCEPTABLE e ainda
+            # assim ter parâmetro de biosensor fora da faixa (o
+            # compliance_score do BiotecPredict mede proximidade do ideal,
+            # não conta sensor fora da faixa, ver issue de correção de
+            # elegibilidade), risk_prediction MEDIUM_RISK/HIGH_RISK é o
+            # sinal mais forte disso. Só pulamos a consulta extra quando os
+            # dois sinais concordam que está tudo bem.
+            precisa_verificar_sensor = (
+                classification != Classification.ACCEPTABLE
+                or risk_prediction != RiskPrediction.LOW_RISK
+            )
             parametros_fora_da_faixa: list[str] = []
-            if elegivel:
+            if precisa_verificar_sensor:
                 leituras = conn.execute(
                     "SELECT temperature, ph, dissolved_oxygen, pressure, agitator_speed "
                     "FROM sensor_readings WHERE batch_id = ?",
                     (r["id"],),
                 ).fetchall()
                 _, parametros_fora_da_faixa = calcular_sensor_metrics(leituras, regras)
+
+            elegivel = precisa_verificar_sensor or bool(parametros_fora_da_faixa)
             lotes.append(
                 {
                     "batch_id": r["id"],

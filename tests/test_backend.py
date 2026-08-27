@@ -46,15 +46,50 @@ def test_listar_lotes(client):
     resposta = client.get("/api/lotes")
     assert resposta.status_code == 200
     lotes = resposta.json()
-    assert {lote["batch_id"] for lote in lotes} == {501, 502, 503, 511, 512}
+    assert {lote["batch_id"] for lote in lotes} == {501, 502, 503, 511, 512, 513, 514}
     elegiveis = {lote["batch_id"] for lote in lotes if lote["elegivel"]}
-    assert elegiveis == {511, 512}
+    # 511/512, WARNING/CRITICAL pelo compliance_score, elegiveis como antes.
+    # 513, ACCEPTABLE mas MEDIUM_RISK, elegivel só por causa do risco (ver
+    # test_listar_lotes_elegivel_por_risco_mesmo_com_score_aceitavel).
+    assert elegiveis == {511, 512, 513}
 
     lote_511 = next(lote for lote in lotes if lote["batch_id"] == 511)
     assert "agitator_speed" in lote_511["parametros_fora_da_faixa"]
 
     lote_501 = next(lote for lote in lotes if lote["batch_id"] == 501)
     assert lote_501["parametros_fora_da_faixa"] == []
+
+
+def test_listar_lotes_elegivel_por_risco_mesmo_com_score_aceitavel(client):
+    """Issue #67: compliance_score ACCEPTABLE não basta para descartar um
+    lote, risk_prediction MEDIUM_RISK/HIGH_RISK também torna o lote
+    elegível, mesmo sem nenhum parâmetro de biosensor fora da faixa (lote
+    513 de fixture: leituras todas dentro da faixa aceitável do
+    Root-Spector)."""
+    resposta = client.get("/api/lotes")
+    lote_513 = next(lote for lote in resposta.json() if lote["batch_id"] == 513)
+
+    assert lote_513["classification"] == "ACCEPTABLE"
+    assert lote_513["risk_prediction"] == "MEDIUM_RISK"
+    assert lote_513["elegivel"] is True
+    assert lote_513["parametros_fora_da_faixa"] == []
+
+
+def test_listar_lotes_pula_consulta_de_sensor_quando_score_e_risco_ok(client):
+    """Issue #67: lote ACCEPTABLE e LOW_RISK não tem a consulta extra em
+    sensor_readings executada. Lote 514 de fixture não tem NENHUMA leitura
+    de sensor cadastrada -- se o código tentasse calcular
+    parametros_fora_da_faixa mesmo assim, calcular_sensor_metrics quebraria
+    (min()/max() de lista vazia). A resposta 200 com elegivel False prova
+    que a consulta foi pulada, não que ela rodou e não achou nada."""
+    resposta = client.get("/api/lotes")
+    assert resposta.status_code == 200
+    lote_514 = next(lote for lote in resposta.json() if lote["batch_id"] == 514)
+
+    assert lote_514["classification"] == "ACCEPTABLE"
+    assert lote_514["risk_prediction"] == "LOW_RISK"
+    assert lote_514["elegivel"] is False
+    assert lote_514["parametros_fora_da_faixa"] == []
 
 
 def test_investigacao_completa_ate_revisao_com_relatorio_ja_gerado(client):

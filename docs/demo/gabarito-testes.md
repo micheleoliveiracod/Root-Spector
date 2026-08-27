@@ -3,9 +3,35 @@
 Roteiro de respostas prontas pra quem for testar o Root-Spector de ponta a
 ponta, sabendo de antemão a causa raiz "oficial" de cada lote (definida em
 `data/simulacao_causa_raiz/README.md`, cenários `desvio_01` e `desvio_06`).
-São os **únicos dois lotes elegíveis** (`WARNING`) do dataset atual, os
-outros 8 lotes com desvio ficam `ACCEPTABLE` pelo score real do
-BiotecPredict e por isso não aparecem como investigáveis na tela.
+
+A regra de elegibilidade de `GET /api/lotes` (`backend/main.py:listar_lotes`)
+passa a considerar `risk_prediction` e `parametros_fora_da_faixa`, não só o
+`compliance_score` do BiotecPredict. Antes dessa correção, `desvio_01` e
+`desvio_06` (lotes 6 e 11 no dataset de exemplo) eram os únicos dois
+elegíveis, os outros 8 lotes com desvio ficavam `ACCEPTABLE` pelo score e
+não apareciam como investigáveis. Com a correção, os 10 lotes com desvio
+aparecem como elegíveis, porque todos têm `risk_prediction` MEDIUM_RISK ou
+HIGH_RISK mesmo quando o `compliance_score` fica ACCEPTABLE:
+
+| Causa raiz simulada | Sensor(es) afetado(s) | Score | Classificação | Risco ML |
+|---|---|---|---|---|
+| Contaminação microbiana / meio de cultura ruim (`desvio_01`, lote 6) | pH + temperatura + OD | 48.31 | WARNING | HIGH_RISK |
+| Falha na bomba dosadora de base (`desvio_02`) | pH | 84.13 | ACCEPTABLE | MEDIUM_RISK |
+| Falha na bomba dosadora de ácido (`desvio_03`) | pH | 84.53 | ACCEPTABLE | MEDIUM_RISK |
+| Falha no sistema de aquecimento (`desvio_04`) | temperatura | 84.65 | ACCEPTABLE | MEDIUM_RISK |
+| Deriva de calibração do sensor de temperatura (`desvio_05`) | temperatura | 83.96 | ACCEPTABLE | MEDIUM_RISK |
+| Agitador com RPM muito baixo (`desvio_06`, lote 11) | agitador + OD | 71.32 | WARNING | MEDIUM_RISK |
+| Erro de configuração do agitador (`desvio_07`) | agitador | 84.36 | ACCEPTABLE | MEDIUM_RISK |
+| Válvula de contrapressão travada (`desvio_08`) | pressão | 84.56 | ACCEPTABLE | MEDIUM_RISK |
+| Vazamento na linha/vedação do reator (`desvio_09`) | pressão | 84.56 | ACCEPTABLE | MEDIUM_RISK |
+| Falha no suprimento de ar (`desvio_10`) | oxigênio dissolvido | 85.04 | ACCEPTABLE | MEDIUM_RISK |
+
+O `batch_id` real de cada lote depende da ordem de upload no BiotecPredict,
+por isso a tabela usa o nome do arquivo CSV, não um número de lote fixo,
+exceto pelos lotes 6 e 11 já documentados abaixo. O roteiro completo de
+respostas (Ishikawa + 5 Porquês) dos outros 8 cenários ainda não foi
+escrito aqui, fica como próximo passo para quem for demonstrar esses
+casos especificamente.
 
 **Como usar:** a pergunta que o agente mostra na tela é gerada pelo LLM a
 cada rodada, a redação varia, mas a intenção de cada categoria é sempre a
