@@ -189,9 +189,10 @@ lote da investigação.
 Nenhum código novo aqui (confirmado em `specs/fase02/requirements.md`).
 Dois documentos novos:
 
-- `docs/fase02/qa/code-review-ia.md`, code review de IA sobre um diff
-  real (candidato: PR #41 desta sessão), mais o teste de prompt injection
-  como "teste priorizado por risco".
+- `docs/fase02/qa/code-review-ia.md`, code review de IA sobre um PR de
+  código real (candidato: PR #63, os guardrails de governança desta
+  fase), mais o teste de prompt injection como "teste priorizado por
+  risco".
 - `docs/fase02/devops/analise-incidente-ci.md`, usa os dados reais já
   coletados nesta sessão (35 execuções `startup_failure`, run IDs,
   timestamps via `gh api`): explicação de log de 2 etapas (lint + E2E), a

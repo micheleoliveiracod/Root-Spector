@@ -125,9 +125,10 @@ na tool. Ver `specs/fase02/design.md` § Observabilidade.
 | Selecionar e justificar 1 teste prioritário por risco | ❌ | Não formalizado |
 
 **Trabalho novo:** documentar formalmente (não é código), code review de
-IA sobre um PR real (candidato: PR #41, a correção de CI desta sessão), e
-o teste de prompt injection (§4.5) como o "teste prioritário por risco"
-(maior risco = segurança). Ver `specs/fase02/design.md` § QA.
+IA sobre um PR de código real (candidato: PR #63, os guardrails de
+governança desta fase), e o teste de prompt injection (§4.5) como o
+"teste prioritário por risco" (maior risco = segurança). Ver
+`specs/fase02/design.md` § QA.
 
 ---
 

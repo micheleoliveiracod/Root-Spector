@@ -279,10 +279,10 @@ Notas:
 - **Contexto:** o PDF exige IA analisando um diff/PR real, mais um teste
   ou cenário priorizado por risco/impacto (§4.7).
 - **Escopo:** `docs/fase02/qa/code-review-ia.md` documentando um code
-  review de IA sobre um PR real (candidato: PR #41 desta sessão, a
-  correção de CI); referenciar o teste de prompt injection
-  (`feature/governanca-fase02`) como o teste priorizado por risco,
-  justificando a prioridade (maior risco = segurança).
+  review de IA sobre um PR de código real (candidato: PR #63, os
+  guardrails de governança desta fase); referenciar o teste de prompt
+  injection (`feature/governanca-fase02`) como o teste priorizado por
+  risco, justificando a prioridade (maior risco = segurança).
 - **Critérios de aceite:** documento com achados reais do review (mesmo
   que "nada crítico encontrado" seja um achado válido) e a justificativa
   de priorização.
