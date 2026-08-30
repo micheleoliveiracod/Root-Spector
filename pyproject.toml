@@ -13,7 +13,6 @@ dependencies = [
     "langchain>=0.3",
     "langchain-google-genai>=2.0",
     "langchain-groq>=0.2",
-    "langchain-deepseek>=0.1",
     "langchain-anthropic>=0.3",
     "langchain-openai>=0.2",
     "langchain-text-splitters>=0.3",

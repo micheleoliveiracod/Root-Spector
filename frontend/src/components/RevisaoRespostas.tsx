@@ -55,7 +55,7 @@ export function RevisaoRespostas({ revisao, onAjustar, onReiniciar, processando 
       <h2>Revisão da investigação</h2>
 
       <div className="callout">
-        <strong>{revisao.categoria_principal.categoria}</strong> —{" "}
+        <strong>{revisao.categoria_principal.categoria}</strong>:{" "}
         {revisao.categoria_principal.justificativa}
       </div>
 
@@ -115,7 +115,7 @@ export function RevisaoRespostas({ revisao, onAjustar, onReiniciar, processando 
       {processando && (
         <div className="loading">
           <span className="spinner" aria-hidden="true" />
-          <span>Reabrindo um novo ciclo de investigação — isso pode levar alguns instantes.</span>
+          <span>Reabrindo um novo ciclo de investigação, isso pode levar alguns instantes.</span>
         </div>
       )}
     </div>

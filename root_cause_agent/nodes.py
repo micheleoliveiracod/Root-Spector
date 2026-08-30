@@ -193,6 +193,7 @@ def preparar_contexto(state: AgentState) -> dict:
         "numero_porque": 1,
         "pergunta_atual": None,
         "tentativas_pergunta_atual": [],
+        "erro_informatividade": None,
         "candidatos_rag": [],
         "recomendacao_tratativa": None,
         "diagnostico": None,
@@ -453,10 +454,17 @@ def perguntar_operador(state: AgentState) -> dict:
     evasiva -> chama interrupt() de novo com um sinal de erro, sem avançar
     o grafo. Guardrail MAX_TENTATIVAS_CAMADA_1 (Fase 2, governança): a
     partir da tentativa que excede o limite, levanta
-    LimiteTentativasExcedidoError em vez de pedir de novo indefinidamente."""
+    LimiteTentativasExcedidoError em vez de pedir de novo indefinidamente.
+
+    Se a tentativa anterior foi rejeitada pela Camada 2 (agêntica, ver
+    avaliar_informatividade), erro_informatividade já vem preenchido no
+    state -- entra no primeiro payload, não só nas repetições da Camada 1,
+    senão o operador vê a mesma pergunta de novo sem nenhuma explicação."""
     pergunta = state["pergunta_atual"]
     nc = state["nc_input"].model_dump(mode="json")
     payload = {"pergunta": pergunta, "nc": nc, **_progresso_pergunta(state)}
+    if state.get("erro_informatividade"):
+        payload["erro"] = state["erro_informatividade"]
     resposta = interrupt(payload)
     tentativas_camada_1 = 0
     while not validar_resposta_operador(resposta):
@@ -473,15 +481,19 @@ def perguntar_operador(state: AgentState) -> dict:
             "erro": _erro_camada_1(resposta),
         }
         resposta = interrupt(payload)
-    return {"tentativas_pergunta_atual": state["tentativas_pergunta_atual"] + [resposta]}
+    return {
+        "tentativas_pergunta_atual": state["tentativas_pergunta_atual"] + [resposta],
+        "erro_informatividade": None,
+    }
 
 
 def avaliar_informatividade(state: AgentState) -> dict:
     """Camada 2 (agêntica, no máximo 2 tentativas por pergunta): julga se a
     última tentativa de fato informa a pergunta feita. Não informativa e é
-    a 1ª tentativa -> não avança nada (perguntar_operador pede de novo, 2ª
-    e última chance). Informativa, ou não informativa mas 2ª tentativa
-    esgotada -> grava a resposta final e avança a fase."""
+    a 1ª tentativa -> não avança nada, só preenche erro_informatividade
+    (perguntar_operador pede de novo mostrando esse aviso, 2ª e última
+    chance). Informativa, ou não informativa mas 2ª tentativa esgotada ->
+    grava a resposta final e avança a fase."""
 
     class _Julgamento(BaseModel):
         informativa: bool
@@ -505,7 +517,12 @@ def avaliar_informatividade(state: AgentState) -> dict:
     )
 
     if not julgamento.informativa and len(tentativas) < 2:
-        return {}
+        return {
+            "erro_informatividade": (
+                "Essa resposta parece pouco específica para a pergunta. "
+                "Pode detalhar mais?"
+            )
+        }
 
     informativa_final = julgamento.informativa
     fase = _fase_atual(state)
