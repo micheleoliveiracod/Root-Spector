@@ -102,9 +102,9 @@ orquestrar_analise           → identifica categoria_principal
         ↓
 gerar_causa_raiz             → Diagnostico (Pydantic)
         ↓
-reports.py                   → reports/{batch_id}_{ts}.json + .html
+reports.py                   → reports/{batch_id}_{ts}.json (persistido)
         ↓
-Revisão do operador          → link do relatório já disponível | pedir ajuste
+Revisão do operador          → link do JSON já disponível, PDF gerado sob demanda | pedir ajuste
 ```
 
 ---

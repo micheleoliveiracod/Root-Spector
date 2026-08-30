@@ -1,6 +1,7 @@
 // Cenário principal: lista de lotes -> escolher um elegível -> responder as
-// 11 perguntas (6 Ishikawa + 5 porquês) -> revisão, já com o link do
-// relatório gerado automaticamente ao concluir o ciclo.
+// 11 perguntas (6 Ishikawa + 5 porquês) -> revisão, já com o link do JSON
+// gerado automaticamente ao concluir o ciclo, e o PDF gerado sob demanda ao
+// clicar em "Gerar relatório".
 //
 // Cenário de ajuste: revisão -> "pedir ajuste" -> novo ciclo completo (11
 // perguntas de novo) -> conferir que o relatório do 2º ciclo lista o ciclo
@@ -10,6 +11,8 @@
 // playwright.config.ts, sempre contra tests/fixtures/biotecpredict_teste.db
 // e LLM_PROVIDER=fake -- nunca contra data/biotecpredict.db nem um
 // provedor real.
+
+import { readFileSync } from "node:fs";
 
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
@@ -48,10 +51,23 @@ test("investigação completa: escolher lote, responder e revisar com relatório
   await expect(page.getByRole("heading", { name: "Revisão da investigação" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Ishikawa" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "5 Porquês" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Ver relatório (HTML)" })).toHaveAttribute(
-    "href",
-    /http:\/\/localhost:8000\/reports\/.*\.html/,
-  );
+  // "Baixar JSON" busca o relatório gravado no banco (root_cause_agent/
+  // reports.py::buscar_relatorio) via fetch com X-API-Key, não um link
+  // <a href> direto -- por isso o download, não o atributo href.
+  const [downloadJson] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Baixar JSON" }).click(),
+  ]);
+  expect(downloadJson.suggestedFilename()).toMatch(/_relatorio\.json$/);
+
+  // "Gerar relatório (PDF)" chama o endpoint sob demanda (nunca salvo em
+  // disco, ver root_cause_agent/reports.py::gerar_pdf) e dispara o download
+  // do PDF gerado na hora.
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Gerar relatório (PDF)" }).click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/_relatorio\.pdf$/);
 });
 
 test("pedir ajuste reabre um novo ciclo e preserva o anterior no relatório final", async ({
@@ -68,10 +84,12 @@ test("pedir ajuste reabre um novo ciclo e preserva o anterior no relatório fina
   await responderPerguntas(page, 11, "resposta ciclo2");
 
   await expect(page.getByRole("heading", { name: "Revisão da investigação" })).toBeVisible();
-  const href = await page.getByRole("link", { name: "Ver relatório (HTML)" }).getAttribute("href");
-  expect(href).toBeTruthy();
 
-  const resposta = await page.request.get(href!);
-  const corpo = await resposta.text();
-  expect(corpo).toContain("Ciclos anteriores");
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Baixar JSON" }).click(),
+  ]);
+  const caminho = await download.path();
+  const corpo = JSON.parse(readFileSync(caminho!, "utf-8"));
+  expect(corpo.ciclos_anteriores.length).toBeGreaterThan(0);
 });

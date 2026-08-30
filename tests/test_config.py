@@ -1,10 +1,11 @@
 """Teste básico: config.py::get_llm() monta a cadeia de fallback Gemini ->
-Groq -> Anthropic -> OpenAI corretamente conforme as chaves presentes no
-ambiente (mockadas, nunca uma chamada real). Cobre pelo menos: só Gemini
-configurado (sem fallback), Gemini+Groq (os 2 provedores gratuitos), os 4
-provedores, e o caso em que todos os provedores configurados falham -- o nó
-agêntico que chama get_llm() deve relançar FalhaLLMError (nodes.py) apenas
-nesse último caso, nunca antes de esgotar os fallbacks configurados.
+Groq -> DeepSeek -> Anthropic -> OpenAI corretamente conforme as chaves
+presentes no ambiente (mockadas, nunca uma chamada real). Cobre pelo menos:
+só Gemini configurado (sem fallback), Gemini+Groq (os 2 provedores
+gratuitos), Gemini+Groq+DeepSeek, os 5 provedores, e o caso em que todos os
+provedores configurados falham -- o nó agêntico que chama get_llm() deve
+relançar FalhaLLMError (nodes.py) apenas nesse último caso, nunca antes de
+esgotar os fallbacks configurados.
 """
 
 from __future__ import annotations
@@ -22,6 +23,13 @@ class _FakeChatModel:
 
     def with_fallbacks(self, fallbacks):
         self.fallbacks = list(fallbacks)
+        return self
+
+    def with_config(self, **kwargs):
+        # get_llm() sempre encadeia with_config() por cima (Fase 2,
+        # observabilidade, ver config.py::_CallbackObservabilidadeLLM) --
+        # devolve self, não um wrapper, pra preservar as asserções de
+        # identidade (`llm is criados[0]`) já usadas por estes testes.
         return self
 
 
@@ -42,7 +50,7 @@ def sem_chaves_de_fallback_por_padrao(monkeypatch):
     """Garante que nenhum teste herda GROQ_API_KEY/ANTHROPIC_API_KEY/
     OPENAI_API_KEY de um .env real na máquina de quem roda os testes --
     cada teste liga explicitamente só as chaves que quer exercitar."""
-    for chave in ("GROQ_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY"):
+    for chave in ("GROQ_API_KEY", "DEEPSEEK_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY"):
         monkeypatch.delenv(chave, raising=False)
 
 
@@ -69,26 +77,45 @@ def test_gemini_e_groq_os_2_provedores_gratuitos(mocker, monkeypatch):
     assert llm.fallbacks == [criados[1]]
 
 
-def test_gemini_groq_e_anthropic(mocker, monkeypatch):
+def test_gemini_groq_e_deepseek(mocker, monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "chave-fake")
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "outra-chave-fake")
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "outra-chave-fake")
     criados = _patch_init_chat_model(mocker)
 
     llm = get_llm()
 
-    assert [c.provider for c in criados] == ["google_genai", "groq", "anthropic"]
+    assert [c.provider for c in criados] == ["google_genai", "groq", "deepseek"]
     assert llm.fallbacks == criados[1:]
 
 
-def test_os_4_provedores_configurados(mocker, monkeypatch):
+def test_gemini_groq_deepseek_e_anthropic(mocker, monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "chave-fake")
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "outra-chave-fake")
-    monkeypatch.setenv("OPENAI_API_KEY", "mais-uma-chave-fake")
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "outra-chave-fake")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "mais-uma-chave-fake")
     criados = _patch_init_chat_model(mocker)
 
     llm = get_llm()
 
-    assert [c.provider for c in criados] == ["google_genai", "groq", "anthropic", "openai"]
+    assert [c.provider for c in criados] == ["google_genai", "groq", "deepseek", "anthropic"]
+    assert llm.fallbacks == criados[1:]
+
+
+def test_os_5_provedores_configurados(mocker, monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "chave-fake")
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "outra-chave-fake")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "mais-uma-chave-fake")
+    monkeypatch.setenv("OPENAI_API_KEY", "ainda-mais-uma-chave-fake")
+    criados = _patch_init_chat_model(mocker)
+
+    llm = get_llm()
+
+    assert [c.provider for c in criados] == [
+        "google_genai",
+        "groq",
+        "deepseek",
+        "anthropic",
+        "openai",
+    ]
     assert llm.fallbacks == criados[1:]
 
 

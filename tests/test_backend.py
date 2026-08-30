@@ -111,12 +111,16 @@ def test_investigacao_completa_ate_revisao_com_relatorio_ja_gerado(client):
     assert corpo["fontes_rag"]
 
     links = corpo["relatorio"]
-    assert links["json"].startswith("/reports/511_")
-    assert links["html"].startswith("/reports/511_")
+    assert links["json"].startswith("/api/relatorios/")
 
-    r_html = client.get(links["html"])
-    assert r_html.status_code == 200
-    assert "Relatório de causa raiz" in r_html.text
+    r_json = client.get(links["json"])
+    assert r_json.status_code == 200
+    assert r_json.json()["causa_raiz"]
+
+    r_pdf = client.get(f"/api/investigacoes/{thread_id}/relatorio.pdf")
+    assert r_pdf.status_code == 200
+    assert r_pdf.headers["content-type"] == "application/pdf"
+    assert r_pdf.content.startswith(b"%PDF")
 
 
 def test_ajustar_arquiva_ciclo_e_reabre_novo(client):
@@ -132,7 +136,7 @@ def test_ajustar_arquiva_ciclo_e_reabre_novo(client):
 
     r = client.get("/api/investigacoes/512/revisao")
     assert r.status_code == 200
-    assert r.json()["relatorio"]["html"].startswith("/reports/512_")
+    assert r.json()["relatorio"]["json"].startswith("/api/relatorios/")
 
 
 def test_falha_llm_error_vira_http_503(client, monkeypatch):
@@ -172,6 +176,17 @@ def test_revisao_sem_diagnostico_pronto_devolve_400(client):
     assert r.status_code == 400
 
 
+def test_relatorio_pdf_sem_diagnostico_pronto_devolve_400(client):
+    client.post("/api/investigacoes/511/iniciar")
+    r = client.get("/api/investigacoes/511/relatorio.pdf")
+    assert r.status_code == 400
+
+
+def test_obter_relatorio_inexistente_devolve_404(client):
+    r = client.get("/api/relatorios/999999")
+    assert r.status_code == 404
+
+
 def test_contrato_openapi_valido_e_cobre_as_rotas(client):
     esquema = client.get("/openapi.json").json()
     validate(esquema)  # levanta se o documento não for um OpenAPI válido
@@ -181,7 +196,10 @@ def test_contrato_openapi_valido_e_cobre_as_rotas(client):
         "/api/investigacoes/{batch_id}/iniciar",
         "/api/investigacoes/{thread_id}/responder",
         "/api/investigacoes/{thread_id}/revisao",
+        "/api/investigacoes/{thread_id}/relatorio.pdf",
         "/api/investigacoes/{thread_id}/ajustar",
+        "/api/relatorios/resumo-diario",
+        "/api/relatorios/{relatorio_id}",
     }
     assert rotas_esperadas <= set(esquema["paths"])
 
@@ -241,3 +259,107 @@ def test_origens_cors_lista_customizada_separada_por_virgula(monkeypatch):
 
     monkeypatch.setenv("CORS_ALLOWED_ORIGINS", "https://a.exemplo.com, https://b.exemplo.com")
     assert backend_main._origens_cors() == ["https://a.exemplo.com", "https://b.exemplo.com"]
+
+
+def test_exigir_api_key_bloqueia_sem_chave_quando_configurada(client, monkeypatch):
+    """Guardrail: com INTERNAL_API_KEY definida, uma rota operacional
+    (lotes/investigações/resumo diário) sem o cabeçalho X-API-Key correto
+    devolve 401."""
+    import backend.main as backend_main
+
+    monkeypatch.setenv("INTERNAL_API_KEY", "chave-secreta")
+
+    r = client.get("/api/lotes")
+
+    assert r.status_code == 401
+    assert r.json()["detail"] == backend_main.MENSAGEM_API_KEY_INVALIDA
+
+
+def test_exigir_api_key_libera_com_chave_correta(client, monkeypatch):
+    monkeypatch.setenv("INTERNAL_API_KEY", "chave-secreta")
+
+    r = client.get("/api/lotes", headers={"X-API-Key": "chave-secreta"})
+
+    assert r.status_code == 200
+
+
+def test_exigir_api_key_sem_efeito_quando_nao_configurada(client, monkeypatch):
+    """Sem INTERNAL_API_KEY no ambiente, nenhuma chave é exigida --
+    desenvolvimento local continua igual."""
+    monkeypatch.delenv("INTERNAL_API_KEY", raising=False)
+
+    r = client.get("/api/lotes")
+
+    assert r.status_code == 200
+
+
+def test_relatorio_pdf_nao_exige_chave_mesmo_configurada(client, monkeypatch):
+    """O link do relatório em PDF precisa continuar clicável direto do
+    e-mail do n8n, sem cabeçalho customizado -- fica de fora de
+    exigir_api_key mesmo com INTERNAL_API_KEY definida."""
+    monkeypatch.setenv("INTERNAL_API_KEY", "chave-secreta")
+
+    r = client.get("/api/investigacoes/999/relatorio.pdf")
+
+    assert r.status_code == 400  # sem diagnóstico pronto, não 401
+
+
+def test_resumo_diario_sem_data_usa_ontem(client, monkeypatch, tmp_path):
+    """Issue #52 (low-code): sem o parâmetro data, o endpoint assume o dia
+    anterior, o mesmo dia que o workflow n8n pede 1x por dia."""
+    from root_cause_agent import reports, resumo_diario
+
+    caminho_db = tmp_path / "observabilidade_vazia.db"
+    monkeypatch.setattr(reports, "OBSERVABILIDADE_DB_PATH", caminho_db)
+    monkeypatch.setattr(resumo_diario, "OBSERVABILIDADE_DB_PATH", caminho_db)
+
+    r = client.get("/api/relatorios/resumo-diario")
+    assert r.status_code == 200
+    corpo = r.json()
+    assert corpo["total_investigacoes"] == 0
+    assert corpo["investigacoes"] == []
+
+
+def test_resumo_diario_com_data_invalida_devolve_422(client):
+    r = client.get("/api/relatorios/resumo-diario?data=22-08-2026")
+    assert r.status_code == 422
+
+
+def test_resumo_diario_monta_link_de_pdf_com_a_url_da_requisicao(client, monkeypatch, tmp_path):
+    from root_cause_agent import reports, resumo_diario
+    from root_cause_agent.models import (
+        CategoriaAnalise,
+        Classification,
+        Diagnostico,
+        NaoConformidade,
+        RiskPrediction,
+    )
+
+    caminho_db = tmp_path / "observabilidade_vazia.db"
+    monkeypatch.setattr(reports, "OBSERVABILIDADE_DB_PATH", caminho_db)
+    monkeypatch.setattr(resumo_diario, "OBSERVABILIDADE_DB_PATH", caminho_db)
+
+    diagnostico = Diagnostico(
+        nc=NaoConformidade(
+            batch_id=21,
+            upload_date="2026-08-20T00:00:00+00:00",
+            compliance_score=48.0,
+            classification=Classification.WARNING,
+            risk_prediction=RiskPrediction.MEDIUM_RISK,
+            sensor_metrics={},
+            parametros_fora_da_faixa=["agitator_speed"],
+        ),
+        respostas_ishikawa=[],
+        categoria_principal=CategoriaAnalise(categoria="Maquina", justificativa="teste"),
+        categorias_descartadas=[],
+        cadeia_de_porques=[],
+        causa_raiz="causa raiz de teste",
+        narrativa="narrativa de teste",
+        gerado_em="2026-08-22T10:00:00+00:00",
+    )
+    reports.salvar_relatorio(diagnostico)
+
+    r = client.get("/api/relatorios/resumo-diario?data=2026-08-22")
+    assert r.status_code == 200
+    link = r.json()["investigacoes"][0]["link_relatorio_pdf"]
+    assert link == "http://testserver/api/investigacoes/21/relatorio.pdf"

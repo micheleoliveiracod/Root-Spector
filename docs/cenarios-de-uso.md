@@ -34,11 +34,12 @@ respostas em `docs/demo/gabarito-testes.md`.
 6. O operador responde às 5 perguntas "por quê", cada uma ancorada na
    resposta anterior, aprofundando a partir da categoria Máquina.
 7. Após a 5ª resposta, o sistema sintetiza a causa raiz, gera
-   `reports/11_{timestamp}.json` e `.html`, e devolve
+   `reports/11_{timestamp}.json`, e devolve
    `{status: "pronto_para_revisao"}`.
 8. O operador consulta `GET /api/investigacoes/11/revisao` e vê a cadeia
    completa (6 respostas Ishikawa + 5 porquês), a causa raiz sintetizada
-   e os links do relatório.
+   e o link do relatório em JSON. Ao pedir o relatório em PDF, o sistema
+   gera o arquivo na hora, sem salvá-lo em disco.
 9. O operador considera a investigação satisfatória e encerra, nenhuma
    ação adicional é necessária (o relatório já está salvo em `reports/`).
 
