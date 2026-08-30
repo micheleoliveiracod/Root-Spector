@@ -6,19 +6,23 @@ __pycache__/
 .venv/
 venv/
 .env
+.env.local
+frontend/.env.local
 .coverage
 
 # configuração local do Claude Code (worktrees, sessão), não faz parte do projeto
 .claude/
 
-# bancos locais: biotecpredict.db (exportado do BiotecPredict, colocado
-# manualmente em data/), checkpoints.db (estado do LangGraph em runtime) e
-# observabilidade.db (log estruturado em banco, Fase 2, ver
-# root_cause_agent/config.py::OBSERVABILIDADE_DB_PATH) -- ver README "Como
-# executar". Nunca commitar.
+# bancos locais gerados em runtime: checkpoints.db (estado do LangGraph)
+# e observabilidade.db (log estruturado em banco, Fase 2, ver
+# root_cause_agent/config.py::OBSERVABILIDADE_DB_PATH). Nunca commitar.
+# data/biotecpredict.db é a exceção: dados sintéticos curados (ver
+# data/simulacao_causa_raiz/README.md), versionado de propósito para
+# embarcar automaticamente no deploy.
 data/*.db
 data/*.db-*
 !data/.gitkeep
+!data/biotecpredict.db
 
 # relatórios gerados em runtime (mantém a pasta versionada via .gitkeep)
 reports/*

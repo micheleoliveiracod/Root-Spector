@@ -5,18 +5,18 @@
 
 :root {
   /* superfícies e texto */
-  --paper: #f3f6f5;
+  --paper: #f6f5fa;
   --paper-raised: #ffffff;
-  --ink: #14201f;
-  --ink-soft: #47534f;
-  --line: #d8e0dd;
+  --ink: #241f33;
+  --ink-soft: #5b5568;
+  --line: #ddd8e8;
 
-  /* cor de destaque */
-  --accent: #0e8a82;
-  --accent-ink: #08514c;
-  --accent-soft: #e1f1ee;
+  /* cor de destaque, roxo/violeta da identidade visual do Root-Spector */
+  --accent: #7c3aed;
+  --accent-ink: #5b21b6;
+  --accent-soft: #efe9fc;
 
-  --shadow: 0 1px 2px rgba(20, 33, 32, 0.06), 0 8px 24px rgba(20, 33, 32, 0.06);
+  --shadow: 0 1px 2px rgba(36, 31, 51, 0.06), 0 8px 24px rgba(36, 31, 51, 0.06);
 
   /* cores "semáforo" -- sempre em tons pastel (fundo claro + texto legível,
      nunca vermelho/amarelo/verde saturados) */
@@ -40,17 +40,19 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #10171a;
-    --paper-raised: #16201f;
-    --ink: #e7edea;
-    --ink-soft: #a7b4af;
-    --line: #253230;
+    /* cinza escuro, não preto -- fundo com leve matiz violeta pra
+       acompanhar a identidade visual, sem ficar tão escuro quanto antes */
+    --paper: #302c3d;
+    --paper-raised: #3a3548;
+    --ink: #ece9f5;
+    --ink-soft: #b3aec2;
+    --line: #4a4459;
 
-    --accent: #38b4a9;
-    --accent-ink: #9be0d6;
-    --accent-soft: #12302d;
+    --accent: #a78bfa;
+    --accent-ink: #ede9fe;
+    --accent-soft: #443b5c;
 
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.3);
 
     --ok-bg: #16302b;
     --ok-fg: #6fcb93;
