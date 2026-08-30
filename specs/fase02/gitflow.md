@@ -50,6 +50,7 @@ fixa por milestone (só o prazo geral do projeto, 31/08/26).
 | 9 | **Documentação Final & Vídeo** | `docs/readme-video-fase02` | §4.1, §4.10, §5.2, §5.5 |
 | 10 | **Planejamento & Automação GitHub** | `docs/planejamento-fase02` | *(fora do PDF)* |
 | 11 | **Deploy em Produção** | `chore/deploy-producao-fase02` | *(fora do PDF)* |
+| 12 | **Release (Fase 2)** | `release/v2.0-entrega` | §5.5 (vídeo) |
 
 Milestone 4 (Tool) depende do milestone 1 (RAG), `recomendar_tratativa`/
 `Diagnostico` precisam existir antes da tool `consultar_recorrencia` ter
@@ -87,6 +88,7 @@ predominante), sem criar nenhuma nova.
 | `documentacao` | ⚪ `#c5def5` | 9, Documentação Final & Vídeo |
 | `planejamento` | ⚪ `#ededed` | 10, Planejamento & Automação GitHub |
 | `deploy` | 🔵 `#0052cc` | 11, Deploy em Produção |
+| `release` (já existe, reaproveitada da Fase 1) | 🔴 `#b60205` | 12, Release (Fase 2) |
 
 ## Kanban (GitHub Projects, 6 colunas)
 
@@ -414,14 +416,39 @@ observabilidade, e todas as seções novas do README. Mesmo papel que
 - **Critérios de aceite:** todas as seções do §5.2 presentes, coerentes
   com o que foi de fato implementado (sem prometer algo que não existe).
 
-### Issue 3, Gravação e publicação do vídeo de demonstração
-- **Contexto:** o PDF exige vídeo de até 10min (máx. 12min), YouTube não
-  listado, cobrindo os pontos do §5.5.
-- **Escopo:** gravar seguindo o roteiro sugerido (problema→arquitetura→
-  2 cenários→segurança→QA→pipeline/anomalia→low-code→limitações);
-  publicar; inserir link no README.
-- **Critérios de aceite:** vídeo acessível, dentro do limite de 12min,
-  cobre todos os pontos do item 5.5.
+A gravação e publicação do vídeo, antes prevista como uma 3ª issue
+nesta branch, passou para `release/v2.0-entrega`, junto do fechamento
+da entrega, depois que o agente estiver testado e rodando em produção
+(Render, Vercel, Azure Database for PostgreSQL, LangSmith e o workflow
+n8n, todos ativos).
+
+---
+
+## `release/v2.0-entrega`
+
+**Branch de fechamento da entrega**, mesmo papel que `release/v1.0-entrega`
+teve na Fase 1: isola o vídeo de demonstração e os últimos ajustes de
+documentação, sem código novo, e conduz o merge em `main`. Nasce de
+`develop` só depois de todas as outras branches desta fase mergeadas e
+do deploy em produção verificado (Render, Vercel, Azure Database for
+PostgreSQL, LangSmith e o workflow n8n rodando).
+
+### Issue, Vídeo de demonstração e release da Fase 2
+- **Contexto:** o PDF exige, no §5.5, um vídeo de até 10 minutos (máximo
+  12), publicado sem listagem no YouTube. A entrega da Fase 2 segue o
+  mesmo processo de release da Fase 1 (`specs/gitflow.md` § Kanban):
+  merge em `main` só por Pull Request, nunca por commit ou push direto.
+- **Escopo:** gravar o vídeo seguindo o roteiro sugerido (problema,
+  arquitetura, os 2 cenários, segurança, QA, pipeline e anomalia,
+  low-code, limitações), incluindo a aplicação rodando em produção;
+  publicar e inserir o link no README; abrir `release/v2.0-entrega` a
+  partir de `develop`; abrir PR `release/v2.0-entrega` → `main`, revisar
+  e mergear; criar a tag `v2.0-entrega` em `main`; back-merge em
+  `develop`, também via PR.
+- **Critérios de aceite:** vídeo acessível, dentro do limite de 12
+  minutos, cobre todos os pontos do §5.5; nenhum commit ou push direto
+  em `main`; tag `v2.0-entrega` existe em `main` apontando pro commit de
+  merge; `develop` recebe o back-merge, sem divergir de `main`.
 
 ---
 
@@ -500,15 +527,17 @@ não fazem mais parte desta branch.
 
 ## Resumo, contagem de issues
 
-11 branches, **19 issues no total** (9 branches-critério do PDF com 14
-issues + 2 branches de apoio fora do PDF com 5 issues, 1 de
-planejamento, 4 de deploy), dentro da mesma ordem de grandeza da Fase 1
-(que teve 21 definidas / 22 criadas de fato).
+12 branches, **20 issues no total** (9 branches-critério do PDF com 13
+issues + 3 branches de apoio fora do PDF com 6 issues, 1 de
+planejamento, 4 de deploy, 1 de release), dentro da mesma ordem de
+grandeza da Fase 1 (que teve 21 definidas / 22 criadas de fato).
 
 ## Branches fora do PDF
 
-As 11 branches carregam sufixo `-fase02`; 9 correspondem a um critério
-avaliado do PDF (§4.1–§4.10), 2 são de apoio:
+Das 12 branches, todas com sufixo `-fase02` exceto a de release
+(mesmo padrão de nome de `release/v1.0-entrega` na Fase 1), 9
+correspondem a um critério avaliado do PDF (§4.1–§4.10), 3 são de
+apoio:
 
 **Critério do PDF:** `feature/langgraph-agente-fase02` ·
 `feature/memoria-rag-fase02` · `feature/governanca-fase02` ·
@@ -517,7 +546,8 @@ avaliado do PDF (§4.1–§4.10), 2 são de apoio:
 `feature/low-code-fase02` · `docs/readme-video-fase02`
 
 **Apoio, fora do PDF (mesmo padrão de issue/milestone/label):**
-`docs/planejamento-fase02` · `chore/deploy-producao-fase02`
+`docs/planejamento-fase02` · `chore/deploy-producao-fase02` ·
+`release/v2.0-entrega`
 
 ## Próximo passo
 
