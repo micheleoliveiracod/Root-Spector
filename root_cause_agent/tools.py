@@ -12,8 +12,9 @@ from typing import Annotated
 from langchain_core.tools import tool
 from langgraph.prebuilt import InjectedState
 
-from root_cause_agent.config import DB_PATH, REPORTS_DIR
+from root_cause_agent.config import DB_PATH
 from root_cause_agent.models import CasoSemelhante, Diagnostico
+from root_cause_agent.reports import listar_relatorios
 from root_cause_agent.state import AgentState
 
 # Frases evasivas conhecidas que não respondem a pergunta de verdade --
@@ -153,28 +154,17 @@ def consultar_leituras_biosensor(
 
 
 def _diagnosticos_salvos(excluir_batch_id: int) -> list[Diagnostico]:
-    """Lê e valida cada reports/*.json (config.REPORTS_DIR) como um
-    Diagnostico, pulando arquivos que não existem/não parseiam (ex.
-    relatório corrompido ou de um schema muito antigo) -- exclui o próprio
-    lote em investigação, nunca compara um caso com ele mesmo."""
-    if not REPORTS_DIR.exists():
-        return []
-    diagnosticos = []
-    for caminho in sorted(REPORTS_DIR.glob("*.json")):
-        try:
-            diagnostico = Diagnostico.model_validate_json(caminho.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            continue
-        if diagnostico.nc.batch_id != excluir_batch_id:
-            diagnosticos.append(diagnostico)
-    return diagnosticos
+    """Lê os relatórios já salvos na tabela `relatorios` (reports.py),
+    excluindo o próprio lote em investigação, nunca compara um caso com
+    ele mesmo."""
+    return [d for d in listar_relatorios() if d.nc.batch_id != excluir_batch_id]
 
 
 def buscar_casos_semelhantes(state: AgentState) -> list[CasoSemelhante]:
-    """Varre reports/*.json procurando investigações anteriores com a
-    mesma categoria_principal e ao menos 1 parametro_fora_da_faixa em
-    comum com o lote atual, excluindo o próprio lote -- compartilhada pela
-    tool `consultar_recorrencia` (texto pro LLM) e por
+    """Varre os relatórios já salvos procurando investigações anteriores
+    com a mesma categoria_principal e ao menos 1 parametro_fora_da_faixa
+    em comum com o lote atual, excluindo o próprio lote -- compartilhada
+    pela tool `consultar_recorrencia` (texto pro LLM) e por
     nodes.py::recomendar_tratativa (lista estruturada pro Diagnostico
     final), ver specs/fase02/design.md § Tool `consultar_recorrencia`."""
     categoria = state["categoria_principal"].categoria

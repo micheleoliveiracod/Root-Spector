@@ -151,7 +151,8 @@ lista, já classificada, que o operador escolhe o lote.
 ## Saída Esperada por Investigação
 
 Para cada investigação concluída, o sistema produz um `Diagnostico`
-(`reports/{batch_id}_{timestamp}.json` + `.html`) contendo:
+(persistido em `reports/{batch_id}_{timestamp}.json`, com o PDF gerado
+sob demanda a partir dos mesmos dados) contendo:
 
 - A NC original (eco, para rastreabilidade).
 - As 6 respostas do mapeamento Ishikawa, com a categoria principal

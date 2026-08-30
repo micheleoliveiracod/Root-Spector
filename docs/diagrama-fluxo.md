@@ -46,7 +46,7 @@ flowchart TD
 
     OA["orquestrar_analise\n(identifica categoria_principal)"] --> FP
 
-    GCR["gerar_causa_raiz"] --> Fim(["reports/{batch_id}_{ts}.json + .html"])
+    GCR["gerar_causa_raiz"] --> Fim(["reports/{batch_id}_{ts}.json"])
 
     classDef workflow fill:#cfe8ff,stroke:#2f6fb3,color:#1a1a1a
     classDef agentic fill:#e3d4fa,stroke:#7c4dbd,color:#1a1a1a
@@ -98,7 +98,7 @@ sequenceDiagram
             API-->>FE: {thread_id, fase, pergunta, ...}
         else 5º porquê concluído
             G-->>API: diagnóstico pronto
-            API->>API: salvar_relatorio() → reports/*.json + *.html
+            API->>API: salvar_relatorio() → reports/*.json (PDF gerado sob demanda, não salvo)
             API-->>FE: {status: "pronto_para_revisao"}
         end
     end
