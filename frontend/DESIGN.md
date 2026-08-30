@@ -2,21 +2,27 @@
 
 Este documento descreve a linguagem visual usada em `src/`, alinhada à
 identidade visual da marca (logo, favicon, `README.md`): superfície do
-produto clara e neutra, roxo em pontos definidos (botão, foco, rótulo de
-fase), nunca como preenchimento de área grande, e o semáforo dos
-indicadores como o único elemento colorido de peso.
+produto clara e neutra, roxo cheio reservado ao botão de ação, nunca como
+preenchimento de área grande, e o semáforo dos indicadores como o único
+elemento colorido de peso. A premissa é que quem usa o sistema está no
+piso de produção, respondendo perguntas sobre o lote no meio do turno,
+muitas vezes sem familiaridade com software: alvos grandes (48 pixels de
+altura mínima), cada elemento com uma única forma reconhecível, e nenhuma
+informação depende só da cor.
 
 ## Onde vive
 
 - `src/styles/tokens.css` — todas as CSS custom properties (cores,
-  tipografia, raio de borda, sombra). Único lugar com valores de cor
-  hardcoded; todo o resto do CSS consome `var(--token)`.
+  tipografia, altura de controle, raio de borda, sombra). Único lugar com
+  valores de cor hardcoded; todo o resto do CSS consome `var(--token)`.
 - `src/index.css` — estilos globais e classes utilitárias (`.card`,
-  `.badge`, `.qa-list`, `.callout`, `.alert`, `.actions`, etc.), importa
-  `tokens.css`.
-- `src/statusBadge.ts` — mapeia um valor de classificação/risco (ex.
-  `"CRITICAL"`, `"LOW_RISK"`) para a classe de badge correspondente
-  (`badge--ok` / `badge--warn` / `badge--critical` / `badge--neutral`).
+  `.badge`, `.mensagem`, `.estado`, `.progresso`, `.qa-list`, `.callout`,
+  `.alert`, `.actions`, etc.), importa `tokens.css`.
+- `src/statusBadge.ts` — traduz um valor de classificação/risco vindo da
+  API (ex. `"CRITICAL"`, `"LOW_RISK"`) para o que o operador vê:
+  `badgeClass()` devolve a classe de badge (`badge--ok` / `badge--warn` /
+  `badge--critical` / `badge--neutral`), `estadoLote()` devolve a palavra
+  do estado, a ação recomendada e a classe de `.estado` correspondente.
 
 ## Paleta e tema
 
@@ -35,6 +41,10 @@ da marca (banner, README, documentação), não usada dentro do produto.
 | `--accent` / `--accent-ink` / `--accent-soft` | cor de marca (botão primário, eyebrow, callout, links de relatório) |
 | `--accent-deep` / `--accent-border` | texto sobre `--accent-soft` / borda discreta em acento |
 | `--accent-art` | reservado à arte da logo e às faixas escuras (`.on-dark`), sem contraste suficiente sobre branco pra uso em texto/borda |
+| `--accent-hover` / `--accent-active` | estado de hover / clique do botão primário |
+| `--control-height` / `--field-height` | altura mínima de botão (48px) / campo de resposta (52px) |
+| `--control-border` / `--control-border-strong` | borda padrão / borda em hover de campos e botão secundário |
+| `--disabled-bg` / `--disabled-fg` | fundo e texto de botão desabilitado |
 | `--shadow` / `--shadow-lg` | sombra sutil dos cards |
 
 ### Cores "semáforo"
@@ -42,20 +52,25 @@ da marca (banner, README, documentação), não usada dentro do produto.
 Nunca vermelho/amarelo/verde saturados, sempre fundo pastel, borda na
 mesma família de cor e texto legível, pra não competir com o resto da
 interface nem parecer um alerta de sistema operacional. A leitura nunca
-depende só da cor, o ponto sólido em `.badge::before` reforça o estado
-mesmo pra quem não distingue bem as cores:
+depende só da cor: o ponto sólido em `.badge::before` e o quadrado sólido
+em `.estado::before` reforçam o estado mesmo pra quem não distingue bem
+as cores:
 
 | Token (bg/border/fg) | Significado | Usado em |
 |---|---|---|
-| `--ok-bg` / `--ok-border` / `--ok-fg` | aceitável / baixo risco | `badge--ok` |
-| `--warn-bg` / `--warn-border` / `--warn-fg` | atenção / risco médio | `badge--warn` |
-| `--critical-bg` / `--critical-border` / `--critical-fg` | crítico / alto risco | `badge--critical`, `.alert--critical` |
-| `--neutral-bg` / `--neutral-border` / `--neutral-fg` | classificação não mapeada | `badge--neutral` |
+| `--ok-bg` / `--ok-border` / `--ok-fg` | aceitável / baixo risco | `badge--ok`, `estado--ok`, `alert--ok` |
+| `--warn-bg` / `--warn-border` / `--warn-fg` | atenção / risco médio | `badge--warn`, `estado--warn`, `alert--warn` |
+| `--critical-bg` / `--critical-border` / `--critical-fg` | crítico / alto risco | `badge--critical`, `estado--critical`, `alert--critical` |
+| `--neutral-bg` / `--neutral-border` / `--neutral-fg` | classificação não mapeada | `badge--neutral`, `estado--neutral` |
 
-`statusBadge.ts` é o único lugar que decide qual badge usar a partir do
-valor vindo da API — se um novo valor de classificação/risco for
-adicionado no backend, o mapeamento é ajustado ali, não em cada
-componente.
+`statusBadge.ts` é o único lugar que decide qual badge ou estado usar a
+partir do valor vindo da API — se um novo valor de classificação/risco
+for adicionado no backend, o mapeamento é ajustado ali, não em cada
+componente. Onde a leitura importa mais que o dado técnico (ex. a lista
+de lotes), o componente usa `estadoLote()` e mostra a palavra do estado
+em `.estado`, com o código técnico original (`classification` e
+`risk_prediction`) abaixo em `.estado-codigo`, pra quem confere com o
+backend sem perder a leitura rápida.
 
 ## Tipografia
 
@@ -87,19 +102,32 @@ um papel fixo:
   item com um rótulo `.categoria` em mono acima do texto.
 - `.callout` — destaque de fundo `--accent-soft` para a categoria
   principal identificada na revisão.
-- `.alert` / `.alert--critical` — mensagens de erro (ex. LLM
-  indisponível).
+- `.alert` / `.alert--critical` / `.alert--warn` / `.alert--ok` —
+  mensagens de erro ou aviso (ex. LLM indisponível, resposta rejeitada).
+- `.mensagem` — caixa de mensagem do sistema, faixa de título
+  (`.faixa`) dizendo de quem é a fala e corpo (`.corpo`) com o texto em
+  tamanho maior (`--text-question`). Nunca tem fundo roxo cheio, pra não
+  ser confundida com botão. Usada em `PerguntaAtual.tsx` para a pergunta
+  do agente.
+- `.progresso` — barra fina mostrando quantas perguntas faltam
+  (`indice`/`total`), acima da mensagem do sistema em `PerguntaAtual.tsx`.
+- `.estado` / `.estado-codigo` — ver seção "Cores semáforo" acima.
 - `.report-links` — links de relatório como "pills" (`border-radius:
   100px`, fundo `--accent-soft`).
 
 ## Botões
 
-- Padrão: contorno em `--accent`, fundo transparente, texto
-  `--accent-ink`, fundo `--accent-soft` no hover, ação primária
-  (Responder, Voltar à lista de lotes). Nunca preenchimento de área
-  grande, mesma regra da paleta como um todo.
-- `.secondary`: fundo transparente, borda `--line`, texto `--ink`, ação
-  secundária (Pedir ajuste).
+- **Padrão**: retângulo cheio de `--accent` com texto branco, altura
+  mínima `--control-height` (48px). É o único elemento com fundo roxo
+  cheio na tela, por isso não há dúvida sobre onde clicar — uma ação
+  primária por tela (Responder, Investigar). `--accent-hover` /
+  `--accent-active` marcam hover e clique.
+- `.secondary`: fundo branco, borda de 2 pixels em `--control-border`,
+  texto `--ink`, ação secundária.
+- `.link`: texto sublinhado em `--accent-ink`, sem caixa, pra ações de
+  saída (ex. baixar relatório).
+- `:disabled`: fundo e texto em `--disabled-bg`/`--disabled-fg`, sem cor
+  de ação, pra não parecer clicável.
 
 ## Adicionando um novo componente
 
@@ -107,7 +135,10 @@ um papel fixo:
    `.card` se não precisar do espaçamento em coluna).
 2. Use `h2`/`h3` para títulos — nunca defina `font-family` inline.
 3. Se o componente exibir um valor de classificação/risco vindo da API,
-   use `badgeClass()` de `statusBadge.ts` — não crie uma nova cor.
+   use `badgeClass()` (dado técnico) ou `estadoLote()` (leitura para o
+   operador) de `statusBadge.ts` — não crie uma nova cor.
 4. Qualquer cor nova (fundo, texto, borda) deve ser adicionada como token
-   em `tokens.css` (com a variante dark correspondente), nunca como valor
-   hardcoded no componente ou em `index.css`.
+   em `tokens.css`, nunca como valor hardcoded no componente ou em
+   `index.css`.
+5. Nenhum controle interativo (botão, campo, link de ação) deve ter menos
+   de 48 pixels de altura, ver `--control-height` / `--field-height`.
