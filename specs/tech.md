@@ -11,12 +11,14 @@ decisões de arquitetura por trás de cada escolha.
 |---|---|---|
 | **Python** | Linguagem principal | 3.11+ |
 | **LangGraph** | Orquestração do grafo (estado, nós, `interrupt()`, checkpointer) | 0.2+ |
-| **langgraph-checkpoint-sqlite** | Checkpointer `SqliteSaver`, persiste o estado da investigação por `thread_id`, viabilizando pausa/retomada via API | 2.0+ |
+| **langgraph-checkpoint-sqlite** | Checkpointer `SqliteSaver` (padrão local), persiste o estado da investigação por `thread_id`, viabilizando pausa/retomada via API | 2.0+ |
+| **langgraph-checkpoint-postgres** | Checkpointer `PostgresSaver` (Fase 2), usado quando `DATABASE_URL` estiver definida (deploy em nuvem) | -- |
 | **LangChain** | `init_chat_model` (seleção de provedor/modelo plugável), `@tool`, `with_fallbacks` | 0.3+ |
-| **langchain-google-genai** | Integração com Gemini, provedor oficial, gratuito, usado em testes e prototipagem | 2.0+ |
-| **langchain-groq** | Fallback de LLM (2º da cadeia, Groq), gratuito, ativado se `GROQ_API_KEY` estiver configurada | 0.2+ |
+| **langchain-groq** | Integração com Groq, provedor principal (Fase 2), gratuito, cota diária generosa | 0.2+ |
+| **langchain-google-genai** | Fallback de LLM (2º da cadeia, Gemini), gratuito mas com cota diária estreita (20 req/dia/modelo no tier gratuito); também usado pelo RAG (embeddings), fora da cadeia de fallback do LLM principal | 2.0+ |
 | **langchain-anthropic** | Fallback de LLM (3º da cadeia), ativado se `ANTHROPIC_API_KEY` estiver configurada | 0.3+ |
 | **langchain-openai** | Fallback de LLM (4º da cadeia), ativado se `OPENAI_API_KEY` estiver configurada | 0.2+ |
+| **langchain-text-splitters** | Chunking da base de conhecimento do RAG (Fase 2) | 0.3+ |
 | **Pydantic** | Validação de schemas (`NaoConformidade`, `Diagnostico`, etc.) | 2.9+ |
 | **FastAPI** | API web local (lotes, investigação, ajuste de ciclo) | 0.115+ |
 | **Uvicorn** | Servidor ASGI | 0.32+ |
@@ -67,9 +69,9 @@ determinismo no CI).
 `config.py::get_llm()` monta a cadeia principal + fallback:
 
 ```
-Gemini (LLM_PROVIDER/LLM_MODEL, oficial, gratuito)
+Groq (LLM_PROVIDER/LLM_MODEL, principal, gratuito, cota diária generosa)
    ↓ falha (rede/rate limit/chave)
-Groq (só se GROQ_API_KEY estiver no .env, 2º provedor gratuito)
+Gemini (só se GOOGLE_API_KEY estiver no .env, gratuito mas cota diária estreita)
    ↓ falha
 Anthropic (só se ANTHROPIC_API_KEY estiver no .env)
    ↓ falha
@@ -80,10 +82,11 @@ FalhaLLMError → API devolve HTTP 503
 
 Trocar o provedor principal = mudar `LLM_PROVIDER`/`LLM_MODEL` no `.env` +
 instalar o pacote de integração correspondente, não requer tocar em
-`nodes.py`/`graph.py`. Rodar só com a chave do Gemini (cenário mínimo de
-testes/prototipagem) continua funcionando sem exigir Groq/Anthropic/OpenAI;
-configurar `GROQ_API_KEY` permite testar o agente com um 2º LLM de verdade,
-também gratuito.
+`nodes.py`/`graph.py`. Rodar só com a chave do Groq (cenário mínimo de
+testes/prototipagem) continua funcionando sem exigir Gemini/Anthropic/OpenAI;
+configurar `GOOGLE_API_KEY` permite ter um 2º provedor de verdade, também
+gratuito. Os embeddings do RAG (`langchain-google-genai`) chamam a API do
+Gemini sempre, fora dessa cadeia de fallback, ver `docs/RAG.md`.
 
 ---
 
@@ -96,15 +99,15 @@ preparar_contexto            → SELECT em batches/sensor_readings (SQLite)
         ↓
 Ishikawa (6 perguntas)       → nós LLM, tool consultar_leituras_biosensor quando útil
         ↓
-orquestrar_analise           → identifica categoria_principal
+orquestrar_analise           → identifica categoria_principal, fan-out (Fase 2)
+        ↓                                        ↓
+5 Porquês (ancorado)         → nós LLM   pre_busca_rag → busca semântica na base de conhecimento
+        ↓                                        ↓
+gerar_causa_raiz             → Diagnostico ──→ recomendar_tratativa (join, Fase 2, tool consultar_recorrencia)
         ↓
-5 Porquês (ancorado)         → nós LLM, mesma tool
+reports.py                   → tabela relatorios (SQLite local ou Postgres)
         ↓
-gerar_causa_raiz             → Diagnostico (Pydantic)
-        ↓
-reports.py                   → reports/{batch_id}_{ts}.json (persistido)
-        ↓
-Revisão do operador          → link do JSON já disponível, PDF gerado sob demanda | pedir ajuste
+Revisão do operador          → link do relatório já disponível, PDF gerado sob demanda | pedir ajuste
 ```
 
 ---
@@ -142,7 +145,9 @@ isso é um agente para a distinção completa.
 | Validar resposta (Camada 1) | Determinístico | `validar_resposta_operador` | `tools.py` |
 | Julgar informatividade (Camada 2) | Agêntico (LLM) | `avaliar_informatividade` | `nodes.py` |
 | Identificar categoria principal | Agêntico (LLM) | `orquestrar_analise` | `nodes.py` |
+| Buscar na base de conhecimento (Fase 2) | Determinístico | `pre_busca_rag` | `nodes.py`, `rag.py` |
 | Sintetizar causa raiz | Agêntico (LLM) | `gerar_causa_raiz` | `nodes.py` |
+| Recomendar tratativa (Fase 2) | Agêntico (LLM) | `recomendar_tratativa` | `nodes.py` |
 | Persistir relatório | Determinístico | `reports.py` | `reports.py` |
 
 ---
@@ -157,8 +162,8 @@ isso é um agente para a distinção completa.
   (`rodar_investigacao_com_respostas`), sem subir servidor, com 11
   respostas fornecidas (6 Ishikawa + 5 porquês); cobre também o caso de
   "pedir ajuste" gerando um segundo ciclo.
-- `test_config.py`, cadeia de fallback de LLM (Gemini → Groq → Anthropic →
-  OpenAI) com provedores mockados (`pytest-mock`), nunca uma chamada real;
+- `test_config.py`, cadeia de fallback de LLM (Groq → Gemini → Anthropic →
+  OpenAI, Fase 2) com provedores mockados (`pytest-mock`), nunca uma chamada real;
   cobre o caso de todos os provedores configurados falhando (`FalhaLLMError`).
 - `test_backend.py`, rotas do `backend/main.py` via `TestClient`
   (`httpx`), com o grafo mockado onde precisa executar um nó agêntico; e o
@@ -172,6 +177,15 @@ isso é um agente para a distinção completa.
 - SQLite local (arquivo, não in-memory), não há necessidade de um padrão
   de pool especial como no BiotecPredict, já que os testes usam um arquivo
   de fixture próprio, isolado do banco real.
+- (Fase 2) `test_rag.py`, `test_paralelizacao.py`, `test_observabilidade.py`,
+  `test_seguranca_prompt_injection.py`, `test_tool_recorrencia.py`,
+  `test_resumo_diario.py`, `test_checkpointer.py`,
+  `test_pre_busca_rag_falha_embeddings.py` e
+  `test_avaliar_informatividade.py` cobrem RAG, o fan-out paralelo,
+  observabilidade, o cenário adversarial de prompt injection, recorrência,
+  o resumo diário do n8n, o checkpointer condicional (SQLite/Postgres) e
+  duas correções de bug com teste de regressão dedicado (RAG resiliente a
+  falha de embeddings, aviso da Camada 2 na pergunta repetida).
 
 ---
 
@@ -185,8 +199,11 @@ isso é um agente para a distinção completa.
   `backend/`, que depende do motor do agente como biblioteca (nunca o
   contrário); mesma separação backend/frontend do BiotecPredict, e o que
   permite reusar o motor sem FastAPI em outro contexto.
-- **Sem persistência de saída em banco**, o `Diagnostico` é salvo como
-  arquivos (JSON+HTML); só a entrada (lotes/leituras) vem de SQLite.
+- **Persistência de saída em banco (Fase 2)**, o `Diagnostico` é gravado
+  na tabela `relatorios` (SQLite local ou Postgres, conforme
+  `DATABASE_URL`), mesma instância do checkpointer e do `eventos_log`; o
+  PDF nunca é salvo, gerado sob demanda. Na Fase 1, era salvo como
+  arquivos (JSON+HTML) em `reports/`.
 - **Sem router nem lib de estado no frontend**, uma tela, um `useState`.
 - **Human-in-the-loop via `interrupt()`, não `input()`**, obrigatório
   numa API web, que não pode bloquear esperando o navegador.

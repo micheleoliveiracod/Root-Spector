@@ -60,12 +60,13 @@ paths:
       summary: Enviar a resposta do operador à pergunta atual
       description: '`Command(resume=resposta)`, retoma o grafo a partir do `interrupt()`
         pausado. Se ainda houver perguntas, devolve a próxima (`{thread_id, fase,
-        categoria|numero, pergunta, ...}`); ao concluir o 5º porquê, já gera `reports/*.json`
-        e devolve `{thread_id, status: ''pronto_para_revisao''}`. Devolve 503 (''Serviço
-        de IA indisponível, recarregue a página.'') se todos os provedores de LLM
-        configurados falharem, ou 429 (''Limite de respostas rejeitadas atingido para
-        esta pergunta, investigação encerrada.'') se o limite de respostas rejeitadas
-        pela Camada 1 de validação for excedido (guardrail, ver root_cause_agent/nodes.py::MAX_TENTATIVAS_CAMADA_1).'
+        categoria|numero, pergunta, ...}`); ao concluir o 5º porquê, já grava o relatório
+        na tabela `relatorios` e devolve `{thread_id, status: ''pronto_para_revisao''}`.
+        Devolve 503 (''Serviço de IA indisponível, recarregue a página.'') se todos
+        os provedores de LLM configurados falharem, ou 429 (''Limite de respostas
+        rejeitadas atingido para esta pergunta, investigação encerrada.'') se o limite
+        de respostas rejeitadas pela Camada 1 de validação for excedido (guardrail,
+        ver root_cause_agent/nodes.py::MAX_TENTATIVAS_CAMADA_1).'
       operationId: responder_api_investigacoes__thread_id__responder_post
       parameters:
       - name: thread_id
@@ -129,8 +130,8 @@ paths:
       summary: Gerar o PDF do relatório sob demanda
       description: Lê o `Diagnostico` já concluído direto do checkpoint da investigação
         e gera o PDF na hora, em memória, sem nunca salvar em disco (diferente do
-        `reports/*.json`, que é persistido automaticamente ao fim da investigação).
-        Devolve 400 se o ciclo ainda não chegou à revisão.
+        relatório, que é gravado na tabela `relatorios` automaticamente ao fim da
+        investigação). Devolve 400 se o ciclo ainda não chegou à revisão.
       operationId: relatorio_pdf_api_investigacoes__thread_id__relatorio_pdf_get
       parameters:
       - name: thread_id

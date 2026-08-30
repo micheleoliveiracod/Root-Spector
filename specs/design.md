@@ -120,8 +120,9 @@ para outras requisições enquanto aguarda a resposta do operador. A solução
   parâmetro) é reenviada em toda pergunta pra o operador não precisar
   memorizar qual parâmetro está fora da faixa nem voltar pra lista de lotes
   pra conferir os dados.
-- O grafo é compilado com um **checkpointer** (`SqliteSaver`, gravando em
-  `data/checkpoints.db`), que persiste o estado da investigação por
+- O grafo é compilado com um **checkpointer** (`SqliteSaver` local por
+  padrão, gravando em `data/checkpoints.db`; Postgres quando `DATABASE_URL`
+  estiver definida, Fase 2), que persiste o estado da investigação por
   `thread_id` (um id de sessão associado ao lote escolhido).
 - A API retoma a execução com
   `graph.invoke(Command(resume=resposta_operador), config={"configurable": {"thread_id": ...}})`.
@@ -149,11 +150,12 @@ arrastar FastAPI junto.
 |---|---|
 | `GET /api/lotes` | Lista os lotes de `data/biotecpredict.db` com classificação calculada, destaque dos elegíveis e, para estes, os parâmetros de biosensor fora da faixa aceitável |
 | `POST /api/investigacoes/{batch_id}/iniciar` | Cria/retoma um `thread_id`, roda o grafo até o 1º `interrupt`, devolve a 1ª pergunta |
-| `POST /api/investigacoes/{thread_id}/responder` | `Command(resume=resposta)`, devolve a próxima pergunta ou sinaliza "pronto pra revisão"; ao concluir o ciclo (resposta ao 5º porquê), já gera `reports/{batch_id}_{ts}.json` (via `root_cause_agent.reports`) |
-| `GET /api/investigacoes/{thread_id}/revisao` | Devolve toda a cadeia (Ishikawa + 5 Porquês) + rascunho de `causa_raiz` + o link do JSON já gerado |
+| `POST /api/investigacoes/{thread_id}/responder` | `Command(resume=resposta)`, devolve a próxima pergunta ou sinaliza "pronto pra revisão"; ao concluir o ciclo (resposta ao 5º porquê), já grava o `Diagnostico` na tabela `relatorios` (via `root_cause_agent.reports`) |
+| `GET /api/investigacoes/{thread_id}/revisao` | Devolve toda a cadeia (Ishikawa + 5 Porquês) + `causa_raiz` + recomendação de tratativa (Fase 2) + o link do relatório já gravado |
 | `GET /api/investigacoes/{thread_id}/relatorio.pdf` | Gera o PDF do relatório sob demanda, direto do checkpoint, nunca salvo em disco |
 | `POST /api/investigacoes/{thread_id}/ajustar` | Arquiva o ciclo atual em `ciclos_anteriores`, reinicia um novo ciclo completo pro mesmo `batch_id` |
-| `GET /reports/{arquivo}` | Serve o relatório JSON estático |
+| `GET /api/relatorios/{relatorio_id}` | Devolve o relatório gravado na tabela `relatorios` pelo id (Fase 2) |
+| `GET /api/relatorios/resumo-diario` | Resumo diário de investigações concluídas, para o workflow n8n (Fase 2) |
 
 Só as duas rotas que efetivamente executam nós do grafo (`iniciar` e
 `responder`) podem levantar `FalhaLLMError`, ver seção abaixo.
@@ -260,25 +262,42 @@ provedores voltarem e só então recarregar/reenviar; dado que o checkpoint
 já fica pausado no ponto certo (parágrafo acima), esperar não arrisca
 perder nada da investigação em andamento.
 
+**Estado na Fase 2:** a ordem da cadeia mudou para Groq (principal,
+`LLM_PROVIDER=groq`, cota diária bem mais generosa que o Gemini gratuito)
+→ Gemini (fallback) → Anthropic → OpenAI; o mecanismo (`with_fallbacks`,
+`FalhaLLMError`, checkpoint no ponto certo) é o mesmo descrito acima. A
+Fase 2 também corrigiu um caso não coberto aqui: os embeddings do RAG
+(`rag.py`) chamam a API do Gemini sempre, fora dessa cadeia de fallback;
+uma falha ali é capturada em `pre_busca_rag` e degrada para
+`candidatos_rag` vazio, sem acionar `FalhaLLMError`. Ver
+`specs/fase02/design.md` § RAG.
+
 ## Arquitetura de módulos
 
 ```
 root_cause_agent/
-├── models.py    # Pydantic: NaoConformidade, RespostaIshikawa, PorQue, Diagnostico (+ CicloAnterior)
+├── models.py    # Pydantic: NaoConformidade, RespostaIshikawa, PorQue, Diagnostico (+ CicloAnterior, CandidatoRAG, CasoSemelhante)
 ├── state.py     # AgentState: nc_input, regras_setor, messages, respostas_ishikawa, categoria_atual,
 │                #             categoria_principal, categorias_descartadas, cadeia_porques, numero_porque,
-│                #             pergunta_atual, ciclos_anteriores, diagnostico
-├── config.py    # .env, seleção de LLM (init_chat_model), carga do YAML de regras, caminhos dos .db
-├── tools.py     # @tool consultar_leituras_biosensor(batch_id, data_inicio, data_fim) -- SELECT em sensor_readings
+│                #             pergunta_atual, tentativas_pergunta_atual, erro_informatividade,
+│                #             ciclos_anteriores, candidatos_rag, recomendacao_tratativa, diagnostico
+├── config.py    # .env, seleção de LLM (init_chat_model, cadeia de fallback), carga do YAML de regras,
+│                #  caminhos dos .db, logging estruturado (eventos_log)
+├── tools.py     # @tool consultar_leituras_biosensor(batch_id, data_inicio, data_fim) -- SELECT em sensor_readings;
+│                #  @tool consultar_recorrencia (Fase 2) -- varre a tabela relatorios por categoria/parâmetro
+├── rag.py       # (Fase 2) chunking + embedding + InMemoryVectorStore sobre data/base_conhecimento/
+├── resumo_diario.py  # (Fase 2) agrega investigações concluídas + métricas de eficiência de um dia
 ├── nodes.py     # preparar_contexto, formular_pergunta_ishikawa, orquestrar_analise,
 │                #  formular_porque, perguntar_operador (usa interrupt(), Camada 1 de
-│                #  validação), avaliar_informatividade (Camada 2), gerar_causa_raiz
-├── graph.py     # monta e compila o StateGraph com checkpointer (SqliteSaver)
-├── reports.py   # Diagnostico -> reports/{batch_id}_{timestamp}.json (persistido) + PDF sob demanda
+│                #  validação), avaliar_informatividade (Camada 2), gerar_causa_raiz,
+│                #  pre_busca_rag, recomendar_tratativa (Fase 2)
+├── graph.py     # monta e compila o StateGraph com checkpointer (SQLite local ou Postgres, conforme DATABASE_URL)
+├── reports.py   # Diagnostico -> tabela relatorios (SQLite local ou Postgres) + PDF sob demanda
 └── main.py      # harness de teste: roda o grafo com respostas fornecidas em código, sem servidor
 
 backend/         # FastAPI -- depende de root_cause_agent, nunca o contrário
-└── main.py      # rotas de lotes/investigação/ajuste, serve reports/ como estático
+└── main.py      # rotas de lotes/investigação/ajuste/relatório/resumo diário; guardrails
+                 #  de governança (rate limit, X-API-Key)
 
 frontend/        # React + TypeScript + Vite -- única tela, sem router/lib de estado
 ```
@@ -347,15 +366,23 @@ orquestrar_analise   [nó LLM: analisa as 6 respostas, identifica               
 gerar_causa_raiz  [nó LLM: sintetiza categoria_principal + cadeia_porques + categorias_descartadas
                     em Diagnostico estruturado por categoria; valida contra o schema]
    ↓
-[API: salva reports/{batch_id}_{ts}.json; apresenta a cadeia
- completa ao operador para revisão, já com o link do JSON, PDF gerado
- sob demanda ao pedir]
+[API: salva o Diagnostico na tabela relatorios; apresenta a cadeia
+ completa ao operador para revisão, já com o link do relatório, PDF
+ gerado sob demanda ao pedir]
    ↓ (operador decide)
    ├── nada a fazer → relatório já está salvo e disponível
    └── pedir ajuste → arquiva o ciclo atual (já reportado) em
                         ciclos_anteriores; reinicia um novo ciclo completo
                         a partir de preparar_contexto
 ```
+
+**Estado na Fase 2:** a partir de `orquestrar_analise`, o grafo passa a
+ter 2 ramos em paralelo, `formular_porque` (acima) e `pre_busca_rag`
+(busca semântica na base de conhecimento pela `categoria_principal`),
+convergindo em `recomendar_tratativa` (consulta `consultar_recorrencia`
+por decisão do LLM, sintetiza a recomendação) antes de `gerar_causa_raiz`
+concluir o `Diagnostico`. Ver `specs/fase02/design.md` § Grafo para o
+diagrama completo desse fan-out/join.
 
 `AgentState.messages` (reducer `add_messages`) é a memória do sub-loop de
 tool-calling dentro de uma única pergunta (Ishikawa ou "por quê").
@@ -501,8 +528,8 @@ tal. A troca de domínio (agro → biotec, ver histórico em
 
 ## Camada de LLM plugável
 
-`config.py::get_llm()` lê `LLM_PROVIDER` (default `google_genai`) e
-`LLM_MODEL` (default `gemini-2.5-flash`) do `.env`, e usa
+`config.py::get_llm()` lê `LLM_PROVIDER` (default `groq`, Fase 2) e
+`LLM_MODEL` (default `openai/gpt-oss-120b`, Fase 2) do `.env`, e usa
 `langchain.chat_models.init_chat_model(model, model_provider=provider)`.
 Trocar de LLM = mudar as duas variáveis + instalar o pacote de integração
 correspondente (`langchain-anthropic`, `langchain-openai`, etc.), não requer
@@ -526,7 +553,7 @@ tocar em `nodes.py` ou `graph.py`.
   não bate com nada e parece "nenhuma leitura encontrada".
 - Saída final validada contra o schema `Diagnostico` antes de ser salva.
 
-## Roadmap (processo real completo, fase 2 não implementada nesta entrega)
+## Roadmap (processo real completo, tal como planejado ao fim da Fase 1)
 
 O processo produtivo de tratamento de NC não termina no relatório gerado
 pelo Root-Spector. Mapeado por completo no mapa de processo visual (BPMN,
@@ -560,6 +587,17 @@ de revisão do operador (relatório já gerado / pedir ajuste), que
 originalmente também estava nesta lista, **já está implementado** (ver
 "Fluxo do grafo" acima), era tecnicamente simples de encaixar no motor
 atual e passou a fazer parte do escopo real.
+
+**Estado na Fase 2:** a recomendação de tratativa via RAG foi
+implementada, com escopo menor que este roadmap: um nó (`recomendar_tratativa`)
+dentro do mesmo grafo, não um segundo agente separado, sem o fluxo de
+aprovação entre Qualidade e Coordenação da Produção nem o ciclo PDCA
+completo (Plan/Do/Check/Act) descrito acima. Consulta uma base de
+conhecimento curada (`data/base_conhecimento/`) via retrieval semântico e
+sintetiza uma recomendação textual de ação corretiva/preventiva; a tool
+`consultar_recorrencia` identifica se o caso é inédito ou recorrente. Ver
+`specs/fase02/design.md` § RAG e `docs/RAG.md` para o detalhamento
+completo.
 
 ## Adaptação a outro setor produtivo
 

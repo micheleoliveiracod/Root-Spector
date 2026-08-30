@@ -8,9 +8,9 @@ para o contrato completo):
                                                           roda até o 1º interrupt()
   POST /api/investigacoes/{thread_id}/responder       -- Command(resume=resposta);
                                                           ao concluir o ciclo (5º porquê),
-                                                          já gera reports/*.json
+                                                          já grava o relatório na tabela relatorios
   GET  /api/investigacoes/{thread_id}/revisao          -- cadeia Ishikawa + 5 Porquês
-                                                          + link do relatório JSON já gerado
+                                                          + link do relatório já gravado
   GET  /api/investigacoes/{thread_id}/relatorio.pdf      -- gera o PDF sob demanda,
                                                           nunca salvo em disco
   POST /api/investigacoes/{thread_id}/ajustar            -- arquiva ciclo, reabre um novo
@@ -266,8 +266,9 @@ def iniciar_investigacao(batch_id: int):
         "`Command(resume=resposta)`, retoma o grafo a partir do "
         "`interrupt()` pausado. Se ainda houver perguntas, devolve a "
         "próxima (`{thread_id, fase, categoria|numero, pergunta, ...}`); "
-        "ao concluir o 5º porquê, já gera `reports/*.json` e "
-        "devolve `{thread_id, status: 'pronto_para_revisao'}`. Devolve "
+        "ao concluir o 5º porquê, já grava o relatório na tabela "
+        "`relatorios` e devolve `{thread_id, status: "
+        "'pronto_para_revisao'}`. Devolve "
         f"503 ('{MENSAGEM_LLM_INDISPONIVEL}') se todos os provedores de "
         f"LLM configurados falharem, ou 429 ('{MENSAGEM_LIMITE_TENTATIVAS}') "
         "se o limite de respostas rejeitadas pela Camada 1 de validação for "
@@ -336,8 +337,8 @@ def revisao(thread_id: str):
     description=(
         "Lê o `Diagnostico` já concluído direto do checkpoint da "
         "investigação e gera o PDF na hora, em memória, sem nunca salvar "
-        "em disco (diferente do `reports/*.json`, que é persistido "
-        "automaticamente ao fim da investigação). Devolve 400 se o ciclo "
+        "em disco (diferente do relatório, que é gravado na tabela "
+        "`relatorios` automaticamente ao fim da investigação). Devolve 400 se o ciclo "
         "ainda não chegou à revisão."
     ),
 )

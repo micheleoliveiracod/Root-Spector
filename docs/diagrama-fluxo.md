@@ -45,8 +45,11 @@ flowchart TD
     AI -- "5º porquê respondido" --> GCR
 
     OA["orquestrar_analise\n(identifica categoria_principal)"] --> FP
+    OA -- "fan-out, Fase 2" --> PBR
 
-    GCR["gerar_causa_raiz"] --> Fim(["reports/{batch_id}_{ts}.json"])
+    PBR["pre_busca_rag\n(Fase 2)"] --> RT
+    GCR["gerar_causa_raiz"] --> RT
+    RT["recomendar_tratativa\n(Fase 2, join)"] --> Fim(["tabela relatorios"])
 
     classDef workflow fill:#cfe8ff,stroke:#2f6fb3,color:#1a1a1a
     classDef agentic fill:#e3d4fa,stroke:#7c4dbd,color:#1a1a1a
@@ -54,7 +57,7 @@ flowchart TD
     classDef human fill:#d3f2d6,stroke:#3f9142,color:#1a1a1a
 
     class PC workflow
-    class FPI,AI,OA,FP,GCR agentic
+    class FPI,AI,OA,FP,GCR,PBR,RT agentic
     class UF tool
     class PO human
 ```
@@ -68,7 +71,11 @@ resposta não for informativa e ainda for a 1ª tentativa, volta para
 `perguntar_operador` (2ª e última chance); caso contrário, registra a
 resposta final e o roteamento (`rotear_apos_avaliar`) segue para a próxima
 categoria, para `orquestrar_analise` (Ishikawa completo), para o próximo
-porquê, ou para `gerar_causa_raiz` (5º porquê concluído).
+porquê, ou para `gerar_causa_raiz` (5º porquê concluído). A partir de
+`orquestrar_analise` (Fase 2), `pre_busca_rag` roda em paralelo com o loop
+dos 5 Porquês (não depende dele, só da `categoria_principal`); os dois
+ramos convergem em `recomendar_tratativa`, que também pode chamar a tool
+`consultar_recorrencia`, antes de o `Diagnostico` ser gravado.
 
 ## 2. Sequência operador ↔ frontend ↔ backend ↔ agente
 
@@ -77,7 +84,7 @@ sequenceDiagram
     actor Operador
     participant FE as Frontend (React)
     participant API as backend/main.py
-    participant G as Grafo (checkpointer SqliteSaver)
+    participant G as Grafo (checkpointer SQLite/Postgres)
 
     Operador->>FE: escolhe um lote elegível (WARNING/CRITICAL)
     FE->>API: POST /api/investigacoes/{batch_id}/iniciar
@@ -98,7 +105,7 @@ sequenceDiagram
             API-->>FE: {thread_id, fase, pergunta, ...}
         else 5º porquê concluído
             G-->>API: diagnóstico pronto
-            API->>API: salvar_relatorio() → reports/*.json (PDF gerado sob demanda, não salvo)
+            API->>API: salvar_relatorio() → tabela relatorios (PDF gerado sob demanda, não salvo)
             API-->>FE: {status: "pronto_para_revisao"}
         end
     end

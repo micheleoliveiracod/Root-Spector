@@ -23,21 +23,26 @@ Essa separação é o que permite reusar o motor do agente em outro contexto
 │   ├── models.py         # Pydantic: NaoConformidade, RespostaIshikawa, PorQue,
 │   │                      # CategoriaAnalise, CategoriaDescartada, CicloAnterior, Diagnostico
 │   ├── state.py           # AgentState (TypedDict) + CATEGORIAS_ISHIKAWA_ORDEM
-│   ├── config.py           # .env, get_llm() (fallback Gemini→Groq→Anthropic→OpenAI),
-│   │                        # carga do YAML de regras, caminhos dos .db
+│   ├── config.py           # .env, get_llm() (fallback Groq→Gemini→Anthropic→OpenAI, Fase 2),
+│   │                        # carga do YAML de regras, caminhos dos .db, logging estruturado
 │   ├── tools.py              # consultar_leituras_biosensor (batch_id via InjectedState,
-│   │                          # datas validadas); validar_resposta_operador (Camada 1)
+│   │                          # datas validadas); validar_resposta_operador (Camada 1);
+│   │                          # consultar_recorrencia (Fase 2)
+│   ├── rag.py                  # (Fase 2) chunking + embedding + InMemoryVectorStore
+│   ├── resumo_diario.py         # (Fase 2) agrega investigações concluídas de um dia
 │   ├── nodes.py                # preparar_contexto, formular_pergunta_ishikawa,
 │   │                            # orquestrar_analise, formular_porque, perguntar_operador,
-│   │                            # avaliar_informatividade, gerar_causa_raiz; FalhaLLMError
-│   ├── graph.py                 # monta e compila o StateGraph com checkpointer SqliteSaver
-│   ├── reports.py                # Diagnostico -> reports/{batch_id}_{ts}.json (persistido) + PDF sob demanda (Jinja2 + xhtml2pdf)
+│   │                            # avaliar_informatividade, gerar_causa_raiz, pre_busca_rag,
+│   │                            # recomendar_tratativa (Fase 2); FalhaLLMError
+│   ├── graph.py                 # monta e compila o StateGraph com checkpointer (SQLite local
+│   │                             # ou Postgres, conforme DATABASE_URL, Fase 2)
+│   ├── reports.py                # Diagnostico -> tabela relatorios (SQLite/Postgres, Fase 2) + PDF sob demanda (Jinja2 + xhtml2pdf)
 │   └── main.py                     # harness de teste (roda o grafo com respostas em código)
 │
 ├── backend/                          # FastAPI -- camada web, depende de root_cause_agent
 │   ├── __init__.py
-│   └── main.py                          # app FastAPI: lotes, investigação, ajuste,
-│                                          # serve reports/ como estático (uvicorn backend.main:app)
+│   └── main.py                          # app FastAPI: lotes, investigação, ajuste, relatório,
+│                                          # resumo diário; guardrails de rate limit + X-API-Key (Fase 2)
 │
 ├── frontend/                       # React + TypeScript + Vite, única tela, sem router
 │   ├── DESIGN.md                       # tokens, tipografia, padrões de layout do design system
@@ -81,7 +86,8 @@ Essa separação é o que permite reusar o motor do agente em outro contexto
 │       └── tests/
 │           └── investigacao.spec.ts             # fluxo completo + caso de "pedir ajuste"
 │
-├── reports/                          # saída em runtime (JSON + HTML); só .gitkeep versionado
+├── reports/                          # não usado em runtime desde a Fase 2 (Diagnostico persiste na
+│                                      # tabela relatorios, PDF sempre sob demanda); só .gitkeep versionado
 │
 ├── scripts/
 │   └── setup_github.py               # administração do GitHub (labels, milestones, issues,
@@ -150,10 +156,12 @@ sem precisar de camadas completas de Clean Architecture (RNF5).
 Camada web, único lugar do projeto com dependência de FastAPI. Importa
 `root_cause_agent` (grafo, models, config) como biblioteca; nunca o
 contrário. Responsabilidade: expor o grafo por HTTP (listar lotes, iniciar/
-responder/revisar/ajustar investigação, `responder` já gera o relatório ao
-concluir o ciclo), tratar `FalhaLLMError` como HTTP 503, e servir `reports/`
-como estático pro frontend consumir o link do relatório. Ver
-`specs/design.md` § Interface para o contrato completo de rotas.
+responder/revisar/ajustar investigação, `responder` já grava o relatório na
+tabela `relatorios` ao concluir o ciclo, `GET /api/relatorios/{id}` devolve
+esse relatório e `GET /api/relatorios/resumo-diario` agrega os do dia,
+Fase 2), tratar `FalhaLLMError` como HTTP 503, e aplicar os guardrails de
+governança (rate limit, `X-API-Key`, Fase 2). Ver `specs/design.md` §
+Interface para o contrato completo de rotas.
 
 ### `config/`
 
