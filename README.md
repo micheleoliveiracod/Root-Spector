@@ -1,4 +1,17 @@
-# Root-Spector — Agente de Investigação de Causa Raiz de NC
+<div align="center">
+
+<img src="docs/brand/logo-lockup.png" alt="Root-Spector" width="720" />
+
+![Python](https://img.shields.io/badge/Python-3.12-9184D9?style=flat-square&labelColor=0B0A10)
+![LangGraph](https://img.shields.io/badge/LangGraph-agente-9184D9?style=flat-square&labelColor=0B0A10)
+![FastAPI](https://img.shields.io/badge/FastAPI-backend-9184D9?style=flat-square&labelColor=0B0A10)
+![React](https://img.shields.io/badge/React-frontend-9184D9?style=flat-square&labelColor=0B0A10)
+![CI](https://img.shields.io/github/actions/workflow/status/micheleoliveiracod/Root-Spector/ci.yml?style=flat-square&labelColor=0B0A10&color=9184D9&label=CI)
+![License](https://img.shields.io/badge/licenca-Apache--2.0-9184D9?style=flat-square&labelColor=0B0A10)
+
+</div>
+
+---
 
 **Desenvolvido por:** [Michele Oliveira](https://github.com/micheleoliveiracod)
 
@@ -8,34 +21,29 @@
 
 **Objetivo:** Desenvolvimento de um mini projeto E2E com IA em todas as etapas, como entrega parcial do módulo 2.
 
-> **Status:** agente, backend, frontend e testes (pytest + Vitest + Playwright)
-> implementados e verificados localmente, inclusive via `deploy/` (Docker).
-> M2 a M5 já commitados e mergeados em `develop` via PR; `release/v1.0-entrega`
-> em andamento — ver `docs/gitflow.md`. Detalhamento técnico em
-> `specs/requirements.md` e `specs/design.md`.
-
 ## Descrição do problema
 
-Quando um processo produtivo gera uma Não-Conformidade (NC) — um lote fora
-da especificação — o passo mais custoso do tratamento costuma ser descobrir
+Quando um processo produtivo gera uma Não-Conformidade (NC), um lote fora
+da especificação, o passo mais custoso do tratamento costuma ser descobrir
 **por que** aconteceu, não só constatar que aconteceu. Essa investigação
 normalmente depende de um especialista cruzando manualmente o evento de NC
 com dados históricos de processo, e é conduzida por um colaborador da
 qualidade investigando um processo operacional realizado por outro
-colaborador — o que carrega um viés interpessoal difícil de eliminar. Um
+colaborador, o que carrega um viés interpessoal difícil de eliminar. Um
 agente de IA traz imparcialidade e impessoalidade a essa investigação, por
 não ser parte da equipe operacional, e agilidade no processo de
 investigação e tratamento da causa, evitando que o lote se transforme em
-um produto e avance no processo produtivo, causando mais desperdícios e a reincidencia do problema.
+um produto e avance no processo produtivo, causando mais desperdícios e a
+reincidência do problema.
 
 ## Objetivo do agente
 
 Este agente é o **complemento de causa raiz** do
 [BiotecPredict](https://github.com/micheleoliveiracod/Projeto-avaliativo-M1-2-BiotecPredict)
 (projeto da mesma autora), uma plataforma que avalia lotes de bioprocesso a
-partir de dados de biosensores por dois sinais independentes — um
-`compliance_score` (0–100, classificável em ACCEPTABLE/WARNING/CRITICAL) e
-um `risk_prediction` de ML (LOW_RISK/MEDIUM_RISK/HIGH_RISK) — e persiste o
+partir de dados de biosensores por dois sinais independentes: um
+`compliance_score` (0-100, classificável em ACCEPTABLE/WARNING/CRITICAL) e
+um `risk_prediction` de ML (LOW_RISK/MEDIUM_RISK/HIGH_RISK). Persiste o
 resultado num **banco SQLite** (`batches` + `sensor_readings`, schema
 verificado diretamente no código-fonte do BiotecPredict).
 
@@ -45,29 +53,30 @@ O agente identifica deterministicamente qual(is) parâmetro(s) de biosensor
 está(ão) fora da faixa (comparando a média das leituras do lote contra
 `config/regras_bioprocesso.yaml`) e então **facilita duas ferramentas de
 qualidade em sequência com o operador**: primeiro um **diagrama de
-Ishikawa** (6 perguntas de contexto — Método, Máquina, Material, Mão de
-obra, Meio ambiente, Medição — não perguntas diretas sobre o parâmetro fora
-da faixa), identifica a categoria mais provável, e só então aprofunda com o
-**método dos 5 Porquês** ancorado nessa categoria — sempre 6 + 5 rodadas —
-até sintetizar uma causa raiz sistêmica, gerando o relatório. Ao final, o
+Ishikawa** (6 perguntas de contexto: Método, Máquina, Material, Mão de
+obra, Meio ambiente e Medição; não perguntas diretas sobre o parâmetro
+fora da faixa), que identifica a categoria mais provável, e só então
+aprofunda com o **método dos 5 Porquês** ancorado nessa categoria, sempre 6
+mais 5 rodadas, até sintetizar uma causa raiz sistêmica e gerar o
+relatório. Ao final, o
 operador revisa a cadeia completa e pode **pedir ajuste** (reabre um novo
 ciclo, preservando o anterior). Não é um agente que investiga
 sozinho; é um agente que conduz a investigação em conjunto com quem opera o
 processo.
 
-**Case de referência:** biotecnologia — produção de bioinsumos/bioprocessos.
-A solução é desenhada para ser adaptável a outros setores produtivos
-trocando apenas os arquivos de configuração/dados — ver "Adaptação a outro
-setor" em `specs/design.md`. Este projeto começou desenhado para
-agronegócio/grãos e foi re-configurado para bioprocessos trocando só esses
-arquivos, na prática validando esse requisito.
+**Case de referência:** biotecnologia, produção de bioinsumos e
+bioprocessos. A solução é desenhada para ser adaptável a outros setores
+produtivos trocando apenas os arquivos de configuração e dados, ver
+"Adaptação a outro setor" em `specs/design.md`. Este projeto começou
+desenhado para agronegócio e grãos, e foi reconfigurado para bioprocessos
+trocando só esses arquivos, na prática validando esse requisito.
 
 ## Arquitetura
 
 - **Backend:** Python, LangGraph (motor do agente) + FastAPI (API).
 - **Frontend:** React + TypeScript (Vite), uma única tela.
-- **Dados de entrada:** `data/biotecpredict.db` — um arquivo SQLite (não
-  versionado, ver "Como executar").
+- **Dados de entrada:** `data/biotecpredict.db`, um arquivo SQLite não
+  versionado (ver "Como executar").
 
 ## Fluxo com LangGraph
 
@@ -106,12 +115,13 @@ em `specs/design.md`.
 
 ## Ferramenta utilizada pelo agente
 
-`consultar_leituras_biosensor(batch_id, data_inicio, data_fim)` — `SELECT`
-somente leitura na tabela `sensor_readings` de `data/biotecpredict.db`,
-restrita a um `batch_id` e a uma janela de datas. Disponível tanto em
-`formular_pergunta_ishikawa` quanto em `formular_porque` (no máximo 1x por
-pergunta), tipicamente mais usada nas perguntas técnicas (Máquina/Medição,
-5 Porquês) do que nas de processo/pessoas (Método/Mão de obra).
+`consultar_leituras_biosensor(batch_id, data_inicio, data_fim)`: um
+`SELECT` somente leitura na tabela `sensor_readings` de
+`data/biotecpredict.db`, restrita a um `batch_id` e a uma janela de datas.
+Disponível tanto em `formular_pergunta_ishikawa` quanto em
+`formular_porque` (no máximo uma vez por pergunta), tipicamente mais usada
+nas perguntas técnicas (Máquina e Medição, 5 Porquês) do que nas de
+processo e pessoas (Método e Mão de obra).
 
 ## Como executar
 
@@ -125,7 +135,7 @@ cp .env.example .env         # preencher a chave de API do provedor de LLM escol
 # 2. Dados: colocar um arquivo biotecpredict.db (exportado do BiotecPredict,
 #    schema em specs/design.md) em data/biotecpredict.db.
 #    Os testes automatizados usam tests/fixtures/biotecpredict_teste.db
-#    (fixture estática já incluída no repositório) — nunca este arquivo real.
+#    (fixture estática já incluída no repositório); nunca este arquivo real.
 
 # 3. Subir a API
 uvicorn backend.main:app --reload
@@ -136,13 +146,13 @@ npm install
 npm run dev
 ```
 
-Abrir a URL indicada pelo Vite (padrão `http://localhost:5173`) — a tela
+Abrir a URL indicada pelo Vite (padrão `http://localhost:5173`); a tela
 inicial já lista os lotes de `data/biotecpredict.db` com sua classificação.
 
 ## Exemplo de entrada (formato)
 
 Linha da tabela `batches` que dispara a investigação (schema real do
-BiotecPredict; lote 11 do dataset de demonstração atual — ver "Estratégia
+BiotecPredict; lote 11 do dataset de demonstração atual, ver "Estratégia
 de dados" em `specs/design.md`):
 
 ```json
@@ -156,23 +166,23 @@ de dados" em `specs/design.md`):
 ```
 
 `compliance_score=71.32` é classificado `WARNING` (entre 45 e 80, regra
-real do BiotecPredict replicada em `config/regras_bioprocesso.yaml`) —
+real do BiotecPredict replicada em `config/regras_bioprocesso.yaml`).
 `classification` não é uma coluna do banco, o agente calcula na hora. O
 `risk_prediction` do modelo de ML concorda (`MEDIUM_RISK`).
 `preparar_contexto` calcula `sensor_metrics` a partir de `sensor_readings`
 e identifica `parametros_fora_da_faixa: ["dissolved_oxygen",
-"agitator_speed"]` (par correlacionado — menos agitação, menos
-transferência de oxigênio) — isso já vem pronto quando o agente entra em
-ação; ele não descobre qual parâmetro é, ele investiga *por que* esses
-parâmetros ficaram fora da faixa — primeiro mapeando o contexto
-(Ishikawa), depois aprofundando (5 Porquês).
+"agitator_speed"]` (par correlacionado: menos agitação, menos
+transferência de oxigênio). Isso já vem pronto quando o agente entra em
+ação; ele não descobre qual é o parâmetro, ele investiga *por que* esses
+parâmetros ficaram fora da faixa, primeiro mapeando o contexto (Ishikawa),
+depois aprofundando (5 Porquês).
 
 ## Exemplo de interação (Ishikawa + 5 Porquês)
 
 ```
 [Agente] (Máquina) O agitador deste lote operou dentro da velocidade
          (RPM) padrão do processo?
-[Operador] Não — o setpoint do inversor de frequência estava abaixo do
+[Operador] Não, o setpoint do inversor de frequência estava abaixo do
            valor padrão.
 [Agente] (Método) Houve alguma mudança de procedimento neste lote?
 [Operador] Não, seguimos o procedimento padrão.
@@ -191,7 +201,7 @@ parâmetros ficaram fora da faixa — primeiro mapeando o contexto
 [Operador] ...
 ```
 (continua até a 5ª pergunta, quando o relatório já é gerado; o operador
-revisa e pode pedir ajuste — roteiro completo em
+revisa e pode pedir ajuste; roteiro completo em
 `docs/demo/gabarito-testes.md`)
 
 ## Exemplo de saída (formato)
@@ -237,42 +247,44 @@ O `.html` correspondente apresenta o mesmo conteúdo formatado para leitura.
   agênticos (`formular_pergunta_ishikawa`, `orquestrar_analise`,
   `formular_porque`, `gerar_causa_raiz`), um `ToolNode`, e um ponto
   human-in-the-loop (`perguntar_operador`, reusado nas duas fases).
-- **Interface web (FastAPI + React), não CLI** — o operador interage pelo
-  navegador; o mecanismo de pausa/retomada usa `interrupt()` e um
-  checkpointer do LangGraph, não `input()` bloqueante (que não funciona
-  atrás de uma API) — ver `specs/design.md`.
-- **Ishikawa (6 categorias) antes de 5 Porquês** — 5 Porquês sozinho não
+- **Interface web (FastAPI + React), não CLI**: o operador interage pelo
+  navegador. O mecanismo de pausa e retomada usa `interrupt()` e um
+  checkpointer do LangGraph, não `input()` bloqueante, que não funciona
+  atrás de uma API (ver `specs/design.md`).
+- **Ishikawa (6 categorias) antes de 5 Porquês**: 5 Porquês sozinho não
   prioriza entre causas de categorias diferentes (método, máquina,
   material, mão de obra, meio ambiente, medição); mapear o contexto
   primeiro evita ancorar a investigação numa categoria errada. Decisão
-  informada por literatura de qualidade (ASQ, KaiNexus) e por um artigo
-  acadêmico sobre RCA multiagente — ver `specs/design.md`.
+  informada pela literatura de qualidade (ASQ, KaiNexus) e por um artigo
+  acadêmico sobre RCA multiagente (ver `specs/design.md`).
 - **"Orquestrador" e "relatório" são nós do mesmo grafo, não agentes
-  separados** — decisão deliberada de simplicidade; a literatura de
+  separados**: decisão deliberada de simplicidade. A literatura de
   referência usa arquitetura multiagente de verdade, mas replicar isso
   aqui adicionaria complexidade de coordenação sem necessidade.
-- **Sempre exatamente 6 perguntas de Ishikawa + 5 Porquês, no máximo 1
-  consulta à ferramenta por pergunta** — decisão deliberada por
+- **Sempre exatamente 6 perguntas de Ishikawa e 5 Porquês, no máximo uma
+  consulta à ferramenta por pergunta**: decisão deliberada por
   previsibilidade, mesmo sabendo que a prática real do método às vezes
   para antes (ver `specs/design.md`).
-- **Relatório gerado ao final de cada ciclo, revisão sempre disponível** — o
-  relatório já é salvo assim que a cadeia é concluída (5º porquê
-  respondido) e seu link aparece na tela de revisão; o operador pode pedir
-  ajuste a qualquer momento, o que preserva o ciclo anterior (já reportado)
-  em `ciclos_anteriores` (auditoria) e reabre um novo ciclo.
-- **Relatório em JSON e HTML** — JSON para consumo por outros sistemas,
+- **Relatório gerado ao final de cada ciclo, revisão sempre disponível**:
+  o relatório já é salvo assim que a cadeia é concluída (5º porquê
+  respondido) e seu link aparece na tela de revisão. O operador pode pedir
+  ajuste a qualquer momento, o que preserva o ciclo anterior, já
+  reportado, em `ciclos_anteriores` para auditoria, e reabre um novo
+  ciclo.
+- **Relatório em JSON e HTML**: JSON para consumo por outros sistemas,
   HTML para leitura humana.
-- **LLM plugável**: provedor/modelo escolhidos via variável de ambiente
-  (`LLM_PROVIDER`/`LLM_MODEL`) usando `init_chat_model` do LangChain —
+- **LLM plugável**: provedor e modelo escolhidos via variável de ambiente
+  (`LLM_PROVIDER`/`LLM_MODEL`) usando `init_chat_model` do LangChain,
   padrão Google Gemini (gratuito) nesta entrega.
-- **Entrada via SQLite, schema real do BiotecPredict** — `data/biotecpredict.db`
-  (nunca versionado) é montado a partir de um dataset curado de
-  demonstração, versionado em `data/simulacao_causa_raiz/` (15 lotes: 5
-  "ideais" + 10 com um desvio de causa física única cada). Os valores de
-  sensor são desenhados propositalmente, mas `compliance_score`/
-  `classification`/`risk_prediction` não são inventados: vêm de rodar o
+- **Entrada via SQLite, schema real do BiotecPredict**:
+  `data/biotecpredict.db` (nunca versionado) é montado a partir de um
+  dataset curado de demonstração, versionado em
+  `data/simulacao_causa_raiz/` (15 lotes: 5 "ideais" e 10 com um desvio de
+  causa física única cada). Os valores de sensor são desenhados
+  propositalmente, mas `compliance_score`, `classification` e
+  `risk_prediction` não são inventados: vêm de rodar o
   `ComplianceService`/`MLModel` reais e inalterados do BiotecPredict sobre
-  esses dados — ver "Estratégia de dados" em `specs/design.md`. Os
+  esses dados (ver "Estratégia de dados" em `specs/design.md`). Os
   thresholds de classificação (`>=80` ACCEPTABLE, `>=45` WARNING, abaixo
   CRITICAL) foram conferidos linha a linha em
   `ComplianceService._classify_score()` do BiotecPredict, não apenas no
@@ -282,13 +294,13 @@ O `.html` correspondente apresenta o mesmo conteúdo formatado para leitura.
 
 ## Limitações
 
-- A classificação/detecção da NC não é feita por este agente — ela vem do
-  BiotecPredict. O agente lê um arquivo de banco local (exportado
+- A classificação e a detecção da NC não são feitas por este agente; vêm
+  do BiotecPredict. O agente lê um arquivo de banco local (exportado
   manualmente), não uma conexão ao vivo com uma instância em execução.
 - Cobre um parâmetro fora da faixa por lote; múltiplos parâmetros fora da
   faixa simultaneamente exigiriam ciclos/NCs separadas.
 - Os loops sempre completam todas as perguntas (6 Ishikawa + 5 Porquês),
-  mesmo que a categoria/causa fique óbvia antes — não implementa parada
+  mesmo que a categoria/causa fique óbvia antes, não implementa parada
   antecipada.
 - Lotes com `compliance_score` nulo (processados mas sem score atribuído)
   são excluídos da lista de elegíveis.
@@ -299,16 +311,16 @@ Ver seção correspondente em `specs/design.md`.
 
 ## Documentação relacionada
 
-- `docs/PRD.md` — documento de requisitos de produto (problema, público, escopo, critérios de sucesso)
-- `docs/cenarios-de-uso.md` — cenários de uso passo a passo (fluxo principal + validação/erro/ajuste)
-- `docs/diagrama-fluxo.md` — diagramas Mermaid do grafo LangGraph e da sequência de chamadas HTTP
-- `docs/openapi.yaml` — contrato completo da API (gerado a partir do schema real do FastAPI)
-- `specs/requirements.md` — requisitos funcionais e não-funcionais
-- `specs/design.md` — arquitetura, fluxo do grafo, estratégia de dados
-- `docs/prompts.md` — prompts usados para planejar/implementar o agente
-- `docs/gitflow.md` — modelo de branches, CI/CD, convenções de commit/PR
-- `docs/apresentacao.md` — conteúdo da apresentação de 2 slides
-- [BiotecPredict](https://github.com/micheleoliveiracod/Projeto-avaliativo-M1-2-BiotecPredict) — projeto complementar (classificação de risco do lote)
+- `docs/PRD.md`: documento de requisitos de produto (problema, público, escopo, critérios de sucesso)
+- `docs/cenarios-de-uso.md`: cenários de uso passo a passo (fluxo principal, validação, erro e ajuste)
+- `docs/diagrama-fluxo.md`: diagramas Mermaid do grafo LangGraph e da sequência de chamadas HTTP
+- `docs/openapi.yaml`: contrato completo da API (gerado a partir do schema real do FastAPI)
+- `specs/requirements.md`: requisitos funcionais e não funcionais
+- `specs/design.md`: arquitetura, fluxo do grafo, estratégia de dados
+- `docs/prompts.md`: prompts usados para planejar e implementar o agente
+- `docs/gitflow.md`: modelo de branches, CI/CD, convenções de commit e PR
+- `docs/apresentacao.md`: conteúdo da apresentação de 2 slides
+- [BiotecPredict](https://github.com/micheleoliveiracod/Projeto-avaliativo-M1-2-BiotecPredict): projeto complementar (classificação de risco do lote)
 
 ---
 
@@ -319,7 +331,7 @@ Ver seção correspondente em `specs/design.md`.
 
 ---
 
-## 👨‍💻 Desenvolvedor
+## 👩🏻‍💻 Desenvolvedora
 
 **Desenvolvido com 💜 por Michele Oliveira**
 - GitHub: [@micheleoliveiracod](https://github.com/micheleoliveiracod)

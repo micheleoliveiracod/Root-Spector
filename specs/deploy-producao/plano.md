@@ -66,7 +66,7 @@ equivalente).
 
 | Peça | Hoje, local | Produção |
 |---|---|---|
-| `data/biotecpredict.db` | arquivo local, leitura só | sem mudança, nunca é escrito, embarca no deploy normalmente |
+| `data/biotecpredict.db` | versionado no repositório, leitura só | sem mudança, embarca no deploy normalmente |
 | Checkpointer LangGraph | `SqliteSaver`, `data/checkpoints.db` | `PostgresSaver`, Azure Database for PostgreSQL, quando `DATABASE_URL` estiver definida, com `sslmode=require` na string de conexão; `SqliteSaver` continua sendo o padrão sem essa variável de ambiente, o ambiente de desenvolvimento não ganha infraestrutura extra |
 | Relatório (o PDF é gerado sob demanda e nunca salvo) | tabela `relatorios`, SQLite local | mesma tabela, Postgres, na mesma instância do checkpointer, quando `DATABASE_URL` estiver definida |
 | CORS | `CORS_ALLOWED_ORIGINS`, variável de ambiente, padrão `localhost:5173` | já implementado, só falta apontar para o domínio real do Vercel |
@@ -78,6 +78,20 @@ e a mesma variável de ambiente (`DATABASE_URL`) independentemente do
 provedor, então essa parte do código não muda por causa da troca de
 Supabase para Azure, só o valor da variável de ambiente aponta para outro
 host.
+
+## Versionamento de `data/biotecpredict.db`
+
+A Fase 1 definiu como requisito não funcional (RNF4, `specs/requirements.md`)
+nunca versionar `data/biotecpredict.db`, mantendo-o fora do histórico de
+commits. Esse requisito segue valendo para a Fase 1 e não é alterado
+retroativamente. Para o deploy da Fase 2, o arquivo precisa estar
+disponível no ambiente do Render, que não tem acesso a nenhum passo
+manual de cópia de arquivo na camada gratuita. A partir desta branch,
+`data/biotecpredict.db` passa a ser versionado, gerado a partir do
+dataset curado em `data/simulacao_causa_raiz/` (15 lotes, scores e
+classificações já validados contra o `ComplianceService`/`MLModel` reais
+do BiotecPredict, ver o README daquela pasta), para embarcar
+automaticamente em todo deploy.
 
 ## Issues, todas dentro de `chore/deploy-producao-fase02`
 
