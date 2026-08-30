@@ -149,6 +149,13 @@ governança desta fase), e o teste de prompt injection (§4.5) como o
 coletados desta sessão (run IDs, timestamps, taxa de falha) como
 evidência. Ver `specs/fase02/design.md` § DevOps.
 
+**Estado na Fase 2:** entregue em dois artefatos complementares --
+`docs/fase02/devops/analise-incidente-ci.md` (pipeline de CI, os 35
+`startup_failure`) e `docs/fase02/devops/analise-desempenho-agente.ipynb`
+(desempenho em runtime do agente, a partir de `eventos_log`: duração por
+nó, uma anomalia real detectada e corrigida com teste de regressão, e
+uma comparação de tendência antes/depois de duas correções em produção).
+
 ---
 
 ## §4.9, Low-Code para QA, SRE e agentes
