@@ -1,9 +1,13 @@
 # Fase 02, Requisitos (mapeamento contra o PDF oficial)
 
-> **Status: só planejamento.** Nenhum item marcado "falta" foi implementado
-> ainda. Ver `specs/fase02/design.md` para o "como"; este documento é o
-> "o quê", mapeia o que já existe, o que falta, e cada critério do
-> escopo em detalhe.
+> **Status: implementado.** Todos os itens mapeados abaixo como trabalho
+> novo (RAG, paralelização, tool `consultar_recorrencia`, guardrails de
+> governança, observabilidade, QA/DevOps documentados, low-code n8n)
+> estão entregues; a tabela de status por seção do PDF (✅/🟡/❌) reflete
+> o momento do planejamento, não o estado atual. Ver `specs/fase02/design.md`
+> para o "como", `docs/deploy-producao.md` para o estado do deploy em
+> produção, e `docs/demo/gabarito-testes.md` para o roteiro de
+> demonstração completo (10 lotes).
 
 Cada bloco abaixo corresponde a uma seção do PDF (§4.1–§4.10). Status:
 **✅ já satisfeito** (nenhum trabalho novo) · **🟡 parcial** (existe algo,
@@ -66,7 +70,7 @@ vira só uma frase no README final.)
 
 | Requisito do PDF | Status | Onde |
 |---|---|---|
-| Estratégia de memória/recuperação contextual | ✅ | `state` + checkpointer `SqliteSaver` |
+| Estratégia de memória/recuperação contextual | ✅ | `state` + checkpointer LangGraph (SQLite local ou Postgres, conforme `DATABASE_URL`) |
 | Quando usa RAG: documentar base/chunking/indexação/recuperação/fontes | ❌ | **RAG ainda não existe** |
 
 **Trabalho novo:** implementar o segundo agente de recomendação de
@@ -144,6 +148,13 @@ governança desta fase), e o teste de prompt injection (§4.5) como o
 **Trabalho novo:** documentar (não é código), usar os dados reais já
 coletados desta sessão (run IDs, timestamps, taxa de falha) como
 evidência. Ver `specs/fase02/design.md` § DevOps.
+
+**Estado na Fase 2:** entregue em dois artefatos complementares --
+`docs/fase02/devops/analise-incidente-ci.md` (pipeline de CI, os 35
+`startup_failure`) e `docs/fase02/devops/analise-desempenho-agente.ipynb`
+(desempenho em runtime do agente, a partir de `eventos_log`: duração por
+nó, uma anomalia real detectada e corrigida com teste de regressão, e
+uma comparação de tendência antes/depois de duas correções em produção).
 
 ---
 

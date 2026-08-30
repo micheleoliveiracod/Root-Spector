@@ -32,19 +32,24 @@ respostas em `docs/demo/gabarito-testes.md`.
    (Máquina, setpoint do inversor de frequência do agitador abaixo do
    padrão) e as categorias descartadas, com justificativa/motivo.
 6. O operador responde às 5 perguntas "por quê", cada uma ancorada na
-   resposta anterior, aprofundando a partir da categoria Máquina.
-7. Após a 5ª resposta, o sistema sintetiza a causa raiz, gera
-   `reports/11_{timestamp}.json`, e devolve
+   resposta anterior, aprofundando a partir da categoria Máquina; em
+   paralelo, o sistema busca recomendações relevantes na base de
+   conhecimento curada (RAG, Fase 2).
+7. Após a 5ª resposta, o sistema sintetiza a causa raiz e a recomendação
+   de tratativa (RAG + verificação de recorrência, Fase 2), grava o
+   `Diagnostico` na tabela `relatorios`, e devolve
    `{status: "pronto_para_revisao"}`.
 8. O operador consulta `GET /api/investigacoes/11/revisao` e vê a cadeia
-   completa (6 respostas Ishikawa + 5 porquês), a causa raiz sintetizada
-   e o link do relatório em JSON. Ao pedir o relatório em PDF, o sistema
-   gera o arquivo na hora, sem salvá-lo em disco.
+   completa (6 respostas Ishikawa + 5 porquês), a causa raiz sintetizada,
+   a recomendação de tratativa e as fontes consultadas (Fase 2), e o link
+   do relatório gravado. Ao pedir o relatório em PDF, o sistema gera o
+   arquivo na hora, sem salvá-lo em disco.
 9. O operador considera a investigação satisfatória e encerra, nenhuma
-   ação adicional é necessária (o relatório já está salvo em `reports/`).
+   ação adicional é necessária (o relatório já está gravado).
 
-**Pós-condição:** `Diagnostico` válido persistido em JSON e HTML;
-checkpoint do `thread_id` no estado final (`diagnostico` preenchido).
+**Pós-condição:** `Diagnostico` válido persistido na tabela `relatorios`
+(SQLite local ou Postgres); checkpoint do `thread_id` no estado final
+(`diagnostico` preenchido).
 
 ---
 
@@ -127,7 +132,7 @@ lote, todos auditáveis via `ciclos_anteriores`.
 
 1. O operador aciona qualquer ação que exija um nó agêntico (iniciar,
    responder, ajustar).
-2. `get_llm()` tenta a cadeia completa, Gemini → Groq → Anthropic →
+2. `get_llm()` tenta a cadeia completa, Groq → Gemini → Anthropic →
    OpenAI (cada camada só ativa se a respectiva chave estiver
    configurada), e todas falham (rede, rate limit, chave inválida).
 3. O nó agêntico relança `FalhaLLMError`; a API captura e devolve

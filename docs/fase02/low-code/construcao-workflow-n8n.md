@@ -114,7 +114,8 @@ Esses três campos ficam disponíveis para o próximo nó como
 
 ## Passo 7, testar o workflow completo
 
-Com um dia que já tenha investigações reais em `reports/*.json`, clicar
+Com um dia que já tenha investigações reais concluídas (gravadas na
+tabela `relatorios`), clicar
 no botão "Execute Workflow", no topo do canvas. O n8n executa cada nó em
 sequência, mostrando o resultado de cada um. Confirmar que o e-mail
 chegou na caixa de entrada configurada no passo 6.

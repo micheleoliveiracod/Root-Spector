@@ -94,12 +94,13 @@ Escopo desta entrega e `specs/requirements.md`):
 - Validação em duas camadas da resposta do operador.
 - Revisão do operador com opção de pedido de ajuste (novo ciclo).
 - Relatório final em JSON + HTML.
-- Fallback de LLM em cadeia (Gemini → Groq → Anthropic → OpenAI).
+- Fallback de LLM em cadeia (Groq → Gemini → Anthropic → OpenAI).
 
-**Fora do escopo nesta entrega:**
+**Fora do escopo na entrega da Fase 1:**
 - Detecção automática da NC (já chega classificada como entrada).
 - Segundo agente (RAG) para recomendação de plano PDCA e fluxo de Garantia
-  da Qualidade, roadmap, ver § 12 abaixo.
+  da Qualidade, roadmap, ver § 12 abaixo. Implementado na Fase 2 com
+  escopo menor (um nó de recomendação dentro do mesmo grafo).
 - Múltiplos parâmetros fora da faixa tratados como NCs separadas.
 - Adaptação simultânea a mais de um setor produtivo.
 - Parada antecipada dos loops (sempre 6 + 5 perguntas, mesmo se a causa
@@ -183,15 +184,23 @@ fazer sentido, com uso em produção.
   de classificação do BiotecPredict, mas não uma captura de uma instância
   de produção real.
 
-## 12. Roadmap (fora desta entrega)
+## 12. Roadmap (tal como planejado ao fim da Fase 1)
 
 Ver `specs/design.md` § Roadmap para o desenho completo: um segundo agente
 (RAG) consultando documentação da empresa/legislação/ANVISA/bibliografia
 para recomendar um plano PDCA (ação corretiva + Kaizen), avaliado pela
 Garantia da Qualidade em conjunto com a Coordenação da Produção, executado
 e verificado quanto à eficácia por reincidência, fechando um ciclo PDCA
-completo. É nesse estágio que métricas de negócio (tempo médio de
-investigação, taxa de reincidência) passariam a ser aplicáveis.
+completo.
+
+**Estado na Fase 2:** implementado com escopo menor, dentro do mesmo
+grafo (nó `recomendar_tratativa`, RAG sobre `data/base_conhecimento/` +
+tool `consultar_recorrencia`), sem o fluxo de aprovação entre Qualidade e
+Coordenação da Produção nem o ciclo PDCA completo. Métricas de eficiência
+operacional (tempo médio de investigação, tempo médio por nó, uso do
+fallback de LLM) já são coletadas e agregadas no resumo diário (ver
+`docs/OBSERVABILIDADE.md`), a taxa de reincidência aparece por
+investigação via `consultar_recorrencia`.
 
 ## 13. Referências
 

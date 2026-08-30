@@ -1,0 +1,13 @@
+# Dependências só para reabrir/reexecutar analise-desempenho-agente.ipynb
+# -- não fazem parte do runtime do agente (pyproject.toml), por isso
+# ficam num arquivo à parte, não instaladas por padrão.
+#
+#   pip install -r docs/fase02/devops/requirements-notebook.txt
+#   jupyter nbconvert --to notebook --execute --inplace docs/fase02/devops/analise-desempenho-agente.ipynb
+#
+# Os dados já vêm exportados em dados/eventos_log.csv (tabela eventos_log,
+# Postgres de produção, 2026-08-30), não é preciso acesso ao banco real
+# pra reexecutar a análise.
+pandas==3.0.5
+matplotlib==3.11.1
+jupyter==1.1.1

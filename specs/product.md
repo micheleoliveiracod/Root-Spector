@@ -100,14 +100,18 @@ Uma plataforma web local que:
 - Revisão do operador com o relatório já gerado, e opção de pedido de
   ajuste (novo ciclo, histórico preservado).
 - Relatório final em JSON + HTML.
-- Fallback de LLM em cadeia (Gemini → Groq → Anthropic → OpenAI) para
-  resiliência a falhas de rede/rate limit/chave.
+- Fallback de LLM em cadeia (Groq → Gemini → Anthropic → OpenAI, Fase 2;
+  Gemini era o principal na Fase 1) para resiliência a falhas de rede/rate
+  limit/chave.
 
-**Fora do escopo (nesta entrega, ver `specs/requirements.md` para a lista
-completa):**
+**Fora do escopo (na entrega da Fase 1, ver `specs/requirements.md` para a
+lista completa):**
 - Detecção automática da NC (já chega classificada como entrada).
 - Segundo agente (RAG) para recomendação de plano PDCA e fluxo de Garantia
-  da Qualidade, roadmap, ver `specs/design.md` § Roadmap.
+  da Qualidade, roadmap, ver `specs/design.md` § Roadmap. **Estado na
+  Fase 2:** implementado com escopo menor, um nó de recomendação dentro do
+  mesmo grafo, sem o fluxo de aprovação com a Qualidade nem o ciclo PDCA
+  completo, ver `specs/fase02/design.md` § RAG.
 - Múltiplos parâmetros fora da faixa simultaneamente tratados como NCs
   separadas.
 - Adaptação simultânea a mais de um setor produtivo nesta entrega.
@@ -151,8 +155,8 @@ lista, já classificada, que o operador escolhe o lote.
 ## Saída Esperada por Investigação
 
 Para cada investigação concluída, o sistema produz um `Diagnostico`
-(persistido em `reports/{batch_id}_{timestamp}.json`, com o PDF gerado
-sob demanda a partir dos mesmos dados) contendo:
+(persistido na tabela `relatorios`, SQLite local ou Postgres, Fase 2; com
+o PDF gerado sob demanda a partir dos mesmos dados) contendo:
 
 - A NC original (eco, para rastreabilidade).
 - As 6 respostas do mapeamento Ishikawa, com a categoria principal
@@ -180,12 +184,19 @@ testes automatizados, nunca pela aplicação em execução.
 
 ---
 
-## Roadmap (fora desta entrega)
+## Roadmap (tal como planejado ao fim da Fase 1)
 
 Ver `specs/design.md` § Roadmap para o desenho completo: um segundo agente
 (RAG) consultando documentação da empresa/legislação/ANVISA/bibliografia
 para recomendar um plano PDCA (ação corretiva + Kaizen), avaliado pela
 Garantia da Qualidade em conjunto com a Coordenação da Produção, executado
 e verificado quanto à eficácia por reincidência, fechando um ciclo PDCA
-completo. Exige infraestrutura (ingestão de documentos, embeddings, vector
-store) fora do escopo desta entrega.
+completo.
+
+**Estado na Fase 2:** implementado com escopo menor. `recomendar_tratativa`
+consulta a base de conhecimento curada (`data/base_conhecimento/`) via
+RAG (chunking, embedding, busca semântica) e a tool `consultar_recorrencia`
+(recorrência entre investigações), sintetizando uma recomendação textual
+de ação corretiva/preventiva dentro do mesmo grafo, sem o fluxo de
+aprovação entre Qualidade e Coordenação da Produção nem o ciclo PDCA
+completo. Ver `specs/fase02/design.md` § RAG e `docs/RAG.md`.
