@@ -1,8 +1,11 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import * as api from "../api";
 import type { Revisao } from "../api";
 import { RevisaoRespostas } from "./RevisaoRespostas";
+
+vi.mock("../api");
 
 const REVISAO: Revisao = {
   thread_id: "511",
@@ -13,8 +16,7 @@ const REVISAO: Revisao = {
   causa_raiz: "Ausência de verificação de manutenção preventiva.",
   narrativa: "O agitador não foi verificado a tempo.",
   relatorio: {
-    json: "/reports/511_20260718T000000.json",
-    html: "/reports/511_20260718T000000.html",
+    json: "/api/relatorios/42",
   },
 };
 
@@ -27,14 +29,59 @@ describe("RevisaoRespostas", () => {
     expect(screen.getByText(REVISAO.causa_raiz)).toBeInTheDocument();
   });
 
-  it("renderiza os links do relatório apontando pro backend", () => {
+  it("baixa o JSON ao clicar em Baixar JSON", async () => {
+    const blob = new Blob(['{"causa_raiz": "teste"}'], { type: "application/json" });
+    vi.mocked(api.baixarRelatorioJson).mockResolvedValue(blob);
+    const criarUrl = vi.fn().mockReturnValue("blob:url-de-teste");
+    const revogarUrl = vi.fn();
+    URL.createObjectURL = criarUrl;
+    URL.revokeObjectURL = revogarUrl;
+    const cliqueLink = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
     render(<RevisaoRespostas revisao={REVISAO} onAjustar={() => {}} onReiniciar={() => {}} processando={false} />);
 
-    const linkHtml = screen.getByRole("link", { name: "Ver relatório (HTML)" });
-    const linkJson = screen.getByRole("link", { name: "Baixar JSON" });
+    fireEvent.click(screen.getByRole("button", { name: "Baixar JSON" }));
 
-    expect(linkHtml).toHaveAttribute("href", `http://localhost:8000${REVISAO.relatorio.html}`);
-    expect(linkJson).toHaveAttribute("href", `http://localhost:8000${REVISAO.relatorio.json}`);
+    await waitFor(() => expect(api.baixarRelatorioJson).toHaveBeenCalledWith(REVISAO.relatorio.json));
+    expect(criarUrl).toHaveBeenCalledWith(blob);
+    expect(cliqueLink).toHaveBeenCalledTimes(1);
+    expect(revogarUrl).toHaveBeenCalledWith("blob:url-de-teste");
+
+    cliqueLink.mockRestore();
+  });
+
+  it("gera e baixa o PDF ao clicar em Gerar relatório", async () => {
+    const blob = new Blob(["%PDF-1.4"], { type: "application/pdf" });
+    vi.mocked(api.gerarRelatorioPdf).mockResolvedValue(blob);
+    const criarUrl = vi.fn().mockReturnValue("blob:url-de-teste");
+    const revogarUrl = vi.fn();
+    URL.createObjectURL = criarUrl;
+    URL.revokeObjectURL = revogarUrl;
+    // jsdom tenta navegar de verdade ao clicar num <a href>, sem suporte a
+    // blob: URLs -- só nos interessa que o clique aconteceu, não a
+    // navegação em si (que só existe de fato no navegador).
+    const cliqueLink = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    render(<RevisaoRespostas revisao={REVISAO} onAjustar={() => {}} onReiniciar={() => {}} processando={false} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Gerar relatório (PDF)" }));
+
+    await waitFor(() => expect(api.gerarRelatorioPdf).toHaveBeenCalledWith(REVISAO.thread_id));
+    expect(criarUrl).toHaveBeenCalledWith(blob);
+    expect(cliqueLink).toHaveBeenCalledTimes(1);
+    expect(revogarUrl).toHaveBeenCalledWith("blob:url-de-teste");
+
+    cliqueLink.mockRestore();
+  });
+
+  it("mostra uma mensagem de erro se a geração do PDF falhar", async () => {
+    vi.mocked(api.gerarRelatorioPdf).mockRejectedValue(new Error("Erro 400 ao gerar o relatório em PDF"));
+
+    render(<RevisaoRespostas revisao={REVISAO} onAjustar={() => {}} onReiniciar={() => {}} processando={false} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Gerar relatório (PDF)" }));
+
+    expect(await screen.findByText("Erro 400 ao gerar o relatório em PDF")).toBeInTheDocument();
   });
 
   it("chama onReiniciar e onAjustar nos respectivos botões", () => {
