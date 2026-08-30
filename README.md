@@ -1,3 +1,18 @@
+<div align="center">
+
+<img src="docs/brand/logo-lockup.png" alt="Root-Spector" width="720" />
+
+![Python](https://img.shields.io/badge/Python-3.12-9184D9?style=flat-square&labelColor=0B0A10)
+![LangGraph](https://img.shields.io/badge/LangGraph-agente-9184D9?style=flat-square&labelColor=0B0A10)
+![FastAPI](https://img.shields.io/badge/FastAPI-backend-9184D9?style=flat-square&labelColor=0B0A10)
+![React](https://img.shields.io/badge/React-frontend-9184D9?style=flat-square&labelColor=0B0A10)
+[![CI](https://github.com/micheleoliveiracod/Root-Spector/actions/workflows/ci.yml/badge.svg)](https://github.com/micheleoliveiracod/Root-Spector/actions/workflows/ci.yml)
+![License](https://img.shields.io/badge/licenca-Apache--2.0-9184D9?style=flat-square&labelColor=0B0A10)
+
+</div>
+
+---
+
 # Root-Spector, Agente de Investigação de Causa Raiz de NC
 
 **Desenvolvido por:** [Michele Oliveira](https://github.com/micheleoliveiracod)
@@ -93,6 +108,23 @@ configuração/dados, ver "Adaptação a outro setor" em `specs/design.md`.
 Este projeto começou desenhado para agronegócio e grãos e foi
 reconfigurado para bioprocessos trocando só esses arquivos, na prática
 validando esse requisito.
+
+### Classificação da solução
+
+Esta solução é classificada como um **agente**, não um workflow
+determinístico nem um sistema híbrido. A diferença central está em quem
+decide o próximo passo da investigação: os nós determinísticos do grafo
+(leitura de biosensor, roteamento condicional) cuidam só da mecânica de
+estado, mas o conteúdo da investigação (qual pergunta de Ishikawa
+formular a seguir, qual categoria priorizar, quando invocar a ferramenta
+`consultar_recorrencia`, como sintetizar a causa raiz e a recomendação de
+tratativa) é decidido pelo LLM em tempo de execução, a partir do que o
+operador responde, não por um roteiro fixo escrito antecipadamente. O LLM
+também decide autonomamente, chamada a chamada, se e quando usar cada
+ferramenta disponível (`consultar_leituras_biosensor` e
+`consultar_recorrencia`), o que caracteriza um agente e não um workflow
+de passos fixos. O LangGraph funciona aqui como motor de orquestração de
+estado do agente, não como um mecanismo de regras que dispensaria o LLM.
 
 ### Arquitetura
 
@@ -233,6 +265,23 @@ mapeando o contexto (Ishikawa), depois aprofundando (5 Porquês).
 revisa e pode pedir ajuste, roteiro completo em
 `docs/demo/gabarito-testes.md`)
 
+### Cenário de risco: falha de todos os provedores de LLM
+
+Nem sempre a chamada ao LLM tem sucesso. A cadeia de fallback configurada
+em `config.py` tenta, em ordem, Groq, Gemini, Anthropic e OpenAI; se um
+provedor falhar (limite de cota, erro de rede, chave inválida), o próximo
+da lista assume automaticamente a mesma chamada, sem intervenção do
+operador. O cenário de risco documentado é o caso em que todos os
+provedores configurados falham na mesma chamada: a API responde HTTP 503
+em vez de travar ou devolver um erro genérico, e o estado da investigação
+em andamento não é perdido, porque o checkpointer do LangGraph já havia
+persistido o passo anterior antes da chamada falhar. O operador pode
+tentar novamente mais tarde, retomando exatamente do ponto em que a
+cadeia de fallback foi esgotada, sem repetir perguntas já respondidas.
+Esse comportamento está descrito em detalhe em `specs/design.md` e é o
+motivo pelo qual o checkpointer é obrigatório mesmo numa arquitetura de
+agente único, não multiagente.
+
 ### Exemplo de saída (formato)
 
 Salvo em `reports/11_20260719T000000.json`:
@@ -359,6 +408,26 @@ embedding e vector store, não busca por palavra-chave). O novo nó
 preventiva a partir da causa raiz e dos trechos recuperados. Detalhado em
 `docs/RAG.md`.
 
+### Refinamento documentado: falha silenciosa no `pre_busca_rag`
+
+Durante a construção da análise de observabilidade desta fase (ver
+"DevOps inteligente" abaixo), os dados reais de `eventos_log` mostraram
+uma anomalia concreta: o nó `pre_busca_rag` executou 10 vezes numa única
+investigação do lote 606, quando o esperado é uma única execução por
+chamada do grafo. A causa raiz foi rastreada até `rag.py`: a função de
+embeddings do Gemini falhava sem tratamento de exceção, e o retry
+automático de nó do LangGraph reexecutava o nó inteiro repetidamente, sem
+nunca degradar de forma previsível. A mudança feita foi envolver a busca
+em `pre_busca_rag` num bloco try/except, registrar a falha via log
+estruturado e devolver uma lista vazia de candidatos em vez de deixar a
+exceção subir, com um teste de regressão dedicado
+(`tests/test_pre_busca_rag_falha_embeddings.py`) provando o comportamento
+antes e depois da correção. O resultado, medido no antes e depois do
+deploy dessa correção (16:47 UTC), está documentado com números reais em
+`docs/fase02/devops/analise-desempenho-agente.ipynb`: a duração média por
+evento caiu de 2,77 para 0,98 segundos, e as execuções indevidas de
+`pre_busca_rag` caíram de 7 em 85 eventos para 3 em 193 eventos.
+
 ### Paralelização real no grafo
 
 Depois de `orquestrar_analise`, o grafo faz um fan-out genuíno: o loop
@@ -451,13 +520,14 @@ endpoint acima. Instruções de construção, passo a passo, em
 
 ### Planejado, ainda não implementado
 
-- **Deploy em produção (Render, Vercel e Azure):** exercício de
-  aprendizado, fora do escopo avaliado do PDF, plano completo em
-  `specs/deploy-producao/plano.md`. O checkpointer do grafo e a tabela
-  `eventos_log` já trocam para Postgres sozinhos quando `DATABASE_URL`
-  estiver definida (testado com um Postgres simulado, ainda não contra
-  uma instância real do Azure); falta o deploy de verdade e persistir o
-  relatório de cada investigação na mesma tabela de banco.
+- **Nenhum item de escopo do PDF ficou pendente.** O deploy em produção
+  (Render, Vercel e Azure), fora do escopo avaliado do PDF mas executado
+  como exercício de aprendizado, está no ar: o checkpointer do grafo e a
+  tabela `eventos_log` já usam o Postgres do Azure quando `DATABASE_URL`
+  está definida, e o relatório de cada investigação é persistido na
+  tabela `relatorios` desse mesmo banco, verificado com investigações
+  reais rodando em produção. Plano completo em
+  `specs/deploy-producao/plano.md`.
 
 ---
 
