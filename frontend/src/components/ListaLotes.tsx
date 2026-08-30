@@ -30,18 +30,32 @@ function situacaoLote(lote: Lote) {
 export function ListaLotes({ onEscolher, processando }: Props) {
   const [lotes, setLotes] = useState<Lote[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
-    listarLotes().then((dados) => {
-      setLotes(dados);
-      setCarregando(false);
-    });
+    listarLotes()
+      .then((dados) => {
+        setLotes(dados);
+        setCarregando(false);
+      })
+      .catch((e) => {
+        setErro((e as Error).message);
+        setCarregando(false);
+      });
   }, []);
 
   if (carregando) {
     return (
       <div className="card">
         <p className="muted">Carregando lotes...</p>
+      </div>
+    );
+  }
+
+  if (erro) {
+    return (
+      <div className="card">
+        <p className="alert alert--critical">Não foi possível carregar os lotes: {erro}</p>
       </div>
     );
   }
@@ -94,7 +108,7 @@ export function ListaLotes({ onEscolher, processando }: Props) {
       {processando && (
         <div className="loading">
           <span className="spinner" aria-hidden="true" />
-          <span>Iniciando a investigação com o agente — isso pode levar alguns instantes.</span>
+          <span>Iniciando a investigação com o agente, isso pode levar alguns instantes.</span>
         </div>
       )}
     </div>

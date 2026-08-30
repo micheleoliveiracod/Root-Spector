@@ -65,6 +65,13 @@ class AgentState(TypedDict):
     # normal, 2 quando a 1a tentativa foi julgada não informativa.
     tentativas_pergunta_atual: list[str]
 
+    # mensagem exibida ao operador quando avaliar_informatividade (Camada 2)
+    # julga a 1a tentativa pouco informativa e pede a mesma pergunta de
+    # novo -- sem isso, perguntar_operador reemite a pergunta sem nenhum
+    # sinal de rejeição (ver nodes.py::avaliar_informatividade). None fora
+    # desse caso; sempre limpo assim que a pergunta avança.
+    erro_informatividade: str | None
+
     # ciclos anteriores preservados quando o operador pede ajuste
     ciclos_anteriores: list[CicloAnterior]
 

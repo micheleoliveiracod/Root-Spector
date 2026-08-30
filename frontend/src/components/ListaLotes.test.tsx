@@ -58,7 +58,18 @@ describe("ListaLotes", () => {
 
     expect(screen.getByRole("button", { name: "Investigar" })).toBeDisabled();
     expect(
-      screen.getByText("Iniciando a investigação com o agente — isso pode levar alguns instantes."),
+      screen.getByText("Iniciando a investigação com o agente, isso pode levar alguns instantes."),
     ).toBeInTheDocument();
+  });
+
+  it("mostra uma mensagem de erro quando a lista de lotes falha ao carregar", async () => {
+    vi.mocked(api.listarLotes).mockRejectedValue(new Error("Chave de API ausente ou inválida."));
+    render(<ListaLotes onEscolher={() => {}} processando={false} />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("Não foi possível carregar os lotes: Chave de API ausente ou inválida."),
+      ).toBeInTheDocument(),
+    );
   });
 });

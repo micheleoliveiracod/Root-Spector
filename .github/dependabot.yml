@@ -4,13 +4,16 @@
 # ninguém rode `npm install`/`pip install` de novo pra perceber) em dias,
 # via PR, em vez de silenciosamente por meses. Ver docs/prompts.md para o
 # histórico da decisão.
+#
+# open-pull-requests-limit em 0: pausado. O Dependabot ainda verifica
+# deriva de versão, mas não abre PR nenhuma até o limite ser reativado.
 version: 2
 updates:
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     commit-message:
       prefix: "chore(deps)"
 
@@ -18,7 +21,7 @@ updates:
     directory: "/frontend"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     commit-message:
       prefix: "chore(deps)"
 
@@ -26,7 +29,7 @@ updates:
     directory: "/tests/e2e"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     commit-message:
       prefix: "chore(deps)"
 
@@ -34,6 +37,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     commit-message:
       prefix: "chore(deps)"

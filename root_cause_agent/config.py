@@ -299,27 +299,30 @@ def get_llm():
     (e instalar o pacote de integração correspondente, ex:
     langchain-anthropic, langchain-openai).
 
-    Fallback automático: Gemini (LLM_PROVIDER/LLM_MODEL -- o provedor
-    oficial deste projeto, gratuito, usado em testes e prototipagem) ->
-    Groq (hospeda modelos open-source como Llama num chip próprio de
-    inferência rápida, tier gratuito generoso, usado nos mesmos testes) ->
-    DeepSeek -> Anthropic -> OpenAI, nessa ordem, via
+    Fallback automático: Groq (LLM_PROVIDER/LLM_MODEL -- provedor padrão
+    deste projeto, gratuito e com limite diário generoso, hospeda modelos
+    open-weight como o gpt-oss da OpenAI num chip próprio de inferência
+    rápida) -> Gemini (2º provedor gratuito, mas com cota diária estreita
+    no tier gratuito, 20 requisições/dia por modelo -- insuficiente como
+    principal pra uma investigação completa, que consome bem mais que
+    isso) -> Anthropic -> OpenAI, nessa ordem, via
     ChatModel.with_fallbacks(). Cada fallback só entra na cadeia se sua
     respectiva chave de API estiver configurada no .env -- rodar só com a
-    chave do Gemini (o cenário mínimo de testes/prototipagem) continua
-    funcionando sem exigir as outras quatro; configurar GROQ_API_KEY (2º
-    provedor gratuito pra testar de verdade), DEEPSEEK_API_KEY (provedor
-    pago de baixo custo) e/ou ANTHROPIC_API_KEY/OPENAI_API_KEY (reforço
+    chave do Groq (o cenário mínimo de testes/prototipagem) continua
+    funcionando sem exigir as outras três; configurar GOOGLE_API_KEY (2º
+    provedor gratuito) e/ou ANTHROPIC_API_KEY/OPENAI_API_KEY (reforço
     pago, ex: pra demonstração) ativa a resiliência extra sem mudar nenhum
-    código. Se todos os provedores configurados falharem, a exceção
-    original propaga pro nó, que a converte em FalhaLLMError (ver
-    nodes.py e specs/design.md § Tratamento de falha na chamada ao LLM).
+    código. DeepSeek foi removido da cadeia (decisão do projeto: provedor
+    pago sem crédito carregado, nunca funcionou de fato). Se todos os
+    provedores configurados falharem, a exceção original propaga pro nó,
+    que a converte em FalhaLLMError (ver nodes.py e specs/design.md §
+    Tratamento de falha na chamada ao LLM).
 
     `LLM_PROVIDER=fake` ativa um provedor determinístico sem rede
     (root_cause_agent.fake_llm.FakeChatModel) -- usado pela suíte E2E
     (tests/e2e/, local e CI) pra rodar o fluxo completo sem custo/flakiness de
     chamar um provedor real. Nunca é o padrão."""
-    provider = os.getenv("LLM_PROVIDER", "google_genai")
+    provider = os.getenv("LLM_PROVIDER", "groq")
     if provider == "fake":
         from root_cause_agent.fake_llm import FakeChatModel
 
@@ -327,22 +330,15 @@ def get_llm():
 
     from langchain.chat_models import init_chat_model
 
-    model = os.getenv("LLM_MODEL", "gemini-2.5-flash")
+    model = os.getenv("LLM_MODEL", "openai/gpt-oss-120b")
     principal = init_chat_model(model, model_provider=provider)
 
     fallbacks = []
-    if os.getenv("GROQ_API_KEY"):
+    if os.getenv("GOOGLE_API_KEY"):
         fallbacks.append(
             init_chat_model(
-                os.getenv("LLM_FALLBACK_GROQ_MODEL", "llama-3.3-70b-versatile"),
-                model_provider="groq",
-            )
-        )
-    if os.getenv("DEEPSEEK_API_KEY"):
-        fallbacks.append(
-            init_chat_model(
-                os.getenv("LLM_FALLBACK_DEEPSEEK_MODEL", "deepseek-v4-flash"),
-                model_provider="deepseek",
+                os.getenv("LLM_FALLBACK_GEMINI_MODEL", "gemini-2.5-flash"),
+                model_provider="google_genai",
             )
         )
     if os.getenv("ANTHROPIC_API_KEY"):
