@@ -383,12 +383,16 @@ já existirem (`feature/memoria-rag-fase02`), ver ordem de construção em
 
 ## `docs/readme-video-fase02`
 
-**Branch de consolidação final**, recebe tudo que foi deliberadamente
-adiado nas branches de código acima: evidências de prompts
-(`docs/fase02/prompts/instrucoes-sistema.md` + o ciclo de refinamento
-documentado), o exemplo real correlacionando os 2 sinais de
-observabilidade, e todas as seções novas do README. Mesmo papel que
-`docs/documentacao-final` teve no M5 da Fase 1.
+**Branch de consolidação da documentação atual**, recebe tudo que foi
+deliberadamente adiado nas branches de código acima: evidências de
+prompts (`docs/fase02/prompts/instrucoes-sistema.md` + o ciclo de
+refinamento documentado), o exemplo real correlacionando os 2 sinais de
+observabilidade, e as seções novas do README que já podem ser escritas
+agora. Mesmo papel que `docs/documentacao-final` teve no M5 da Fase 1.
+Não inclui o link do vídeo de demonstração nem os ajustes finais de
+README que dependem do deploy em produção já rodando, isso fica pra
+`release/v2.0-entrega`, pra não duplicar o mesmo trecho de documentação
+em duas branches.
 
 ### Issue 1, Consolidar evidências de prompts e documentação geral
 - **Contexto:** evidências de prompts e toda documentação atualizada do
@@ -412,9 +416,11 @@ observabilidade, e todas as seções novas do README. Mesmo papel que
   a paralelização nova), tool+integração, memória/RAG, segurança+
   autonomia (incl. prompt injection), instalação/execução, evidências de
   QA/observabilidade/DevOps, automação low-code, os 2 cenários de uso,
-  análise crítica+limitações+link do vídeo.
-- **Critérios de aceite:** todas as seções do §5.2 presentes, coerentes
-  com o que foi de fato implementado (sem prometer algo que não existe).
+  análise crítica+limitações. O link do vídeo entra depois, em
+  `release/v2.0-entrega`, junto do vídeo em si.
+- **Critérios de aceite:** todas as seções do §5.2, exceto o link do
+  vídeo, presentes e coerentes com o que foi de fato implementado (sem
+  prometer algo que não existe).
 
 A gravação e publicação do vídeo, antes prevista como uma 3ª issue
 nesta branch, passou para `release/v2.0-entrega`, junto do fechamento
