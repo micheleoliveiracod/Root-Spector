@@ -50,7 +50,7 @@ fixa por milestone (só o prazo geral do projeto, 31/08/26).
 | 9 | **Documentação Final & Vídeo** | `docs/readme-video-fase02` | §4.1, §4.10, §5.2, §5.5 |
 | 10 | **Planejamento & Automação GitHub** | `docs/planejamento-fase02` | *(fora do PDF)* |
 | 11 | **Deploy em Produção** | `chore/deploy-producao-fase02` | *(fora do PDF)* |
-| 12 | **Release (Fase 2)** | `release/v2.0-entrega` | §5.5 (vídeo) |
+| 12 | **Release (Fase 2)** | `release/v2.0-entrega` | *(fora do PDF)* |
 
 Milestone 4 (Tool) depende do milestone 1 (RAG), `recomendar_tratativa`/
 `Diagnostico` precisam existir antes da tool `consultar_recorrencia` ter
@@ -383,16 +383,16 @@ já existirem (`feature/memoria-rag-fase02`), ver ordem de construção em
 
 ## `docs/readme-video-fase02`
 
-**Branch de consolidação da documentação atual**, recebe tudo que foi
-deliberadamente adiado nas branches de código acima: evidências de
-prompts (`docs/fase02/prompts/instrucoes-sistema.md` + o ciclo de
-refinamento documentado), o exemplo real correlacionando os 2 sinais de
-observabilidade, e as seções novas do README que já podem ser escritas
-agora. Mesmo papel que `docs/documentacao-final` teve no M5 da Fase 1.
-Não inclui o link do vídeo de demonstração nem os ajustes finais de
-README que dependem do deploy em produção já rodando, isso fica pra
-`release/v2.0-entrega`, pra não duplicar o mesmo trecho de documentação
-em duas branches.
+**Branch de consolidação final**, recebe tudo que foi deliberadamente
+adiado nas branches de código acima: evidências de prompts
+(`docs/fase02/prompts/instrucoes-sistema.md` + o ciclo de refinamento
+documentado), o exemplo real correlacionando os 2 sinais de
+observabilidade, todas as seções novas do README e o vídeo de
+demonstração. Mesmo papel que `docs/documentacao-final` teve no M5 da
+Fase 1. Só nasce (ou só recebe commit novo) depois do deploy em
+produção verificado (Render, Vercel, Azure Database for PostgreSQL,
+LangSmith e o workflow n8n rodando), já que o vídeo precisa mostrar a
+aplicação em produção.
 
 ### Issue 1, Consolidar evidências de prompts e documentação geral
 - **Contexto:** evidências de prompts e toda documentação atualizada do
@@ -416,45 +416,42 @@ em duas branches.
   a paralelização nova), tool+integração, memória/RAG, segurança+
   autonomia (incl. prompt injection), instalação/execução, evidências de
   QA/observabilidade/DevOps, automação low-code, os 2 cenários de uso,
-  análise crítica+limitações. O link do vídeo entra depois, em
-  `release/v2.0-entrega`, junto do vídeo em si.
-- **Critérios de aceite:** todas as seções do §5.2, exceto o link do
-  vídeo, presentes e coerentes com o que foi de fato implementado (sem
-  prometer algo que não existe).
+  análise crítica+limitações+link do vídeo.
+- **Critérios de aceite:** todas as seções do §5.2 presentes, coerentes
+  com o que foi de fato implementado (sem prometer algo que não existe).
 
-A gravação e publicação do vídeo, antes prevista como uma 3ª issue
-nesta branch, passou para `release/v2.0-entrega`, junto do fechamento
-da entrega, depois que o agente estiver testado e rodando em produção
-(Render, Vercel, Azure Database for PostgreSQL, LangSmith e o workflow
-n8n, todos ativos).
+### Issue 3, Gravação e publicação do vídeo de demonstração
+- **Contexto:** o PDF exige, no §5.5, um vídeo de até 10 minutos (máximo
+  12), publicado sem listagem no YouTube.
+- **Escopo:** gravar o vídeo seguindo o roteiro sugerido (problema,
+  arquitetura, os 2 cenários, segurança, QA, pipeline e anomalia,
+  low-code, limitações), incluindo a aplicação rodando em produção;
+  publicar o vídeo e inserir o link no README.
+- **Critérios de aceite:** vídeo acessível, dentro do limite de 12
+  minutos, cobre todos os pontos do §5.5.
 
 ---
 
 ## `release/v2.0-entrega`
 
 **Branch de fechamento da entrega**, mesmo papel que `release/v1.0-entrega`
-teve na Fase 1: isola o vídeo de demonstração e os últimos ajustes de
-documentação, sem código novo, e conduz o merge em `main`. Nasce de
-`develop` só depois de todas as outras branches desta fase mergeadas e
-do deploy em produção verificado (Render, Vercel, Azure Database for
-PostgreSQL, LangSmith e o workflow n8n rodando).
+teve na Fase 1: isola só a mecânica do release, sem código novo nem
+documentação nova. Nasce de `develop` só depois de todas as outras
+branches desta fase mergeadas, incluindo `docs/readme-video-fase02`
+(vídeo e README final já prontos).
 
-### Issue, Vídeo de demonstração e release da Fase 2
-- **Contexto:** o PDF exige, no §5.5, um vídeo de até 10 minutos (máximo
-  12), publicado sem listagem no YouTube. A entrega da Fase 2 segue o
-  mesmo processo de release da Fase 1 (`specs/gitflow.md` § Kanban):
-  merge em `main` só por Pull Request, nunca por commit ou push direto.
-- **Escopo:** gravar o vídeo seguindo o roteiro sugerido (problema,
-  arquitetura, os 2 cenários, segurança, QA, pipeline e anomalia,
-  low-code, limitações), incluindo a aplicação rodando em produção;
-  publicar e inserir o link no README; abrir `release/v2.0-entrega` a
-  partir de `develop`; abrir PR `release/v2.0-entrega` → `main`, revisar
-  e mergear; criar a tag `v2.0-entrega` em `main`; back-merge em
-  `develop`, também via PR.
-- **Critérios de aceite:** vídeo acessível, dentro do limite de 12
-  minutos, cobre todos os pontos do §5.5; nenhum commit ou push direto
-  em `main`; tag `v2.0-entrega` existe em `main` apontando pro commit de
-  merge; `develop` recebe o back-merge, sem divergir de `main`.
+### Issue, Release da Fase 2, merge em main, tag v2.0-entrega e submissão
+- **Contexto:** a entrega da Fase 2 segue o mesmo processo de release da
+  Fase 1 (`specs/gitflow.md` § Kanban): merge em `main` só por Pull
+  Request, nunca por commit ou push direto.
+- **Escopo:** abrir `release/v2.0-entrega` a partir de `develop`;
+  conferir CI verde; abrir PR `release/v2.0-entrega` → `main`, revisar e
+  mergear; criar a tag `v2.0-entrega` em `main`; back-merge em
+  `develop`, também via PR; submeter o link do repositório no AVA.
+- **Critérios de aceite:** nenhum commit ou push direto em `main`;
+  tag `v2.0-entrega` existe em `main` apontando pro commit de merge;
+  `develop` recebe o back-merge, sem divergir de `main`; link submetido
+  no AVA aponta pra `main` na tag `v2.0-entrega`.
 
 ---
 
@@ -533,9 +530,9 @@ não fazem mais parte desta branch.
 
 ## Resumo, contagem de issues
 
-12 branches, **20 issues no total** (9 branches-critério do PDF com 13
-issues + 3 branches de apoio fora do PDF com 6 issues, 1 de
-planejamento, 4 de deploy, 1 de release), dentro da mesma ordem de
+12 branches, **21 issues no total** (9 branches-critério do PDF com 14
+issues + 3 branches de apoio fora do PDF com 7 issues, 1 de
+planejamento, 5 de deploy, 1 de release), dentro da mesma ordem de
 grandeza da Fase 1 (que teve 21 definidas / 22 criadas de fato).
 
 ## Branches fora do PDF
