@@ -12,13 +12,13 @@ informação depende só da cor.
 
 ## Onde vive
 
-- `src/styles/tokens.css` — todas as CSS custom properties (cores,
+- `src/styles/tokens.css`: todas as CSS custom properties (cores,
   tipografia, altura de controle, raio de borda, sombra). Único lugar com
   valores de cor hardcoded; todo o resto do CSS consome `var(--token)`.
-- `src/index.css` — estilos globais e classes utilitárias (`.card`,
+- `src/index.css`: estilos globais e classes utilitárias (`.card`,
   `.badge`, `.mensagem`, `.estado`, `.progresso`, `.qa-list`, `.callout`,
   `.alert`, `.actions`, etc.), importa `tokens.css`.
-- `src/statusBadge.ts` — traduz um valor de classificação/risco vindo da
+- `src/statusBadge.ts`: traduz um valor de classificação/risco vindo da
   API (ex. `"CRITICAL"`, `"LOW_RISK"`) para o que o operador vê:
   `badgeClass()` devolve a classe de badge (`badge--ok` / `badge--warn` /
   `badge--critical` / `badge--neutral`), `estadoLote()` devolve a palavra
@@ -64,7 +64,7 @@ as cores:
 | `--neutral-bg` / `--neutral-border` / `--neutral-fg` | classificação não mapeada | `badge--neutral`, `estado--neutral` |
 
 `statusBadge.ts` é o único lugar que decide qual badge ou estado usar a
-partir do valor vindo da API — se um novo valor de classificação/risco
+partir do valor vindo da API: se um novo valor de classificação/risco
 for adicionado no backend, o mapeamento é ajustado ali, não em cada
 componente. Onde a leitura importa mais que o dado técnico (ex. a lista
 de lotes), o componente usa `estadoLote()` e mostra a palavra do estado
@@ -77,11 +77,11 @@ backend sem perder a leitura rápida.
 Duas famílias, carregadas via Google Fonts em `index.html`, cada uma com
 um papel fixo:
 
-- **Sans** (`--font-sans`, Inter) — corpo do texto (`body`, parágrafos,
+- **Sans** (`--font-sans`, Inter): corpo do texto (`body`, parágrafos,
   textarea, botões) e títulos (`h1`, `h2`, peso 500). `--font-serif`
   aponta pra `--font-sans`, mantido só por compatibilidade com o restante
   do CSS que já referenciava esse token.
-- **Mono** (`--font-mono`, JetBrains Mono) — rótulos curtos em caixa alta
+- **Mono** (`--font-mono`, JetBrains Mono): rótulos curtos em caixa alta
   com letter-spacing: `.eyebrow`, `h3`, cabeçalho de tabela, `.categoria`
   nas listas de pergunta/resposta, badges, links de relatório, dado
   (identificador de lote, parâmetro, unidade). Sinaliza "metadado", não
@@ -89,37 +89,37 @@ um papel fixo:
 
 ## Padrões de layout
 
-- `.page` — largura máxima 720px, centralizado; a interface é uma coluna
+- `.page`: largura máxima 720px, centralizado; a interface é uma coluna
   única, sem sidebar/grid.
-- `.card` + `.section` — todo bloco de conteúdo (lista de lotes, pergunta
+- `.card` + `.section`: todo bloco de conteúdo (lista de lotes, pergunta
   atual, revisão, relatório) é um `.card` com `.section` para o
   espaçamento vertical interno (`gap: 14px`); cards empilhados usam
   `.card + .card` para o espaçamento entre eles.
-- `.masthead` — cabeçalho fixo da página (`eyebrow` + `h1` + `.dek`),
+- `.masthead`: cabeçalho fixo da página (`eyebrow` + `h1` + `.dek`),
   presente em toda tela via `App.tsx`.
-- `.actions` — container de botões ao fim de um card (`gap: 10px`).
-- `.qa-list` — lista de pergunta/resposta (Ishikawa e 5 Porquês), cada
+- `.actions`: container de botões ao fim de um card (`gap: 10px`).
+- `.qa-list`: lista de pergunta/resposta (Ishikawa e 5 Porquês), cada
   item com um rótulo `.categoria` em mono acima do texto.
-- `.callout` — destaque de fundo `--accent-soft` para a categoria
+- `.callout`: destaque de fundo `--accent-soft` para a categoria
   principal identificada na revisão.
-- `.alert` / `.alert--critical` / `.alert--warn` / `.alert--ok` —
-  mensagens de erro ou aviso (ex. LLM indisponível, resposta rejeitada).
-- `.mensagem` — caixa de mensagem do sistema, faixa de título
+- `.alert` / `.alert--critical` / `.alert--warn` / `.alert--ok`: mensagens
+  de erro ou aviso (ex. LLM indisponível, resposta rejeitada).
+- `.mensagem`: caixa de mensagem do sistema, faixa de título
   (`.faixa`) dizendo de quem é a fala e corpo (`.corpo`) com o texto em
   tamanho maior (`--text-question`). Nunca tem fundo roxo cheio, pra não
   ser confundida com botão. Usada em `PerguntaAtual.tsx` para a pergunta
   do agente.
-- `.progresso` — barra fina mostrando quantas perguntas faltam
+- `.progresso`: barra fina mostrando quantas perguntas faltam
   (`indice`/`total`), acima da mensagem do sistema em `PerguntaAtual.tsx`.
-- `.estado` / `.estado-codigo` — ver seção "Cores semáforo" acima.
-- `.report-links` — links de relatório como "pills" (`border-radius:
+- `.estado` / `.estado-codigo`: ver seção "Cores semáforo" acima.
+- `.report-links`: links de relatório como "pills" (`border-radius:
   100px`, fundo `--accent-soft`).
 
 ## Botões
 
 - **Padrão**: retângulo cheio de `--accent` com texto branco, altura
   mínima `--control-height` (48px). É o único elemento com fundo roxo
-  cheio na tela, por isso não há dúvida sobre onde clicar — uma ação
+  cheio na tela, por isso não há dúvida sobre onde clicar: uma ação
   primária por tela (Responder, Investigar). `--accent-hover` /
   `--accent-active` marcam hover e clique.
 - `.secondary`: fundo branco, borda de 2 pixels em `--control-border`,
@@ -133,10 +133,10 @@ um papel fixo:
 
 1. Envolva o conteúdo em `<div className="card section">` (ou apenas
    `.card` se não precisar do espaçamento em coluna).
-2. Use `h2`/`h3` para títulos — nunca defina `font-family` inline.
+2. Use `h2`/`h3` para títulos: nunca defina `font-family` inline.
 3. Se o componente exibir um valor de classificação/risco vindo da API,
    use `badgeClass()` (dado técnico) ou `estadoLote()` (leitura para o
-   operador) de `statusBadge.ts` — não crie uma nova cor.
+   operador) de `statusBadge.ts`: não crie uma nova cor.
 4. Qualquer cor nova (fundo, texto, borda) deve ser adicionada como token
    em `tokens.css`, nunca como valor hardcoded no componente ou em
    `index.css`.

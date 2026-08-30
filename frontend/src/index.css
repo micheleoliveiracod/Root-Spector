@@ -32,6 +32,23 @@ body {
   margin-bottom: 36px;
 }
 
+/* faixa quase preta com a arte da marca -- um dos três únicos lugares
+   onde a logo aparece (ver DESIGN.md), nunca dentro das telas de
+   trabalho. */
+.masthead-arte {
+  background: var(--paper);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin-bottom: 18px;
+}
+
+.masthead-arte img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 480px;
+}
+
 .eyebrow {
   font-family: var(--font-mono);
   font-size: 12px;
