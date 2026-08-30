@@ -23,6 +23,16 @@ dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
     "jinja2>=3.1",
+    # Checkpointer condicional (graph.py::_criar_checkpointer) e log
+    # estruturado em banco (config.py::_HandlerBancoDeDados) usam Postgres
+    # só quando DATABASE_URL estiver definida (deploy, Azure Database for
+    # PostgreSQL); em dev/CI, sem essa variável, o SQLite local continua
+    # sendo o padrão, sem exigir nenhuma conexão real. Precisam estar
+    # instalados de qualquer forma, tanto em produção (para o caminho
+    # Postgres funcionar de verdade) quanto em dev/CI (para os testes que
+    # cobrem esse caminho, com um Postgres fake, rodarem).
+    "langgraph-checkpoint-postgres>=2.0",
+    "psycopg[binary,pool]>=3.2",
 ]
 
 [project.optional-dependencies]
