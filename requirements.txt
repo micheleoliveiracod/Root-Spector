@@ -1,0 +1,35 @@
+# Versões travadas das dependências diretas de pyproject.toml, geradas a
+# partir do ambiente de desenvolvimento em uso (pip freeze filtrado, só
+# dependências diretas, não transitivas). pyproject.toml continua sendo a
+# fonte de verdade das faixas de versão aceitas (`pip install -e ".[dev]"`);
+# este arquivo existe só para reproduzir exatamente o mesmo ambiente
+# (`pip install -r requirements.txt`), sem depender de qual versão mais
+# recente de cada pacote está disponível no dia da instalação.
+
+# Agente / backend
+langgraph==1.2.11
+langgraph-checkpoint-sqlite==3.1.1
+langgraph-checkpoint-postgres==3.1.2
+langchain==1.3.16
+langchain-google-genai==4.3.5
+langchain-groq==1.1.3
+langchain-anthropic==1.6.1
+langchain-openai==1.6.0
+langchain-text-splitters==1.1.2
+pydantic==2.13.4
+typing_extensions==4.16.0
+python-dotenv==1.2.3
+PyYAML==6.0.3
+fastapi==0.141.1
+uvicorn==0.52.4
+Jinja2==3.1.6
+xhtml2pdf==0.2.17
+psycopg[binary,pool]==3.3.4
+
+# Dev / testes (ver pyproject.toml [project.optional-dependencies].dev)
+pytest==9.1.1
+pytest-mock==3.15.1
+httpx==0.28.1
+openapi-spec-validator==0.9.0
+ruff==0.16.4
+numpy==2.5.2

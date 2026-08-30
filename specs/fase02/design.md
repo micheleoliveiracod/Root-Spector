@@ -44,7 +44,7 @@ responsabilidade única que já rege `root_cause_agent/`:
 | Base de conhecimento (documentos curados) | `data/base_conhecimento/` (novo, paralelo a `data/simulacao_causa_raiz/`) | Mesmo padrão já estabelecido pra dados versionados e claramente rotulados como curados |
 | Logging estruturado | Configurado em `root_cause_agent/config.py` (já é o módulo central de configuração), usado em `nodes.py`/`backend/main.py`, sem módulo novo | É configuração, não uma feature com lógica própria |
 | Teste de prompt injection | `tests/test_seguranca_prompt_injection.py` (novo arquivo, mesmo nível dos outros `test_*.py`) | `tests/` já é achatada por design, não introduzir subpastas por feature agora |
-| Tool `consultar_recorrencia` | `root_cause_agent/tools.py` (junto da tool existente), varre `reports/*.json` | Mesmo arquivo da tool de biosensor, mesmo padrão (`@tool` + `InjectedState`) |
+| Tool `consultar_recorrencia` | `root_cause_agent/tools.py` (junto da tool existente), consulta a tabela `relatorios` | Mesmo arquivo da tool de biosensor, mesmo padrão (`@tool` + `InjectedState`) |
 | Endpoint de resumo diário (low-code) | Nova rota `GET /api/relatorios/resumo-diario` em `backend/main.py` | É só mais uma rota FastAPI, não justifica módulo próprio |
 
 **Únicas 2 pastas novas no repositório inteiro:**
@@ -93,9 +93,14 @@ infraestrutura nova (nada de Pinecone/Weaviate/servidor de vetores).
 | Etapa | Ferramenta | Dependência nova? |
 |---|---|---|
 | Chunking | `langchain-text-splitters` (`RecursiveCharacterTextSplitter`, ou `MarkdownHeaderTextSplitter` primeiro por seção) | Sim, só essa, pacote pequeno e oficial do LangChain, sem sub-dependências pesadas |
-| Embedding | `GoogleGenerativeAIEmbeddings` (`langchain_google_genai`, modelo `text-embedding-004`) | Não, já instalado, reaproveita a mesma `GOOGLE_API_KEY` do LLM |
+| Embedding | `GoogleGenerativeAIEmbeddings` (`langchain_google_genai`, modelo `models/gemini-embedding-001`, `text-embedding-004` foi descontinuado pela Google) | Não, já instalado, reaproveita a mesma `GOOGLE_API_KEY`, independente do `LLM_PROVIDER` configurado pra `get_llm()` (embeddings não fazem parte da cadeia de fallback do LLM principal) |
 | Vector store | `InMemoryVectorStore` (`langchain_core.vectorstores`) | Não, já vem com `langchain-core`, que já é dependência |
 | Retrieval | `.similarity_search(query, k=3)`, busca semântica de verdade |, |
+
+Falha na chamada de embeddings (cota, rede) não derruba a investigação:
+`pre_busca_rag` captura a exceção, loga um aviso e segue com
+`candidatos_rag` vazio; `recomendar_tratativa` já degrada graciosamente
+nesse caso (contexto RAG genérico).
 
 - **Base de conhecimento**: 5-10 documentos curtos e curados, claramente
   rotulados como referência (não legislação oficial), boas práticas de
@@ -215,7 +220,7 @@ Dois documentos novos:
 
 1 automação diária, o mais simples possível, não 1 webhook por
 relatório gerado. Novo endpoint `GET /api/relatorios/resumo-diario` em
-`backend/main.py` (varre `reports/*.json` do dia pedido). Workflow n8n:
+`backend/main.py` (consulta a tabela `relatorios` do dia pedido). Workflow n8n:
 **Cron Trigger** (1x/dia) → **HTTP Request** (chama o endpoint pedindo o
 dia anterior) → **Function/Set** (formata) → **Send Email**. Nenhuma env
 var nova no lado do Root-Spector, o n8n é quem inicia a chamada, não o
@@ -225,7 +230,7 @@ como arquivo de export; passo a passo de construção em
 
 **Conteúdo do payload/e-mail:**
 
-- **Por investigação do dia** (de cada `Diagnostico` em `reports/*.json`):
+- **Por investigação do dia** (de cada `Diagnostico` gravado na tabela `relatorios`):
   `batch_id`, `classification`, `risk_prediction`, `categoria_principal`,
   `causa_raiz`, `recorrencia` (resumo de `casos_semelhantes`),
   `recomendacao_tratativa`, link do relatório em PDF (o endpoint sob
@@ -271,7 +276,7 @@ investigação, distinta de uma automação (que roda por agenda, sem
 decisão do agente, é o que `feature/low-code-fase02` faz).
 `consultar_recorrencia`, em `tools.py`, junto de
 `consultar_leituras_biosensor`, recebe categoria/parâmetros do lote via
-`InjectedState`, varre `reports/*.json` procurando casos anteriores
+`InjectedState`, consulta a tabela `relatorios` procurando casos anteriores
 semelhantes, chamada por decisão do nó `recomendar_tratativa`. Resultado
 vai pro relatório de forma estruturada:
 `Diagnostico.casos_semelhantes: list[CasoSemelhante]`, lista vazia =
@@ -302,7 +307,7 @@ Ordem por dependência técnica, não só por peso de nota:
    dependência de código; pode rodar em qualquer ponto, mas faz mais
    sentido depois de já ter algo novo pra revisar (itens 1-4).
 6. **Low-code** (`feature/low-code-fase02`), independente do resto, só
-   precisa de `reports/*.json` existir (já existe desde a Fase 1).
+   precisa da tabela `relatorios` existir (criada sob demanda por `reports.py::salvar_relatorio`).
 7. **README final + vídeo** (`docs/readme-video-fase02`), por último, depende
    de tudo o resto estar pronto pra documentar de verdade.
 
