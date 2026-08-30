@@ -115,7 +115,7 @@ select = ["E", "F", "I", "UP"]
   localmente, via `uvicorn` + `npm run dev` ou via `deploy/` (Docker +
   docker-compose, ver `specs/structure.md`). O `push` em `main` já
   dispara o gate de lint/testes (acima), mas nenhum passo de deploy de
-  verdade (Render/Vercel/Supabase) está implementado ainda, plano
+  verdade (Render/Vercel/Azure) está implementado ainda, plano
   separado, fora do escopo avaliado, em `specs/deploy-producao/plano.md`.
 - Cobertura mínima obrigatória / Codecov, os critérios de aceitação
   (`specs/requirements.md`) definem o que precisa passar, não uma métrica

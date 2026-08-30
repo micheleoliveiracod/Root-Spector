@@ -4,6 +4,7 @@ Porquês)."""
 
 from __future__ import annotations
 
+import os
 import sqlite3
 import time
 from typing import Optional
@@ -43,6 +44,46 @@ def _com_log_estruturado(nome: str, no):
             log_no_executado(nome, thread_id, state.get("batch_id"), duracao)
 
     return envolto
+
+
+def _criar_checkpointer(checkpoint_db_path: str | None):
+    """SqliteSaver local por padrão; PostgresSaver quando `DATABASE_URL`
+    estiver definida (deploy, Azure Database for PostgreSQL) --
+    `checkpoint_db_path` (usado por testes/harness, ex: ":memory:") só se
+    aplica ao caminho SQLite, o Postgres não tem esse conceito. Ver
+    specs/deploy-producao/plano.md, issue de checkpointer condicional."""
+    modelos_permitidos = {("root_cause_agent.models", nome) for nome in models.__all__}
+    # Os schemas Pydantic de models.py precisam estar na allowlist do
+    # checkpointer -- sem isso, toda (de)serialização emite um aviso
+    # "unregistered type" (e seria bloqueada numa versão futura do langgraph).
+    serde = JsonPlusSerializer(allowed_msgpack_modules=modelos_permitidos)
+
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        from langgraph.checkpoint.postgres import PostgresSaver
+        from psycopg import Connection
+        from psycopg.rows import dict_row
+
+        # autocommit=True e prepare_threshold=0: mesma configuração que
+        # PostgresSaver.from_conn_string() usa internamente -- não
+        # reaproveitamos esse context manager pronto porque ele fecha a
+        # conexão ao sair do `with`, e o grafo precisa da conexão viva
+        # pelo tempo de vida do processo, não só durante build_graph().
+        conn = Connection.connect(
+            database_url, autocommit=True, prepare_threshold=0, row_factory=dict_row
+        )
+        checkpointer = PostgresSaver(conn, serde=serde)
+        # Idempotente (CREATE TABLE IF NOT EXISTS + migrações versionadas),
+        # precisa ser chamado explicitamente na 1ª vez que o checkpointer é
+        # usado contra um banco novo.
+        checkpointer.setup()
+        return checkpointer
+
+    path = checkpoint_db_path if checkpoint_db_path is not None else str(CHECKPOINT_DB_PATH)
+    if path != ":memory:":
+        CHECKPOINT_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(path, check_same_thread=False)
+    return SqliteSaver(conn, serde=serde)
 
 
 def build_graph(checkpoint_db_path: str | None = None):
@@ -125,15 +166,5 @@ def build_graph(checkpoint_db_path: str | None = None):
     g.add_edge("gerar_causa_raiz", "recomendar_tratativa")
     g.add_edge("recomendar_tratativa", END)
 
-    path = checkpoint_db_path if checkpoint_db_path is not None else str(CHECKPOINT_DB_PATH)
-    if path != ":memory:":
-        CHECKPOINT_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path, check_same_thread=False)
-    # Os schemas Pydantic de models.py precisam estar na allowlist do
-    # checkpointer -- sem isso, toda (de)serialização emite um aviso
-    # "unregistered type" (e seria bloqueada numa versão futura do langgraph).
-    modelos_permitidos = {("root_cause_agent.models", nome) for nome in models.__all__}
-    serde = JsonPlusSerializer(allowed_msgpack_modules=modelos_permitidos)
-    checkpointer = SqliteSaver(conn, serde=serde)
-
+    checkpointer = _criar_checkpointer(checkpoint_db_path)
     return g.compile(checkpointer=checkpointer)

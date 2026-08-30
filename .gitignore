@@ -12,8 +12,10 @@ venv/
 .claude/
 
 # bancos locais: biotecpredict.db (exportado do BiotecPredict, colocado
-# manualmente em data/) e checkpoints.db (estado do LangGraph em runtime)
-# -- ver README "Como executar". Nunca commitar.
+# manualmente em data/), checkpoints.db (estado do LangGraph em runtime) e
+# observabilidade.db (log estruturado em banco, Fase 2, ver
+# root_cause_agent/config.py::OBSERVABILIDADE_DB_PATH) -- ver README "Como
+# executar". Nunca commitar.
 data/*.db
 data/*.db-*
 !data/.gitkeep

@@ -1,4 +1,9 @@
-const BASE_URL = "http://localhost:8000";
+// VITE_API_URL/VITE_API_KEY (build-time, ver docs/deploy-producao.md):
+// sem elas, cai no backend local de desenvolvimento e em nenhuma chave.
+// Em produção, apontam para o domínio do Render e para o mesmo valor de
+// INTERNAL_API_KEY configurado lá.
+export const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const API_KEY = import.meta.env.VITE_API_KEY ?? "";
 
 export interface Lote {
   batch_id: number;
@@ -69,7 +74,6 @@ export interface CategoriaDescartada {
 
 export interface RelatorioLinks {
   json: string;
-  html: string;
 }
 
 export interface Revisao {
@@ -84,7 +88,11 @@ export interface Revisao {
 }
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
-  const resposta = await fetch(`${BASE_URL}${url}`, options);
+  const headers = {
+    ...(options?.headers ?? {}),
+    ...(API_KEY ? { "X-API-Key": API_KEY } : {}),
+  };
+  const resposta = await fetch(`${BASE_URL}${url}`, { ...options, headers });
   if (!resposta.ok) {
     let mensagem = `Erro ${resposta.status}`;
     try {
@@ -120,4 +128,30 @@ export function buscarRevisao(threadId: string): Promise<Revisao> {
 
 export function ajustar(threadId: string): Promise<Pergunta> {
   return fetchJson(`/api/investigacoes/${threadId}/ajustar`, { method: "POST" });
+}
+
+/** Gera o PDF do relatório sob demanda (nunca salvo em disco, ver
+ * root_cause_agent/reports.py::gerar_pdf) e devolve os bytes como Blob,
+ * pronto para virar um link de download temporário no componente. Sem
+ * cabeçalho X-API-Key, essa rota fica de fora de exigir_api_key (o link
+ * do e-mail do n8n precisa continuar clicável sem cabeçalho customizado). */
+export async function gerarRelatorioPdf(threadId: string): Promise<Blob> {
+  const resposta = await fetch(`${BASE_URL}/api/investigacoes/${threadId}/relatorio.pdf`);
+  if (!resposta.ok) {
+    throw new Error(`Erro ${resposta.status} ao gerar o relatório em PDF`);
+  }
+  return resposta.blob();
+}
+
+/** Baixa o relatório em JSON gravado no banco (`relatorio.json` da
+ * revisão), como Blob -- diferente do PDF, essa rota exige X-API-Key
+ * quando configurada, por isso usa fetch com cabeçalho em vez de um link
+ * `<a href>` direto. */
+export async function baixarRelatorioJson(relatorioLink: string): Promise<Blob> {
+  const headers: HeadersInit = API_KEY ? { "X-API-Key": API_KEY } : {};
+  const resposta = await fetch(`${BASE_URL}${relatorioLink}`, { headers });
+  if (!resposta.ok) {
+    throw new Error(`Erro ${resposta.status} ao baixar o relatório em JSON`);
+  }
+  return resposta.blob();
 }
