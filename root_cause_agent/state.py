@@ -78,8 +78,9 @@ class AgentState(TypedDict):
 
     diagnostico: Diagnostico | None
 
-    # links do relatório (reports/{batch_id}_{ts}.{json,html}), gravados por
+    # link do relatório JSON (reports/{batch_id}_{ts}.json), gravado por
     # backend/main.py::responder assim que o ciclo chega a diagnostico
-    # pronto -- não é responsabilidade do grafo salvar em disco.
+    # pronto -- não é responsabilidade do grafo salvar em disco. O PDF não
+    # tem link persistido: é gerado sob demanda (root_cause_agent/reports.py
+    # ::gerar_pdf), nunca salvo em disco.
     relatorio_json: str | None
-    relatorio_html: str | None

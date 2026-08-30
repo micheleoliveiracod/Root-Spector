@@ -31,7 +31,7 @@ Essa separação é o que permite reusar o motor do agente em outro contexto
 │   │                            # orquestrar_analise, formular_porque, perguntar_operador,
 │   │                            # avaliar_informatividade, gerar_causa_raiz; FalhaLLMError
 │   ├── graph.py                 # monta e compila o StateGraph com checkpointer SqliteSaver
-│   ├── reports.py                # Diagnostico -> reports/{batch_id}_{ts}.json + .html (Jinja2)
+│   ├── reports.py                # Diagnostico -> reports/{batch_id}_{ts}.json (persistido) + PDF sob demanda (Jinja2 + xhtml2pdf)
 │   └── main.py                     # harness de teste (roda o grafo com respostas em código)
 │
 ├── backend/                          # FastAPI -- camada web, depende de root_cause_agent

@@ -6,8 +6,10 @@
 > construção.
 
 **Por que esta pasta existe separada de `specs/`:** a Fase 1 já foi
-entregue e não é reescrita/subsumida, nenhum arquivo de `specs/`/
-`docs/` na raiz é alterado por este trabalho, só lido como referência.
+entregue e não é reescrita/subsumida, este documento cobre só as
+decisões de arquitetura novas da Fase 2; os arquivos de `specs/`/`docs/`
+na raiz recebem apenas os ajustes pontuais necessários para continuar
+descrevendo o estado atual do projeto.
 
 ---
 
@@ -163,24 +165,32 @@ lote da investigação.
 - `CORS_ALLOWED_ORIGINS` + `limitar_taxa` (`backend/main.py`): CORS
   restrito via variável de ambiente e limite de 20 requisições por minuto
   por IP, aplicado a toda a API, sem efeito quando `LLM_PROVIDER=fake`.
+- `INTERNAL_API_KEY` + `exigir_api_key` (`backend/main.py`): cabeçalho
+  `X-API-Key` exigido nas rotas de lotes, investigações e resumo diário
+  quando a variável estiver definida; `relatorio.pdf` e `/reports` ficam
+  de fora, para o link do e-mail do n8n continuar clicável.
 
 ---
 
 ## 4. Observabilidade, 2 sinais correlacionados
 
 - **Sinal 1, logs estruturados (JSON)**: `logging` da stdlib configurado
-  em `config.py`, um registro por nó executado
-  (`thread_id`, `batch_id`, nome do nó, timestamp, duração). Sem
-  dependência nova.
-- **Sinal 2, trace**: `LANGSMITH_TRACING` (env var opt-in), mesma
-  variável já cogitada no plano de deploy (Railway), sem retrabalho.
-  Documentar explicitamente que ativar isso manda a conversa completa pro
-  LangSmith (decisão consciente, não default silencioso).
+  em `config.py`, um registro por nó executado (`thread_id`, `batch_id`,
+  nome do nó, timestamp, duração), emitido em stdout e persistido na
+  tabela `eventos_log`, SQLite local por padrão ou Postgres, na mesma
+  instância do checkpointer do grafo, quando `DATABASE_URL` estiver
+  definida. Um callback do LangChain anexado à cadeia de fallback de LLM
+  gera um registro por tentativa (provedor, modelo, duração, sucesso ou
+  erro) na mesma tabela. Detalhamento completo em
+  `docs/OBSERVABILIDADE.md`.
+- **Sinal 2, trace**: `LANGSMITH_TRACING` (env var opt-in). Ativar manda a
+  conversa completa pro LangSmith (decisão consciente, não default
+  silencioso).
 - **Correlação documentada**: rodar 1 investigação real com os dois sinais
   ativos, capturar o log JSON + o link do trace do LangSmith lado a lado
-  em `docs/fase02/observabilidade/exemplo-correlacionado.md`.
-- **Timeout/retry**: adicionar timeout explícito na consulta SQL da tool
-  (proteção contra banco travado/arquivo corrompido), reforça RNF6.
+  em `docs/OBSERVABILIDADE.md`.
+- **Timeout/retry**: timeout explícito na consulta SQL da tool (proteção
+  contra banco travado/arquivo corrompido), reforça RNF6.
 
 ---
 
@@ -209,15 +219,18 @@ relatório gerado. Novo endpoint `GET /api/relatorios/resumo-diario` em
 **Cron Trigger** (1x/dia) → **HTTP Request** (chama o endpoint pedindo o
 dia anterior) → **Function/Set** (formata) → **Send Email**. Nenhuma env
 var nova no lado do Root-Spector, o n8n é quem inicia a chamada, não o
-contrário. Exportado em `docs/fase02/low-code/n8n-workflow.json`, com
-instruções de reprodução no README.
+contrário. Construído manualmente na interface do n8n, não versionado
+como arquivo de export; passo a passo de construção em
+`docs/fase02/low-code/construcao-workflow-n8n.md`.
 
 **Conteúdo do payload/e-mail:**
 
 - **Por investigação do dia** (de cada `Diagnostico` em `reports/*.json`):
   `batch_id`, `classification`, `risk_prediction`, `categoria_principal`,
   `causa_raiz`, `recorrencia` (resumo de `casos_semelhantes`),
-  `recomendacao_tratativa`, link do relatório HTML.
+  `recomendacao_tratativa`, link do relatório em PDF (o endpoint sob
+  demanda, `GET /api/investigacoes/{thread_id}/relatorio.pdf`, já que o
+  PDF não é salvo em disco).
   ```json
   {
     "data": "2026-08-22",
@@ -227,7 +240,7 @@ instruções de reprodução no README.
         "batch_id": 11, "classification": "WARNING", "risk_prediction": "MEDIUM_RISK",
         "categoria_principal": "Máquina", "causa_raiz": "...",
         "recorrencia": "Primeiro caso registrado com esse padrão",
-        "recomendacao_tratativa": "...", "link_relatorio_html": "https://.../reports/11_....html"
+        "recomendacao_tratativa": "...", "link_relatorio_pdf": "https://.../api/investigacoes/11/relatorio.pdf"
       }
     ],
     "eficiencia_operacional": {
@@ -244,24 +257,9 @@ instruções de reprodução no README.
   o fallback de LLM foi acionado, quantas respostas do operador
   precisaram de 2 tentativas. **Só isso entra no e-mail**, são dados
   que não existem em nenhum outro lugar do projeto.
-- **DevOps e QA ficam de fora do e-mail, deliberadamente, mas por
-  motivos diferentes, sem misturar os dois:**
-  - **DevOps**: o status do CI já é visível na própria aba Actions do
-    GitHub, não faz sentido duplicar um painel que já existe.
-  - **QA** (§4.7 do PDF, qualidade de código/processo de
-    desenvolvimento: code review, geração/refinamento de testes,
-    priorização por risco) é um exercício pontual sobre o **código do
-    projeto**, sem nenhuma relação com o conteúdo de uma investigação de
-    NC, não é um dado que faria sentido aparecer num resumo diário de
-    investigações de qualquer forma, independente de já estar em outro
-    lugar ou não.
-  - `recorrencia`/`informativa` **não são dados de QA**, são atributos
-    do próprio domínio da investigação (histórico de NCs, qualidade da
-    interação com o operador). `recorrencia` já aparece acima, dentro do
-    resumo de cada investigação (não é uma métrica agregada à parte).
-  - As análises de DevOps/QA continuam existindo como documentos
-    estáticos (`docs/fase02/devops/`, `docs/fase02/qa/`), sem nenhuma
-    ligação com o e-mail diário.
+- **DevOps e QA ficam de fora do e-mail**, deliberadamente. Continuam
+  existindo como documentos estáticos (`docs/fase02/devops/`,
+  `docs/fase02/qa/`), sem nenhuma ligação com o e-mail diário.
 - **Se não houver investigação no dia**: o e-mail é **pulado**
   (decisão, menos ruído; a automação simplesmente não dispara o envio
   se `total_investigacoes == 0`).

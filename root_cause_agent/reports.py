@@ -1,18 +1,42 @@
-"""Diagnostico -> reports/{batch_id}_{timestamp}.json + .html (Jinja2).
-
-O CSS inline abaixo usa os mesmos tokens de frontend/src/styles/tokens.css
-e a mesma paleta "semáforo" pastel de frontend/src/statusBadge.ts -- ver
-frontend/DESIGN.md. Duplicado (não importado do frontend) porque o
-relatório é um HTML estático servido pelo backend, sem build step."""
+"""Diagnostico -> tabela `relatorios` (persistência, SQLite local ou
+Postgres quando `DATABASE_URL` estiver definida, mesma instância do
+checkpointer e do `eventos_log`) + PDF gerado sob demanda
+(root_cause_agent.reports.gerar_pdf), nunca salvo em disco. O registro em
+banco continua sendo a fonte de dados durável, usada tanto pela revisão
+da investigação quanto pela tool `consultar_recorrencia`
+(root_cause_agent/tools.py); o PDF é só uma representação de leitura,
+recriada a cada pedido (backend/main.py::relatorio_pdf), o clique em
+"Gerar relatório" no frontend."""
 
 from __future__ import annotations
 
-from pathlib import Path
+import io
+import os
+import sqlite3
 
 from jinja2 import Template
+from xhtml2pdf import pisa
 
-from root_cause_agent.config import REPORTS_DIR
+from root_cause_agent.config import OBSERVABILIDADE_DB_PATH
 from root_cause_agent.models import Diagnostico
+
+_SQL_CRIAR_TABELA_RELATORIOS_SQLITE = """
+CREATE TABLE IF NOT EXISTS relatorios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    batch_id INTEGER NOT NULL,
+    gerado_em TEXT NOT NULL,
+    diagnostico_json TEXT NOT NULL
+)
+"""
+
+_SQL_CRIAR_TABELA_RELATORIOS_POSTGRES = """
+CREATE TABLE IF NOT EXISTS relatorios (
+    id SERIAL PRIMARY KEY,
+    batch_id INTEGER NOT NULL,
+    gerado_em TEXT NOT NULL,
+    diagnostico_json TEXT NOT NULL
+)
+"""
 
 _BADGE_CLASSE = {
     "ACCEPTABLE": "ok",
@@ -28,175 +52,226 @@ def _badge(valor: str) -> str:
     return _BADGE_CLASSE.get(valor, "neutral")
 
 
-_TEMPLATE_HTML = Template(
-    """<!doctype html>
-<html lang="pt-br">
+# CSS restrito ao que o xhtml2pdf (motor puro Python, sem dependência de
+# sistema como o WeasyPrint exige) sabe renderizar: sem variáveis CSS, sem
+# @media, sem flexbox. Paleta fixa clara (papel impresso não tem "modo
+# escuro"), inspirada nos mesmos tons de frontend/src/styles/tokens.css.
+_TEMPLATE_PDF = Template(
+    """<html>
 <head>
-<meta charset="utf-8">
-<title>Relatório de Causa Raiz — Lote {{ d.nc.batch_id }}</title>
 <style>
-  :root {
-    --paper: #f3f6f5; --paper-raised: #ffffff; --ink: #14201f; --ink-soft: #47534f;
-    --line: #d8e0dd; --accent: #0e8a82; --accent-ink: #08514c; --accent-soft: #e1f1ee;
-    --shadow: 0 1px 2px rgba(20, 33, 32, 0.06), 0 8px 24px rgba(20, 33, 32, 0.06);
-    --ok-bg: #e4f2e9; --ok-fg: #226a45;
-    --warn-bg: #f6eedd; --warn-fg: #8a6423;
-    --critical-bg: #fbeae6; --critical-fg: #a23b2e;
-    --neutral-bg: #edefee; --neutral-fg: #666f6c;
-    --font-serif: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, "Noto Serif", serif;
-    --font-sans: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
-    --radius: 10px; --radius-sm: 6px;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --paper: #10171a; --paper-raised: #16201f; --ink: #e7edea; --ink-soft: #a7b4af;
-      --line: #253230; --accent: #38b4a9; --accent-ink: #9be0d6; --accent-soft: #12302d;
-      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
-      --ok-bg: #16302b; --ok-fg: #6fcb93;
-      --warn-bg: #2e2a1b; --warn-fg: #d8c57e;
-      --critical-bg: #2e1d1a; --critical-fg: #e0796a;
-      --neutral-bg: #1e2624; --neutral-fg: #93a19c;
-    }
-  }
-  * { box-sizing: border-box; }
-  body {
-    font-family: var(--font-sans); max-width: 720px; margin: 0 auto;
-    padding: 48px 24px 96px; background: var(--paper); color: var(--ink);
-    -webkit-font-smoothing: antialiased;
-  }
-  .eyebrow {
-    font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em;
-    text-transform: uppercase; color: var(--accent-ink); margin: 0 0 6px;
-  }
-  h1 { font-family: var(--font-serif); font-size: clamp(26px, 3.6vw, 34px);
-       margin: 0 0 24px; letter-spacing: -0.01em; text-wrap: balance; }
-  h2 { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em;
-       text-transform: uppercase; color: var(--ink-soft); margin: 28px 0 10px; }
-  .card { background: var(--paper-raised); border: 1px solid var(--line);
-          border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px 26px; }
-  .card + .card { margin-top: 16px; }
-  .meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 4px; }
-  .badge {
-    display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono);
-    font-size: 11px; letter-spacing: 0.02em; padding: 3px 9px; border-radius: 100px;
-    white-space: nowrap;
-  }
-  .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%;
-                    background: currentColor; flex: none; }
-  .badge--ok { background: var(--ok-bg); color: var(--ok-fg); }
-  .badge--warn { background: var(--warn-bg); color: var(--warn-fg); }
-  .badge--critical { background: var(--critical-bg); color: var(--critical-fg); }
-  .badge--neutral { background: var(--neutral-bg); color: var(--neutral-fg); }
-  .muted { color: var(--ink-soft); font-size: 13px; }
-  table { border-collapse: collapse; width: 100%; font-size: 14px; }
-  thead th { text-align: left; font-family: var(--font-mono); font-size: 10.5px;
-             letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft);
-             font-weight: 600; padding: 8px 12px; border-bottom: 1px solid var(--line); }
-  tbody td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  tbody tr:last-child td { border-bottom: none; }
-  .callout { background: var(--accent-soft); color: var(--accent-ink);
-             border-radius: var(--radius-sm); padding: 14px 16px; font-size: 14.5px;
-             line-height: 1.6; }
-  .rodape { color: var(--ink-soft); font-size: 12px; margin-top: 32px; }
+  @page { size: A4; margin: 2cm; }
+  body { font-family: Helvetica, Arial, sans-serif; color: #14201f; font-size: 10.5pt; }
+  .eyebrow { font-size: 9pt; letter-spacing: 2px; text-transform: uppercase; color: #08514c; }
+  h1 { font-size: 19pt; margin-bottom: 4pt; }
+  h2 { font-size: 11.5pt; text-transform: uppercase; color: #47534f;
+       margin-top: 16pt; margin-bottom: 6pt; border-bottom: 1px solid #d8e0dd;
+       padding-bottom: 3pt; }
+  .badge { padding: 2pt 8pt; border-radius: 8pt; font-size: 8.5pt; margin-right: 4pt; }
+  .badge-ok { background-color: #e4f2e9; color: #226a45; }
+  .badge-warn { background-color: #f6eedd; color: #8a6423; }
+  .badge-critical { background-color: #fbeae6; color: #a23b2e; }
+  .badge-neutral { background-color: #edefee; color: #666f6c; }
+  .muted { color: #47534f; font-size: 9pt; }
+  .callout { background-color: #e1f1ee; color: #08514c; padding: 8pt;
+             border-radius: 4pt; font-size: 10pt; }
+  table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin-top: 4pt; }
+  th { text-align: left; text-transform: uppercase; font-size: 8pt; color: #47534f;
+       border-bottom: 1px solid #d8e0dd; padding: 4pt; }
+  td { padding: 4pt; border-bottom: 1px solid #eef1f0; vertical-align: top; }
+  .rodape { color: #8a938f; font-size: 8pt; margin-top: 20pt; }
 </style>
 </head>
 <body>
   <p class="eyebrow">Root-Spector</p>
-  <h1>Relatório de causa raiz — Lote {{ d.nc.batch_id }}</h1>
+  <h1>Relatorio de causa raiz, lote {{ d.nc.batch_id }}</h1>
 
   {% set cls = d.nc.classification.value %}
   {% set risco = d.nc.risk_prediction.value %}
   {% set fora_da_faixa = d.nc.parametros_fora_da_faixa | join(", ") or "nenhum" %}
-  <div class="card">
-    <div class="meta">
-      <span class="badge badge--{{ badge(cls) }}">{{ cls }}</span>
-      <span class="badge badge--{{ badge(risco) }}">{{ risco }}</span>
-      <span class="muted">compliance_score={{ d.nc.compliance_score }}</span>
-    </div>
-    <p class="muted">Parâmetro(s) fora da faixa: {{ fora_da_faixa }}</p>
+  <p>
+    <span class="badge badge-{{ badge(cls) }}">{{ cls }}</span>
+    <span class="badge badge-{{ badge(risco) }}">{{ risco }}</span>
+    <span class="muted">compliance_score={{ d.nc.compliance_score }}</span>
+  </p>
+  <p class="muted">Parametro(s) fora da faixa: {{ fora_da_faixa }}</p>
 
-    <div class="callout">
-      <strong>Causa raiz:</strong> {{ d.causa_raiz }}<br>
-      <em>{{ d.narrativa }}</em>
-    </div>
-
-    <h2>Mapeamento Ishikawa</h2>
-    <p>Categoria principal: <strong>{{ d.categoria_principal.categoria }}</strong>
-       — {{ d.categoria_principal.justificativa }}</p>
-    <table>
-      <thead><tr><th>Categoria</th><th>Pergunta</th><th>Resposta</th></tr></thead>
-      <tbody>
-      {% for r in d.respostas_ishikawa %}
-      <tr><td>{{ r.categoria }}</td><td>{{ r.pergunta }}</td><td>{{ r.resposta }}</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
-    {% if d.categorias_descartadas %}
-    <p class="muted">Categorias descartadas:
-      {% for c in d.categorias_descartadas %}{{ c.categoria }} ({{ c.motivo }})
-      {{- ", " if not loop.last }}{% endfor %}
-    </p>
-    {% endif %}
-
-    <h2>5 Porquês</h2>
-    <table>
-      <thead><tr><th>#</th><th>Pergunta</th><th>Resposta</th></tr></thead>
-      <tbody>
-      {% for p in d.cadeia_de_porques %}
-      <tr><td>{{ p.numero }}</td><td>{{ p.pergunta }}</td><td>{{ p.resposta }}</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
-
-    {% if d.recomendacao_tratativa %}
-    <h2>Recomendação de tratativa</h2>
-    <div class="callout">{{ d.recomendacao_tratativa }}</div>
-    {% if d.fontes_rag %}
-    <p class="muted">Fontes consultadas: {{ d.fontes_rag | join(", ") }}</p>
-    {% endif %}
-    {% endif %}
-
-    {% if d.casos_semelhantes %}
-    <h2>Recorrência</h2>
-    <table>
-      <thead><tr><th>Lote</th><th>Categoria</th><th>Causa raiz</th><th>Gerado em</th></tr></thead>
-      <tbody>
-      {% for c in d.casos_semelhantes %}
-      <tr><td>{{ c.batch_id }}</td><td>{{ c.categoria_principal }}</td>
-          <td>{{ c.causa_raiz }}</td><td>{{ c.gerado_em }}</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
-    {% endif %}
-
-    {% if d.ciclos_anteriores %}
-    <h2>Ciclos anteriores ({{ d.ciclos_anteriores | length }})</h2>
-    {% for c in d.ciclos_anteriores %}
-    <p>Ciclo {{ c.numero_ciclo }} (encerrado em {{ c.encerrado_em }}): {{ c.causa_raiz }}</p>
-    {% endfor %}
-    {% endif %}
+  <div class="callout">
+    <strong>Causa raiz:</strong> {{ d.causa_raiz }}<br/>
+    <i>{{ d.narrativa }}</i>
   </div>
+
+  <h2>Mapeamento Ishikawa</h2>
+  <p>Categoria principal: <strong>{{ d.categoria_principal.categoria }}</strong>,
+     {{ d.categoria_principal.justificativa }}</p>
+  <table>
+    <tr><th>Categoria</th><th>Pergunta</th><th>Resposta</th></tr>
+    {% for r in d.respostas_ishikawa %}
+    <tr><td>{{ r.categoria }}</td><td>{{ r.pergunta }}</td><td>{{ r.resposta }}</td></tr>
+    {% endfor %}
+  </table>
+  {% if d.categorias_descartadas %}
+  <p class="muted">Categorias descartadas:
+    {% for c in d.categorias_descartadas %}{{ c.categoria }} ({{ c.motivo }})
+    {{- ", " if not loop.last }}{% endfor %}
+  </p>
+  {% endif %}
+
+  <h2>5 Porques</h2>
+  <table>
+    <tr><th>#</th><th>Pergunta</th><th>Resposta</th></tr>
+    {% for p in d.cadeia_de_porques %}
+    <tr><td>{{ p.numero }}</td><td>{{ p.pergunta }}</td><td>{{ p.resposta }}</td></tr>
+    {% endfor %}
+  </table>
+
+  {% if d.recomendacao_tratativa %}
+  <h2>Recomendacao de tratativa</h2>
+  <div class="callout">{{ d.recomendacao_tratativa }}</div>
+  {% if d.fontes_rag %}
+  <p class="muted">Fontes consultadas: {{ d.fontes_rag | join(", ") }}</p>
+  {% endif %}
+  {% endif %}
+
+  {% if d.casos_semelhantes %}
+  <h2>Recorrencia</h2>
+  <table>
+    <tr><th>Lote</th><th>Categoria</th><th>Causa raiz</th><th>Gerado em</th></tr>
+    {% for c in d.casos_semelhantes %}
+    <tr><td>{{ c.batch_id }}</td><td>{{ c.categoria_principal }}</td>
+        <td>{{ c.causa_raiz }}</td><td>{{ c.gerado_em }}</td></tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
+  {% if d.ciclos_anteriores %}
+  <h2>Ciclos anteriores ({{ d.ciclos_anteriores | length }})</h2>
+  {% for c in d.ciclos_anteriores %}
+  <p>Ciclo {{ c.numero_ciclo }} (encerrado em {{ c.encerrado_em }}): {{ c.causa_raiz }}</p>
+  {% endfor %}
+  {% endif %}
 
   <p class="rodape">Gerado em {{ d.gerado_em }}</p>
 </body>
 </html>
 """
 )
-_TEMPLATE_HTML.globals["badge"] = _badge
+_TEMPLATE_PDF.globals["badge"] = _badge
 
 
-def salvar_relatorio(diagnostico: Diagnostico) -> tuple[Path, Path]:
-    """Serializa o Diagnostico em JSON + HTML em REPORTS_DIR, nomeados
-    {batch_id}_{timestamp}.{json,html}. Retorna os dois caminhos."""
-    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    ts = diagnostico.gerado_em.strftime("%Y%m%dT%H%M%S")
-    base = f"{diagnostico.nc.batch_id}_{ts}"
+def gerar_pdf(diagnostico: Diagnostico) -> bytes:
+    """Renderiza o Diagnostico em PDF, inteiramente em memória, sem tocar
+    disco -- chamada sob demanda (backend/main.py), não no fim automático
+    da investigação. Levanta ValueError se o xhtml2pdf reportar erro de
+    renderização."""
+    buffer = io.BytesIO()
+    resultado = pisa.CreatePDF(src=_TEMPLATE_PDF.render(d=diagnostico), dest=buffer)
+    if resultado.err:
+        raise ValueError(f"Falha ao gerar PDF do relatório ({resultado.err} erro(s)).")
+    return buffer.getvalue()
 
-    json_path = REPORTS_DIR / f"{base}.json"
-    json_path.write_text(diagnostico.model_dump_json(indent=2), encoding="utf-8")
 
-    html_path = REPORTS_DIR / f"{base}.html"
-    html_path.write_text(_TEMPLATE_HTML.render(d=diagnostico), encoding="utf-8")
+def salvar_relatorio(diagnostico: Diagnostico) -> int:
+    """Grava o Diagnostico como 1 registro na tabela `relatorios`, SQLite
+    local (OBSERVABILIDADE_DB_PATH) por padrão, Postgres, a mesma
+    instância do checkpointer e do `eventos_log`, quando `DATABASE_URL`
+    estiver definida -- única persistência do relatório; o PDF nunca é
+    salvo, só gerado sob demanda (ver gerar_pdf). Retorna o id do
+    registro criado."""
+    linha = (
+        diagnostico.nc.batch_id,
+        diagnostico.gerado_em.isoformat(),
+        diagnostico.model_dump_json(),
+    )
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        import psycopg
 
-    return json_path, html_path
+        with psycopg.connect(database_url) as conn:
+            conn.execute(_SQL_CRIAR_TABELA_RELATORIOS_POSTGRES)
+            cursor = conn.execute(
+                "INSERT INTO relatorios (batch_id, gerado_em, diagnostico_json) "
+                "VALUES (%s, %s, %s) RETURNING id",
+                linha,
+            )
+            relatorio_id = cursor.fetchone()[0]
+            conn.commit()
+        return relatorio_id
+
+    OBSERVABILIDADE_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(OBSERVABILIDADE_DB_PATH))
+    try:
+        conn.execute(_SQL_CRIAR_TABELA_RELATORIOS_SQLITE)
+        cursor = conn.execute(
+            "INSERT INTO relatorios (batch_id, gerado_em, diagnostico_json) VALUES (?, ?, ?)",
+            linha,
+        )
+        conn.commit()
+        return cursor.lastrowid
+    finally:
+        conn.close()
+
+
+def buscar_relatorio(relatorio_id: int) -> Diagnostico | None:
+    """Lê 1 registro da tabela `relatorios` pelo id -- usado pela rota
+    `GET /api/relatorios/{relatorio_id}` (backend/main.py), no lugar do
+    antigo `GET /reports/{arquivo}` estático. Devolve None se o id não
+    existir ou se a tabela ainda não tiver sido criada."""
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        import psycopg
+
+        try:
+            with psycopg.connect(database_url) as conn:
+                linha = conn.execute(
+                    "SELECT diagnostico_json FROM relatorios WHERE id = %s", (relatorio_id,)
+                ).fetchone()
+        except psycopg.errors.UndefinedTable:
+            return None
+        if linha is None:
+            return None
+        return Diagnostico.model_validate_json(linha[0])
+
+    if not OBSERVABILIDADE_DB_PATH.exists():
+        return None
+    conn = sqlite3.connect(str(OBSERVABILIDADE_DB_PATH))
+    try:
+        linha = conn.execute(
+            "SELECT diagnostico_json FROM relatorios WHERE id = ?", (relatorio_id,)
+        ).fetchone()
+    except sqlite3.OperationalError:
+        return None
+    finally:
+        conn.close()
+    if linha is None:
+        return None
+    return Diagnostico.model_validate_json(linha[0])
+
+
+def listar_relatorios() -> list[Diagnostico]:
+    """Lê todos os registros da tabela `relatorios` -- usado pela tool
+    `consultar_recorrencia` (tools.py) e pelo resumo diário
+    (resumo_diario.py), no lugar de varrer `reports/*.json` em disco.
+    Devolve lista vazia se a tabela ainda não tiver sido criada (processo
+    novo, nenhum relatório salvo ainda)."""
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        import psycopg
+
+        try:
+            with psycopg.connect(database_url) as conn:
+                linhas = conn.execute("SELECT diagnostico_json FROM relatorios").fetchall()
+        except psycopg.errors.UndefinedTable:
+            return []
+        return [Diagnostico.model_validate_json(linha[0]) for linha in linhas]
+
+    if not OBSERVABILIDADE_DB_PATH.exists():
+        return []
+    conn = sqlite3.connect(str(OBSERVABILIDADE_DB_PATH))
+    try:
+        linhas = conn.execute("SELECT diagnostico_json FROM relatorios").fetchall()
+    except sqlite3.OperationalError:
+        return []
+    finally:
+        conn.close()
+    return [Diagnostico.model_validate_json(linha[0]) for linha in linhas]

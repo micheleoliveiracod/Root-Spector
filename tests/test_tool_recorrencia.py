@@ -1,8 +1,11 @@
 """Issue #47 (specs/fase02/design.md § 7): tool `consultar_recorrencia`,
-que varre reports/*.json procurando casos anteriores com a mesma
-categoria Ishikawa principal e ao menos 1 parâmetro de biosensor fora da
-faixa em comum, excluindo o próprio lote. Usa relatórios de fixture em
-tests/fixtures/reports_teste/ (nunca reports/ de verdade)."""
+que lê os relatórios já salvos na tabela `relatorios` (reports.py)
+procurando casos anteriores com a mesma categoria Ishikawa principal e ao
+menos 1 parâmetro de biosensor fora da faixa em comum, excluindo o
+próprio lote. Usa relatórios de fixture em
+tests/fixtures/reports_teste/ (nunca a tabela real do repositório),
+gravados na tabela via reports.py::salvar_relatorio, o mesmo caminho de
+produção."""
 
 from __future__ import annotations
 
@@ -25,10 +28,13 @@ REPORTS_TESTE = Path(__file__).parent / "fixtures" / "reports_teste"
 
 
 @pytest.fixture(autouse=True)
-def usar_reports_de_fixture(monkeypatch):
-    from root_cause_agent import tools
+def usar_reports_de_fixture(monkeypatch, tmp_path):
+    from root_cause_agent import reports
 
-    monkeypatch.setattr(tools, "REPORTS_DIR", REPORTS_TESTE)
+    monkeypatch.setattr(reports, "OBSERVABILIDADE_DB_PATH", tmp_path / "relatorios_de_fixture.db")
+    for caminho in sorted(REPORTS_TESTE.glob("*.json")):
+        diagnostico = Diagnostico.model_validate_json(caminho.read_text(encoding="utf-8"))
+        reports.salvar_relatorio(diagnostico)
 
 
 def _estado(batch_id: int, categoria: str, parametros_fora_da_faixa: list[str]) -> dict:
@@ -109,10 +115,10 @@ def test_tool_nao_expoe_parametros_ao_llm():
     assert consultar_recorrencia.args == {}
 
 
-def test_sem_diretorio_de_relatorios_nao_lanca_excecao(tmp_path, monkeypatch):
-    from root_cause_agent import tools
+def test_sem_banco_de_relatorios_nao_lanca_excecao(tmp_path, monkeypatch):
+    from root_cause_agent import reports
 
-    monkeypatch.setattr(tools, "REPORTS_DIR", tmp_path / "reports_inexistente")
+    monkeypatch.setattr(reports, "OBSERVABILIDADE_DB_PATH", tmp_path / "banco_inexistente.db")
     estado = _estado(999, "Maquina", ["agitator_speed"])
     assert buscar_casos_semelhantes(estado) == []
 

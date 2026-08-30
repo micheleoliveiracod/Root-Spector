@@ -148,7 +148,7 @@ no máximo 5 por milestone.
   - `nodes.py` (preparar_contexto [+ cálculo de sensor_metrics/parametros_fora_da_faixa], formular_pergunta_ishikawa, orquestrar_analise, formular_porque, perguntar_operador [human-in-the-loop via `interrupt()`, Camada 1 de validação, reusado nas duas fases], avaliar_informatividade [Camada 2, até 2 tentativas por pergunta], gerar_causa_raiz; `FalhaLLMError` capturada em cada nó agêntico)
   - `graph.py` (StateGraph com dois loops em sequência + checkpointer `SqliteSaver` para suportar pausa/retomada via API)
 - [x] **Relatórios e API (reports.py, api.py, main.py harness)**
-  - `root_cause_agent/reports.py` (Diagnostico → `reports/{batch_id}_{timestamp}.json` + `.html`, template Jinja2)
+  - `root_cause_agent/reports.py` (Diagnostico → `reports/{batch_id}_{timestamp}.json` persistido; PDF gerado sob demanda a partir do mesmo template Jinja2, via xhtml2pdf, nunca salvo em disco, mudança de Fase 2)
   - `backend/main.py` (FastAPI, pacote próprio, depende de `root_cause_agent`: listar lotes, iniciar/responder/revisar/ajustar investigação, servir relatórios, `responder` já gera o relatório ao concluir o ciclo; captura `FalhaLLMError` e devolve HTTP 503 "Serviço de IA indisponível, recarregue a página.")
   - Converter `root_cause_agent/main.py` em harness de teste (roda o grafo com respostas fornecidas em código, sem servidor)
 - [x] **Scaffold frontend/ (React + TypeScript + Vite)**

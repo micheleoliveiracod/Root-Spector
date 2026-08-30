@@ -2,8 +2,9 @@
 
 Este documento descreve os mecanismos de proteção (guardrails) do
 Root-Spector: os que já existiam desde a Fase 1, incorporados à
-arquitetura do agente, e os três novos adicionados na Fase 2 para limitar
-o abuso da interação do operador com o agente. O código correspondente
+arquitetura do agente, e os quatro novos adicionados na Fase 2 para
+limitar o abuso da interação do operador com o agente e o acesso à API.
+O código correspondente
 está em `root_cause_agent/nodes.py`, `root_cause_agent/tools.py` e
 `backend/main.py`; a análise original de resiliência está em
 `specs/fase02/design.md` (seção Governança); a prova automatizada está em
@@ -37,7 +38,7 @@ continua restrito ao lote da investigação.
 
 ## Guardrails novos (Fase 2)
 
-Os três guardrails abaixo foram adicionados nesta fase, motivados pela
+Os quatro guardrails abaixo foram adicionados nesta fase, motivados pela
 mesma pergunta central de governança do PDF (§4.5): em que situação faz
 sentido limitar a interação do operador com o agente. Nos dois casos, a
 resposta é a mesma: quando a ausência do limite permite manter a
@@ -108,8 +109,9 @@ deslizante de `JANELA_LIMITE_TAXA_SEGUNDOS` (60) segundos; ao atingir
 `LIMITE_REQUISICOES_POR_JANELA` (20), a próxima requisição do mesmo IP
 recebe HTTP 429. O contador é mantido em memória por processo, sem
 dependência nova nem infraestrutura externa. Sem efeito quando
-`LLM_PROVIDER=fake`, mesmo sinal já usado para toda a suíte de testes e
-E2E, que faz várias requisições em sequência sem intenção de abuso.
+`LLM_PROVIDER=fake`, mesmo
+sinal já usado para toda a suíte de testes e E2E, que faz várias
+requisições em sequência sem intenção de abuso.
 
 **Onde esse limite deveria caber.** Na camada de transporte da API, não no
 grafo do agente: CORS e limite de taxa protegem o serviço como um todo
@@ -118,10 +120,31 @@ andamento, diferente dos dois guardrails anteriores, que protegem uma
 investigação específica contra uma resposta de operador mal-intencionada
 ou mal formada.
 
+### Chave de API interna (`INTERNAL_API_KEY`)
+
+**Problema.** Nenhuma rota da API exige identificação de quem chama. Em
+produção, com o backend num domínio público, qualquer cliente com a URL
+consegue listar lotes, iniciar e responder investigações, ou ler o
+resumo diário agregado, sem nenhuma credencial.
+
+**Guardrail.** `backend/main.py:exigir_api_key`, uma dependency aplicada
+às rotas de lotes, investigações e resumo diário, exige o cabeçalho
+`X-API-Key` igual ao valor de `INTERNAL_API_KEY` (env var); sem essa
+variável definida, nenhuma chave é exigida, o comportamento de
+desenvolvimento local. `relatorio.pdf` e `/reports` ficam de fora dessa
+exigência, o link do relatório em PDF precisa continuar clicável direto
+do e-mail do workflow n8n, sem cabeçalho customizado.
+
+**Onde esse limite deveria caber.** Também na camada de transporte,
+junto do CORS e do limite de taxa, mas resolvendo um problema diferente
+dos dois: CORS e limite de taxa não identificam quem faz a chamada, só
+de onde ou com que frequência; a chave de API é o único guardrail dos
+quatro que efetivamente autentica o cliente.
+
 ## Quando novos limites fariam sentido
 
 A pergunta geral, "em que situação cabe limitar a interação do usuário
-com o agente", tem uma resposta consistente nos três casos analisados
+com o agente", tem uma resposta consistente nos quatro casos analisados
 nesta fase: um limite novo se justifica quando a ausência dele permite que
 a interação consuma recurso (tempo de investigação, tokens de contexto,
 capacidade de um serviço público) sem produzir nenhum avanço real na

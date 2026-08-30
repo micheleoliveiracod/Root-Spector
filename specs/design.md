@@ -149,10 +149,11 @@ arrastar FastAPI junto.
 |---|---|
 | `GET /api/lotes` | Lista os lotes de `data/biotecpredict.db` com classificação calculada, destaque dos elegíveis e, para estes, os parâmetros de biosensor fora da faixa aceitável |
 | `POST /api/investigacoes/{batch_id}/iniciar` | Cria/retoma um `thread_id`, roda o grafo até o 1º `interrupt`, devolve a 1ª pergunta |
-| `POST /api/investigacoes/{thread_id}/responder` | `Command(resume=resposta)`, devolve a próxima pergunta ou sinaliza "pronto pra revisão"; ao concluir o ciclo (resposta ao 5º porquê), já gera `reports/{batch_id}_{ts}.json` + `.html` (via `root_cause_agent.reports`) |
-| `GET /api/investigacoes/{thread_id}/revisao` | Devolve toda a cadeia (Ishikawa + 5 Porquês) + rascunho de `causa_raiz` + os links do relatório já gerado |
+| `POST /api/investigacoes/{thread_id}/responder` | `Command(resume=resposta)`, devolve a próxima pergunta ou sinaliza "pronto pra revisão"; ao concluir o ciclo (resposta ao 5º porquê), já gera `reports/{batch_id}_{ts}.json` (via `root_cause_agent.reports`) |
+| `GET /api/investigacoes/{thread_id}/revisao` | Devolve toda a cadeia (Ishikawa + 5 Porquês) + rascunho de `causa_raiz` + o link do JSON já gerado |
+| `GET /api/investigacoes/{thread_id}/relatorio.pdf` | Gera o PDF do relatório sob demanda, direto do checkpoint, nunca salvo em disco |
 | `POST /api/investigacoes/{thread_id}/ajustar` | Arquiva o ciclo atual em `ciclos_anteriores`, reinicia um novo ciclo completo pro mesmo `batch_id` |
-| `GET /reports/{arquivo}` | Serve os relatórios estáticos (JSON e HTML) |
+| `GET /reports/{arquivo}` | Serve o relatório JSON estático |
 
 Só as duas rotas que efetivamente executam nós do grafo (`iniciar` e
 `responder`) podem levantar `FalhaLLMError`, ver seção abaixo.
@@ -273,7 +274,7 @@ root_cause_agent/
 │                #  formular_porque, perguntar_operador (usa interrupt(), Camada 1 de
 │                #  validação), avaliar_informatividade (Camada 2), gerar_causa_raiz
 ├── graph.py     # monta e compila o StateGraph com checkpointer (SqliteSaver)
-├── reports.py   # Diagnostico -> reports/{batch_id}_{timestamp}.json + .html (Jinja2)
+├── reports.py   # Diagnostico -> reports/{batch_id}_{timestamp}.json (persistido) + PDF sob demanda
 └── main.py      # harness de teste: roda o grafo com respostas fornecidas em código, sem servidor
 
 backend/         # FastAPI -- depende de root_cause_agent, nunca o contrário
@@ -346,8 +347,9 @@ orquestrar_analise   [nó LLM: analisa as 6 respostas, identifica               
 gerar_causa_raiz  [nó LLM: sintetiza categoria_principal + cadeia_porques + categorias_descartadas
                     em Diagnostico estruturado por categoria; valida contra o schema]
    ↓
-[API: salva reports/{batch_id}_{ts}.json + .html; apresenta a cadeia
- completa ao operador para revisão, já com os links do relatório]
+[API: salva reports/{batch_id}_{ts}.json; apresenta a cadeia
+ completa ao operador para revisão, já com o link do JSON, PDF gerado
+ sob demanda ao pedir]
    ↓ (operador decide)
    ├── nada a fazer → relatório já está salvo e disponível
    └── pedir ajuste → arquiva o ciclo atual (já reportado) em

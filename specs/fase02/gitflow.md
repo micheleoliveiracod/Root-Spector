@@ -321,17 +321,12 @@ recebendo um POST).
     investigações cujo `gerado_em` caiu naquele dia. Devolve, por
     investigação: `batch_id`, `classification`, `risk_prediction`,
     `categoria_principal`, `causa_raiz`, `recorrencia` (resumo de
-    `casos_semelhantes`), `recomendacao_tratativa`, link do relatório
-    HTML. Devolve também `eficiencia_operacional` (agregado dos logs
-    estruturados de `feature/observabilidade-fase02` do dia): tempo
-    médio por investigação, tempo médio por nó, quantas vezes o
+    `casos_semelhantes`), `recomendacao_tratativa`, link do relatório em
+    PDF (sob demanda). Devolve também `eficiencia_operacional` (agregado
+    dos logs estruturados de `feature/observabilidade-fase02` do dia):
+    tempo médio por investigação, tempo médio por nó, quantas vezes o
     fallback de LLM foi acionado, quantas respostas precisaram de 2
-    tentativas. **DevOps e QA ficam de fora do e-mail**, CI já tem
-    painel próprio no GitHub Actions; QA (§4.7, code review/testes do
-    código do projeto) não tem relação com o conteúdo de uma
-    investigação de NC. `recorrencia`/`informativa` são dado do próprio
-    domínio da investigação, não de QA, `recorrencia` já vai junto do
-    resumo por investigação acima.
+    tentativas. DevOps e QA ficam de fora do e-mail, deliberadamente.
   - Se `total_investigacoes == 0` no dia, o endpoint sinaliza isso e o
     workflow não envia e-mail.
   - Workflow n8n: **Cron Trigger** (1x/dia, horário fixo) → **HTTP
@@ -339,11 +334,12 @@ recebendo um POST).
     (pula se vazio) → **Function/Set** (formata o corpo do e-mail) →
     **Send Email**. Nenhuma env var nova no lado do Root-Spector, o
     n8n é quem aponta pro backend, não o contrário.
-  - Exportado em `docs/fase02/low-code/n8n-workflow.json`.
-- **Critérios de aceite:** endpoint testado (dia com investigações / dia
+  - Construído manualmente na interface do n8n, não versionado como
+    arquivo de export; passo a passo de construção em
+    `docs/fase02/low-code/construcao-workflow-n8n.md`.
+- **Critérios de aceite:** endpoint testado (dia com investigações e dia
   vazio); workflow n8n roda manualmente 1x contra o endpoint real e o
-  e-mail chega. (Instruções de reprodução no README ficam pra
-  `docs/readme-video-fase02`.)
+  e-mail chega.
 
 ---
 
@@ -469,28 +465,34 @@ não fazem mais parte desta branch.
 - **Critérios de aceite:** teste cobre os 2 caminhos; local continua
   funcionando sem env var nova.
 
-### Issue 2, Relatórios em Supabase Storage (produção) / disco local (dev)
+### Issue 2, Relatório persistido em banco de dados, não em disco
 - **Contexto:** mesmo problema de persistência do checkpointer, agora
-  pros relatórios gerados.
-- **Escopo:** `salvar_relatorio()` ganha branch condicional
-  (`SUPABASE_URL` setada → Storage; senão, disco local); rota
-  `GET /reports/{arquivo}` serve local ou redireciona.
-- **Critérios de aceite:** teste cobre os 2 caminhos; relatório
-  continua acessível depois de um ciclo de sleep/wake simulado.
+  para os dados do relatório de cada investigação.
+- **Escopo:** `salvar_relatorio()` grava o `Diagnostico` numa tabela
+  `relatorios`, na mesma instância SQLite local ou Postgres do
+  checkpointer e do `eventos_log`; `resumo_diario.py` e a tool
+  `consultar_recorrencia` passam a consultar essa tabela; a rota
+  `GET /reports/{arquivo}` é substituída por uma rota que monta a
+  resposta a partir do banco.
+- **Critérios de aceite:** teste cobre os dois caminhos; relatório
+  continua consultável depois de um reinício do processo simulado.
 
-### Issue 3, Deploy real: Render + Vercel + Supabase
+### Issue 3, Deploy real: Render, Vercel e Azure
 - **Contexto:** subir a aplicação de verdade, depois das issues
   anteriores prontas e testadas localmente.
-- **Escopo:** configuração do serviço web (Render), build do frontend
-  (Vercel, `VITE_API_URL`), projeto Supabase (`DATABASE_URL` + bucket
-  `reports`).
+- **Escopo:** configuração do serviço web no Render, incluindo
+  `INTERNAL_API_KEY` e `DEEPSEEK_API_KEY`; build do frontend no Vercel,
+  `VITE_API_URL` e `VITE_API_KEY`; a instância do Azure Database for
+  PostgreSQL, com a string de conexão em `DATABASE_URL`.
 - **Critérios de aceite:** investigação completa rodada contra a URL de
-  produção; relatório acessível depois do backend dormir/acordar.
+  produção; relatório consultável depois do backend dormir e acordar.
 
 ### Issue 4, Documentação do deploy
-- **Contexto:** registrar o processo pra reproduzir e reaprender depois.
+- **Contexto:** registrar o processo para reproduzir e reaprender
+  depois.
 - **Escopo:** `docs/deploy-producao.md`, passo a passo, URLs finais,
-  limitações conhecidas (cold start do Render free tier).
+  limitações conhecidas, o tempo de inicialização do Render na camada
+  gratuita e a validade de 12 meses da camada gratuita da Azure.
 - **Critérios de aceite:** alguém reproduz o deploy do zero só seguindo
   o documento.
 

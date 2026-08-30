@@ -20,17 +20,33 @@ def usar_fixture_db(monkeypatch, tmp_path):
     mesmo jeito -- ver o fixture `client` em test_backend.py, que corrige
     isso no momento certo (após importar o módulo pela 1ª vez).
 
-    Também isola tools.REPORTS_DIR num diretório vazio por padrão -- sem
-    isso, a tool `consultar_recorrencia` (chamada por recomendar_tratativa
-    sempre que o fake LLM decide chamá-la) varreria os reports/*.json REAIS
-    do repositório durante os testes, tornando-os não determinísticos.
-    Testes que precisam de relatórios de fixture (test_tool_recorrencia.py)
-    sobrescrevem isso explicitamente."""
-    from root_cause_agent import nodes, tools
+    Também isola a tabela `relatorios` (reports.py) num banco vazio por
+    padrão -- sem isso, a tool `consultar_recorrencia` (chamada por
+    recomendar_tratativa sempre que o fake LLM decide chamá-la) leria os
+    relatórios REAIS do repositório durante os testes, tornando-os não
+    determinísticos. Testes que precisam de relatórios de fixture
+    (test_tool_recorrencia.py) sobrescrevem isso explicitamente."""
+    from root_cause_agent import config, nodes, reports, tools
 
     monkeypatch.setattr(tools, "DB_PATH", FIXTURE_DB)
     monkeypatch.setattr(nodes, "DB_PATH", FIXTURE_DB)
-    monkeypatch.setattr(tools, "REPORTS_DIR", tmp_path / "reports_vazio_por_padrao")
+    # `relatorios` e `eventos_log` vivem na mesma instância (mesmo banco),
+    # o mesmo caminho de fixture é usado pros dois -- config.py e
+    # reports.py importam OBSERVABILIDADE_DB_PATH cada um com seu próprio
+    # nome vinculado, por isso os dois precisam do patch.
+    banco_de_teste = tmp_path / "observabilidade_de_teste.db"
+    monkeypatch.setattr(config, "OBSERVABILIDADE_DB_PATH", banco_de_teste)
+    monkeypatch.setattr(reports, "OBSERVABILIDADE_DB_PATH", banco_de_teste)
+    # Garante que nenhum teste usa Postgres por engano herdando uma
+    # DATABASE_URL real de um .env local (graph.py::_criar_checkpointer,
+    # config.py::_HandlerBancoDeDados) -- os testes sempre usam
+    # SQLite/arquivo local, nunca uma conexão de rede.
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    # Mesma lógica pra chave de API interna (backend/main.py::exigir_api_key)
+    # -- sem isso, os testes de backend herdariam INTERNAL_API_KEY de um
+    # .env local e passariam a exigir o cabeçalho X-API-Key sem que os
+    # testes soubessem disso.
+    monkeypatch.delenv("INTERNAL_API_KEY", raising=False)
 
 
 @pytest.fixture

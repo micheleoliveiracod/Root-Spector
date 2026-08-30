@@ -13,6 +13,7 @@ dependencies = [
     "langchain>=0.3",
     "langchain-google-genai>=2.0",
     "langchain-groq>=0.2",
+    "langchain-deepseek>=0.1",
     "langchain-anthropic>=0.3",
     "langchain-openai>=0.2",
     "langchain-text-splitters>=0.3",
@@ -23,6 +24,11 @@ dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
     "jinja2>=3.1",
+    # PDF do relatório final, gerado sob demanda (root_cause_agent/reports.py
+    # ::gerar_pdf) -- puro Python, sem dependência nativa de sistema (ao
+    # contrário do WeasyPrint, que exige GTK/Pango instalados à parte),
+    # funciona igual em desenvolvimento local, CI e no deploy.
+    "xhtml2pdf>=0.2.17",
     # Checkpointer condicional (graph.py::_criar_checkpointer) e log
     # estruturado em banco (config.py::_HandlerBancoDeDados) usam Postgres
     # só quando DATABASE_URL estiver definida (deploy, Azure Database for
