@@ -5,6 +5,7 @@ specs/design.md para o fluxo completo.
 
 from __future__ import annotations
 
+import logging
 import sqlite3
 from datetime import UTC, datetime
 
@@ -289,11 +290,23 @@ def pre_busca_rag(state: AgentState) -> dict:
     categoria_principal, não da cadeia de 5 Porquês, então roda
     independentemente do loop com o operador. Determinístico: busca por
     similaridade na base de conhecimento (root_cause_agent/rag.py), sem
-    chamar o LLM, só levanta candidatos (recomendar_tratativa é quem
-    sintetiza a recomendação, depois que os dois ramos convergem)."""
-    candidatos = buscar_candidatos(
-        state["categoria_principal"].categoria, _resumo_nc(state["nc_input"])
-    )
+    chamar o LLM diretamente -- mas embed_documents/embed_query
+    (langchain_google_genai) chama a API de embeddings do Gemini sempre,
+    independente do LLM_PROVIDER configurado pra get_llm() (não faz parte
+    da cadeia de fallback, ver config.py::get_llm()). Um erro ali (cota
+    esgotada, rede) não pode derrubar a investigação inteira por uma
+    recomendação que é só um reforço: sem candidatos, recomendar_tratativa
+    já degrada graciosamente (contexto_rag genérico), então aqui só loga o
+    problema e segue com candidatos_rag vazio."""
+    try:
+        candidatos = buscar_candidatos(
+            state["categoria_principal"].categoria, _resumo_nc(state["nc_input"])
+        )
+    except Exception:
+        logging.getLogger(__name__).warning(
+            "Busca RAG falhou (embeddings), seguindo sem candidatos.", exc_info=True
+        )
+        candidatos = []
     return {"candidatos_rag": candidatos}
 
 
