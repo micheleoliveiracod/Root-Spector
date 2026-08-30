@@ -27,7 +27,9 @@ deste projeto. Contexto e decisões de arquitetura completas em
 | `LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT` | opcionais, se o rastreamento do LangSmith for usado em produção |
 
 `BIOTECPREDICT_DB_PATH` não precisa ser definida à parte: o arquivo
-`data/biotecpredict.db` é somente leitura e embarca junto com o deploy.
+`data/biotecpredict.db` é somente leitura, versionado no repositório
+(`specs/deploy-producao/plano.md` § Versionamento de `data/biotecpredict.db`)
+e embarca junto com o deploy.
 
 ## 2. Frontend no Vercel
 
