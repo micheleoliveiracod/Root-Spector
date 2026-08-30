@@ -24,10 +24,26 @@ from root_cause_agent.models import (
     RespostaIshikawa,
     RiskPrediction,
 )
+from root_cause_agent.rag import buscar_candidatos
 from root_cause_agent.state import CATEGORIAS_ISHIKAWA_ORDEM, AgentState
-from root_cause_agent.tools import TOOLS, validar_resposta_operador
+from root_cause_agent.tools import (
+    TAMANHO_MAXIMO_RESPOSTA,
+    TOOLS,
+    buscar_casos_semelhantes,
+    consultar_recorrencia,
+    validar_resposta_operador,
+)
 
 PARAMETROS_BIOSENSOR = ["temperature", "ph", "dissolved_oxygen", "pressure", "agitator_speed"]
+
+# Guardrail (Fase 2, governança, ver specs/fase02/design.md § Governança):
+# limite de respostas rejeitadas pela Camada 1 (validar_resposta_operador)
+# para uma única pergunta. Sem esse limite, um operador ou um cliente
+# automatizado poderia manter a investigação presa indefinidamente numa
+# mesma pergunta, mandando resposta inválida repetidas vezes -- cada
+# tentativa não custa chamada de LLM, mas ainda assim consome uma
+# investigação inteira sem nunca progredir.
+MAX_TENTATIVAS_CAMADA_1 = 5
 
 
 class FalhaLLMError(Exception):
@@ -35,6 +51,13 @@ class FalhaLLMError(Exception):
     cadeia de fallback configurada (Gemini -> Anthropic -> OpenAI). A API
     (backend/main.py) traduz isso em HTTP 503 -- ver specs/design.md §
     Tratamento de falha na chamada ao LLM."""
+
+
+class LimiteTentativasExcedidoError(Exception):
+    """Levantada quando o operador (ou um cliente automatizado) excede
+    MAX_TENTATIVAS_CAMADA_1 respostas rejeitadas pela Camada 1 de validação
+    para uma única pergunta. A API (backend/main.py) traduz isso em HTTP
+    429 -- ver specs/fase02/design.md § Governança."""
 
 
 def _invocar_ou_falhar(fn, *args, **kwargs):
@@ -170,6 +193,8 @@ def preparar_contexto(state: AgentState) -> dict:
         "numero_porque": 1,
         "pergunta_atual": None,
         "tentativas_pergunta_atual": [],
+        "candidatos_rag": [],
+        "recomendacao_tratativa": None,
         "diagnostico": None,
         "ciclos_anteriores": state.get("ciclos_anteriores", []),
         "messages": _limpar_mensagens(state) if state.get("messages") else [],
@@ -257,6 +282,20 @@ def orquestrar_analise(state: AgentState) -> dict:
     }
 
 
+def pre_busca_rag(state: AgentState) -> dict:
+    """Ramo paralelo a formular_porque, disparado junto a partir de
+    orquestrar_analise (fan-out em graph.py) -- só depende de
+    categoria_principal, não da cadeia de 5 Porquês, então roda
+    independentemente do loop com o operador. Determinístico: busca por
+    similaridade na base de conhecimento (root_cause_agent/rag.py), sem
+    chamar o LLM, só levanta candidatos (recomendar_tratativa é quem
+    sintetiza a recomendação, depois que os dois ramos convergem)."""
+    candidatos = buscar_candidatos(
+        state["categoria_principal"].categoria, _resumo_nc(state["nc_input"])
+    )
+    return {"candidatos_rag": candidatos}
+
+
 def formular_porque(state: AgentState) -> dict:
     numero = state["numero_porque"]
     if numero == 1:
@@ -317,24 +356,121 @@ def gerar_causa_raiz(state: AgentState) -> dict:
     return {"diagnostico": diagnostico}
 
 
+def _consultar_recorrencia_se_llm_decidir(state: AgentState) -> list:
+    """Tool genuína (specs/fase02/design.md § Tool `consultar_recorrencia`):
+    a decisão de checar recorrência é do LLM, não uma automação embutida no
+    nó -- diferente de pre_busca_rag/buscar_candidatos, chamada sempre.
+    categoria_principal/parametros_fora_da_faixa vêm do estado via
+    InjectedState (a tool nem aceita argumento do LLM), então o único grau
+    de liberdade do modelo é chamar ou não chamar."""
+    instrucao = (
+        "Antes de recomendar a tratativa para esta não-conformidade de "
+        "bioprocesso, avalie se vale a pena checar se um caso semelhante já "
+        "ocorreu antes. Use a ferramenta disponível se achar relevante -- "
+        "ela já sabe qual é o lote e a categoria, não recebe parâmetro seu."
+    )
+    resposta = _invocar_ou_falhar(
+        get_llm().bind_tools([consultar_recorrencia]).invoke,
+        [SystemMessage(content=instrucao), HumanMessage(content=_resumo_nc(state["nc_input"]))],
+    )
+    if not getattr(resposta, "tool_calls", None):
+        return []
+    return buscar_casos_semelhantes(state)
+
+
+def recomendar_tratativa(state: AgentState) -> dict:
+    """Converge os 2 ramos paralelos (gerar_causa_raiz, ao fim do loop dos
+    5 Porquês, e pre_busca_rag) -- ver specs/fase02/design.md § Grafo.
+    Recebe o Diagnostico completo (causa raiz + narrativa) e os candidatos
+    do RAG (chunks relevantes, não documentos inteiros), consulta a
+    recorrência (tool `consultar_recorrencia`, decidida pelo LLM) e
+    sintetiza uma recomendação textual de tratativa. Atualiza o Diagnostico
+    já produzido por gerar_causa_raiz em vez de criar um novo (model_copy),
+    porque os demais campos (nc, respostas_ishikawa, cadeia_de_porques
+    etc.) não mudam aqui."""
+
+    class _Recomendacao(BaseModel):
+        recomendacao_tratativa: str
+
+    candidatos = state["candidatos_rag"]
+    diagnostico = state["diagnostico"]
+
+    if candidatos:
+        contexto_rag = "\n".join(f"- ({c.fonte}) {c.texto}" for c in candidatos)
+    else:
+        contexto_rag = "(nenhum candidato relevante encontrado na base de conhecimento)"
+
+    casos_semelhantes = _consultar_recorrencia_se_llm_decidir(state)
+    if casos_semelhantes:
+        contexto_recorrencia = "\n".join(
+            f"- Lote {c.batch_id} ({c.gerado_em.date()}): {c.causa_raiz}" for c in casos_semelhantes
+        )
+    else:
+        contexto_recorrencia = "(nenhuma recorrência conhecida)"
+
+    instrucao = (
+        "Recomende a tratativa (ação corretiva + preventiva, metodologia "
+        "CAPA/PDCA) para esta não-conformidade de bioprocesso, a partir da "
+        "causa raiz já identificada, dos trechos de referência recuperados "
+        "da base de conhecimento e de casos semelhantes anteriores (se "
+        "houver) abaixo. Diga se o caso é inédito ou recorrente. Seja "
+        "objetivo, cite a metodologia quando pertinente, e não invente "
+        "prática que não esteja nos trechos fornecidos ou na causa raiz."
+    )
+    contexto = (
+        f"Causa raiz: {diagnostico.causa_raiz}\nNarrativa: {diagnostico.narrativa}\n\n"
+        f"Trechos de referência:\n{contexto_rag}\n\n"
+        f"Casos semelhantes anteriores:\n{contexto_recorrencia}"
+    )
+    resultado = _invocar_ou_falhar(
+        get_llm().with_structured_output(_Recomendacao).invoke,
+        [SystemMessage(content=instrucao), HumanMessage(content=contexto)],
+    )
+
+    fontes = sorted({c.fonte for c in candidatos})
+    diagnostico_atualizado = diagnostico.model_copy(
+        update={
+            "recomendacao_tratativa": resultado.recomendacao_tratativa,
+            "fontes_rag": fontes,
+            "casos_semelhantes": casos_semelhantes,
+        }
+    )
+    return {"diagnostico": diagnostico_atualizado}
+
+
 # ------------------------------------------------------- human-in-the-loop --
+
+def _erro_camada_1(resposta: str) -> str:
+    if len(resposta) > TAMANHO_MAXIMO_RESPOSTA:
+        return f"Resposta longa demais (máximo de {TAMANHO_MAXIMO_RESPOSTA} caracteres)."
+    return "Este tipo de resposta não é aceito."
+
 
 def perguntar_operador(state: AgentState) -> dict:
     """Mostra pergunta_atual e pausa via interrupt() -- a API captura a
     resposta e retoma via Command(resume=...). Camada 1 (determinística,
-    tools.py::validar_resposta_operador): resposta vazia/evasiva -> chama
-    interrupt() de novo com um sinal de erro, sem avançar o grafo e sem
-    contar como tentativa (tentativas ilimitadas nesta camada)."""
+    tools.py::validar_resposta_operador): resposta vazia, longa demais ou
+    evasiva -> chama interrupt() de novo com um sinal de erro, sem avançar
+    o grafo. Guardrail MAX_TENTATIVAS_CAMADA_1 (Fase 2, governança): a
+    partir da tentativa que excede o limite, levanta
+    LimiteTentativasExcedidoError em vez de pedir de novo indefinidamente."""
     pergunta = state["pergunta_atual"]
     nc = state["nc_input"].model_dump(mode="json")
     payload = {"pergunta": pergunta, "nc": nc, **_progresso_pergunta(state)}
     resposta = interrupt(payload)
+    tentativas_camada_1 = 0
     while not validar_resposta_operador(resposta):
+        tentativas_camada_1 += 1
+        if tentativas_camada_1 >= MAX_TENTATIVAS_CAMADA_1:
+            raise LimiteTentativasExcedidoError(
+                f"Limite de {MAX_TENTATIVAS_CAMADA_1} respostas rejeitadas "
+                "atingido para esta pergunta."
+            )
         payload = {
             "pergunta": pergunta,
             "nc": nc,
             **_progresso_pergunta(state),
-            "erro": "Este tipo de resposta não é aceito.",
+            "erro": _erro_camada_1(resposta),
         }
         resposta = interrupt(payload)
     return {"tentativas_pergunta_atual": state["tentativas_pergunta_atual"] + [resposta]}

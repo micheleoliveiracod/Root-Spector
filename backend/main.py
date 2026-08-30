@@ -8,36 +8,118 @@ para o contrato completo):
                                                           roda até o 1º interrupt()
   POST /api/investigacoes/{thread_id}/responder       -- Command(resume=resposta);
                                                           ao concluir o ciclo (5º porquê),
-                                                          já gera reports/*.json + *.html
+                                                          já gera reports/*.json
   GET  /api/investigacoes/{thread_id}/revisao          -- cadeia Ishikawa + 5 Porquês
-                                                          + links do relatório já gerado
+                                                          + link do relatório JSON já gerado
+  GET  /api/investigacoes/{thread_id}/relatorio.pdf      -- gera o PDF sob demanda,
+                                                          nunca salvo em disco
   POST /api/investigacoes/{thread_id}/ajustar            -- arquiva ciclo, reabre um novo
-  GET  /reports/{arquivo}                                 -- serve os relatórios estáticos
+  GET  /api/relatorios/{relatorio_id}                     -- devolve o relatório gravado no banco
+  GET  /api/relatorios/resumo-diario                       -- resumo diário para o workflow n8n
 
 `iniciar` e `responder` são as únicas rotas que executam nós do grafo --
 capturam `FalhaLLMError` (root_cause_agent.nodes) e respondem HTTP 503 com
 "Serviço de IA indisponível, recarregue a página.", sem deixar a exceção
 crua vazar pro frontend (ver specs/design.md § Tratamento de falha no LLM).
+`responder` também captura `LimiteTentativasExcedidoError`
+(root_cause_agent.nodes) e responde HTTP 429, guardrail contra um
+operador ou cliente automatizado que insista em respostas rejeitadas pela
+Camada 1 de validação indefinidamente (ver specs/fase02/design.md §
+Governança).
+
+CORS restrito via `CORS_ALLOWED_ORIGINS` (env var, lista separada por
+vírgula; padrão `*` em desenvolvimento local), limite de taxa
+(`limitar_taxa`, dependency aplicada a toda a API, 20 requisições por
+minuto por IP, sem efeito quando `LLM_PROVIDER=fake`) e chave de API
+interna (`exigir_api_key`, opcional
+via `INTERNAL_API_KEY`, exigida nas rotas de lotes/investigações/resumo
+diário; `relatorio.pdf` e `/reports` ficam de fora, o link do relatório
+precisa continuar clicável direto do e-mail do n8n) completam os
+guardrails de governança desta fase (ver docs/GOVERNANCA.md).
 """
 
 from __future__ import annotations
 
+import os
 import sqlite3
-from datetime import UTC, datetime
+import time
+from collections import defaultdict, deque
+from datetime import UTC, date, datetime, timedelta
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from langgraph.types import Command
 from pydantic import BaseModel
 
-from root_cause_agent.config import DB_PATH, REPORTS_DIR, carregar_regras_setor
+from root_cause_agent.config import DB_PATH, carregar_regras_setor
 from root_cause_agent.graph import build_graph
-from root_cause_agent.models import CicloAnterior, Classification
-from root_cause_agent.nodes import FalhaLLMError, calcular_sensor_metrics
-from root_cause_agent.reports import salvar_relatorio
+from root_cause_agent.models import CicloAnterior, Classification, RiskPrediction
+from root_cause_agent.nodes import (
+    FalhaLLMError,
+    LimiteTentativasExcedidoError,
+    calcular_sensor_metrics,
+)
+from root_cause_agent.reports import buscar_relatorio, gerar_pdf, salvar_relatorio
+from root_cause_agent.resumo_diario import montar_resumo_diario
 
 MENSAGEM_LLM_INDISPONIVEL = "Serviço de IA indisponível, recarregue a página."
+MENSAGEM_LIMITE_TENTATIVAS = (
+    "Limite de respostas rejeitadas atingido para esta pergunta, "
+    "investigação encerrada."
+)
+MENSAGEM_LIMITE_TAXA = "Limite de requisições excedido, tente novamente em instantes."
+
+# Guardrail (Fase 2, governança, ver specs/fase02/design.md § Governança):
+# limite de taxa por IP, aplicado a toda a API. Contador em memória por
+# processo (sem dependência nova, sem infraestrutura externa), suficiente
+# pro escopo deste projeto -- um deploy com múltiplos processos/réplicas
+# precisaria de um contador compartilhado (ex: Redis), fora do escopo
+# atual. Sem efeito quando LLM_PROVIDER=fake, sinal já usado em todo o
+# projeto pra suíte de testes/E2E, que faz várias requisições em sequência
+# sem intenção de abuso.
+LIMITE_REQUISICOES_POR_JANELA = 20
+JANELA_LIMITE_TAXA_SEGUNDOS = 60
+_requisicoes_por_ip: dict[str, deque[float]] = defaultdict(deque)
+
+
+def limitar_taxa(request: Request) -> None:
+    if os.getenv("LLM_PROVIDER") == "fake":
+        return
+    ip = request.client.host if request.client else "desconhecido"
+    agora = time.monotonic()
+    janela = _requisicoes_por_ip[ip]
+    while janela and agora - janela[0] > JANELA_LIMITE_TAXA_SEGUNDOS:
+        janela.popleft()
+    if len(janela) >= LIMITE_REQUISICOES_POR_JANELA:
+        raise HTTPException(429, MENSAGEM_LIMITE_TAXA)
+    janela.append(agora)
+
+
+MENSAGEM_API_KEY_INVALIDA = "Chave de API ausente ou inválida."
+
+
+def exigir_api_key(request: Request) -> None:
+    """Guardrail (Fase 2, governança): exige o cabeçalho `X-API-Key` nas
+    rotas operacionais (lotes, investigações, resumo diário), que
+    manipulam ou expõem dados agregados de várias investigações. Opcional
+    via `INTERNAL_API_KEY`: sem essa variável definida, nenhuma chave é
+    exigida (ambiente de desenvolvimento local continua igual). Não se
+    aplica a `relatorio.pdf`/`/reports`, o link de um relatório
+    individual precisa continuar clicável direto do e-mail do n8n, sem
+    cabeçalho customizado -- ver docs/GOVERNANCA.md."""
+    chave_esperada = os.getenv("INTERNAL_API_KEY")
+    if not chave_esperada:
+        return
+    if request.headers.get("X-API-Key") != chave_esperada:
+        raise HTTPException(401, MENSAGEM_API_KEY_INVALIDA)
+
+
+def _origens_cors() -> list[str]:
+    origens = os.getenv("CORS_ALLOWED_ORIGINS", "*")
+    if origens == "*":
+        return ["*"]
+    return [origem.strip() for origem in origens.split(",") if origem.strip()]
+
 
 app = FastAPI(
     title="Root-Spector API",
@@ -48,10 +130,11 @@ app = FastAPI(
         "Contrato completo em `specs/design.md` § Interface; diagrama do "
         "fluxo em `docs/diagrama-fluxo.md`."
     ),
+    dependencies=[Depends(limitar_taxa)],
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_origens_cors(),
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -88,9 +171,13 @@ def _payload_pergunta(thread_id: str, resultado: dict) -> dict:
     description=(
         "Lê `batches` (status COMPLETED, compliance_score não nulo) e "
         "devolve cada lote com `classification` recalculada, `elegivel` "
-        "(WARNING/CRITICAL) e `parametros_fora_da_faixa` (calculado a "
-        "partir de `sensor_readings`, vazio para lotes ACCEPTABLE)."
+        "(WARNING/CRITICAL de `classification`, ou `risk_prediction` "
+        "diferente de LOW_RISK, ou parâmetro de biosensor fora da faixa) "
+        "e `parametros_fora_da_faixa` (calculado a partir de "
+        "`sensor_readings`, vazio quando os dois primeiros sinais já "
+        "indicam que está tudo bem)."
     ),
+    dependencies=[Depends(exigir_api_key)],
 )
 def listar_lotes():
     regras = carregar_regras_setor()
@@ -106,15 +193,33 @@ def listar_lotes():
         lotes = []
         for r in rows:
             classification = _classificar(r["compliance_score"])
-            elegivel = classification != Classification.ACCEPTABLE
+            risk_prediction = RiskPrediction(r["risk_prediction"])
+
+            # `classification` e `risk_prediction` já vêm do SELECT acima,
+            # sem custo extra. `parametros_fora_da_faixa` exige 1 consulta
+            # adicional por lote em sensor_readings, então só calculamos
+            # quando pelo menos um dos dois primeiros sinais já não está
+            # bem -- um lote pode ter compliance_score ACCEPTABLE e ainda
+            # assim ter parâmetro de biosensor fora da faixa (o
+            # compliance_score do BiotecPredict mede proximidade do ideal,
+            # não conta sensor fora da faixa, ver issue de correção de
+            # elegibilidade), risk_prediction MEDIUM_RISK/HIGH_RISK é o
+            # sinal mais forte disso. Só pulamos a consulta extra quando os
+            # dois sinais concordam que está tudo bem.
+            precisa_verificar_sensor = (
+                classification != Classification.ACCEPTABLE
+                or risk_prediction != RiskPrediction.LOW_RISK
+            )
             parametros_fora_da_faixa: list[str] = []
-            if elegivel:
+            if precisa_verificar_sensor:
                 leituras = conn.execute(
                     "SELECT temperature, ph, dissolved_oxygen, pressure, agitator_speed "
                     "FROM sensor_readings WHERE batch_id = ?",
                     (r["id"],),
                 ).fetchall()
                 _, parametros_fora_da_faixa = calcular_sensor_metrics(leituras, regras)
+
+            elegivel = precisa_verificar_sensor or bool(parametros_fora_da_faixa)
             lotes.append(
                 {
                     "batch_id": r["id"],
@@ -142,6 +247,7 @@ def listar_lotes():
         f"('{MENSAGEM_LLM_INDISPONIVEL}') se todos os provedores de LLM "
         "configurados falharem."
     ),
+    dependencies=[Depends(exigir_api_key)],
 )
 def iniciar_investigacao(batch_id: int):
     thread_id = str(batch_id)
@@ -157,30 +263,32 @@ def iniciar_investigacao(batch_id: int):
     tags=["investigacoes"],
     summary="Enviar a resposta do operador à pergunta atual",
     description=(
-        "`Command(resume=resposta)` — retoma o grafo a partir do "
+        "`Command(resume=resposta)`, retoma o grafo a partir do "
         "`interrupt()` pausado. Se ainda houver perguntas, devolve a "
         "próxima (`{thread_id, fase, categoria|numero, pergunta, ...}`); "
-        "ao concluir o 5º porquê, já gera `reports/*.json`+`.html` e "
+        "ao concluir o 5º porquê, já gera `reports/*.json` e "
         "devolve `{thread_id, status: 'pronto_para_revisao'}`. Devolve "
         f"503 ('{MENSAGEM_LLM_INDISPONIVEL}') se todos os provedores de "
-        "LLM configurados falharem."
+        f"LLM configurados falharem, ou 429 ('{MENSAGEM_LIMITE_TENTATIVAS}') "
+        "se o limite de respostas rejeitadas pela Camada 1 de validação for "
+        "excedido (guardrail, ver root_cause_agent/nodes.py::MAX_TENTATIVAS_CAMADA_1)."
     ),
+    dependencies=[Depends(exigir_api_key)],
 )
 def responder(thread_id: str, corpo: RespostaOperador):
     try:
         resultado = grafo.invoke(Command(resume=corpo.resposta), config=_config(thread_id))
     except FalhaLLMError as exc:
         raise HTTPException(503, MENSAGEM_LLM_INDISPONIVEL) from exc
+    except LimiteTentativasExcedidoError as exc:
+        raise HTTPException(429, MENSAGEM_LIMITE_TENTATIVAS) from exc
     if "__interrupt__" in resultado:
         return _payload_pergunta(thread_id, resultado)
 
-    json_path, html_path = salvar_relatorio(resultado["diagnostico"])
+    relatorio_id = salvar_relatorio(resultado["diagnostico"])
     grafo.update_state(
         _config(thread_id),
-        {
-            "relatorio_json": f"/reports/{json_path.name}",
-            "relatorio_html": f"/reports/{html_path.name}",
-        },
+        {"relatorio_json": f"/api/relatorios/{relatorio_id}"},
     )
     return {"thread_id": thread_id, "status": "pronto_para_revisao"}
 
@@ -191,11 +299,14 @@ def responder(thread_id: str, corpo: RespostaOperador):
     summary="Consultar o diagnóstico concluído para revisão",
     description=(
         "Devolve a cadeia Ishikawa + 5 Porquês, `categoria_principal`, "
-        "`categorias_descartadas`, `causa_raiz`, `narrativa` e os links "
-        "`relatorio.json`/`relatorio.html` já gerados. Devolve 400 se o "
-        "ciclo ainda não chegou à revisão (5º porquê ainda não "
-        "respondido)."
+        "`categorias_descartadas`, `causa_raiz`, `narrativa`, "
+        "`recomendacao_tratativa` + `fontes_rag` (Fase 2, RAG) e o link do "
+        "`relatorio.json` já gerado. O PDF não tem link aqui, é gerado sob "
+        "demanda em `GET /api/investigacoes/{thread_id}/relatorio.pdf`. "
+        "Devolve 400 se o ciclo ainda não chegou à revisão (5º porquê "
+        "ainda não respondido)."
     ),
+    dependencies=[Depends(exigir_api_key)],
 )
 def revisao(thread_id: str):
     estado = grafo.get_state(_config(thread_id)).values
@@ -210,23 +321,50 @@ def revisao(thread_id: str):
         "cadeia_de_porques": [p.model_dump() for p in diagnostico.cadeia_de_porques],
         "causa_raiz": diagnostico.causa_raiz,
         "narrativa": diagnostico.narrativa,
+        "recomendacao_tratativa": diagnostico.recomendacao_tratativa,
+        "fontes_rag": diagnostico.fontes_rag,
         "relatorio": {
             "json": estado["relatorio_json"],
-            "html": estado["relatorio_html"],
         },
     }
+
+
+@app.get(
+    "/api/investigacoes/{thread_id}/relatorio.pdf",
+    tags=["investigacoes"],
+    summary="Gerar o PDF do relatório sob demanda",
+    description=(
+        "Lê o `Diagnostico` já concluído direto do checkpoint da "
+        "investigação e gera o PDF na hora, em memória, sem nunca salvar "
+        "em disco (diferente do `reports/*.json`, que é persistido "
+        "automaticamente ao fim da investigação). Devolve 400 se o ciclo "
+        "ainda não chegou à revisão."
+    ),
+)
+def relatorio_pdf(thread_id: str):
+    diagnostico = grafo.get_state(_config(thread_id)).values.get("diagnostico")
+    if diagnostico is None:
+        raise HTTPException(400, "Investigação ainda não chegou à revisão.")
+    pdf = gerar_pdf(diagnostico)
+    nome_arquivo = f"{diagnostico.nc.batch_id}_relatorio.pdf"
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{nome_arquivo}"'},
+    )
 
 
 @app.post(
     "/api/investigacoes/{thread_id}/ajustar",
     tags=["investigacoes"],
-    summary="Pedir ajuste — arquivar o ciclo atual e reabrir um novo",
+    summary="Pedir ajuste, arquivar o ciclo atual e reabrir um novo",
     description=(
         "Move o diagnóstico atual para `ciclos_anteriores` (auditoria, "
         "nunca sobrescrito) e reinicia o grafo para o mesmo `batch_id`, "
         "devolvendo a 1ª pergunta do novo ciclo Ishikawa (mesmo formato de "
         "`iniciar`). Devolve 400 se não houver diagnóstico em revisão."
     ),
+    dependencies=[Depends(exigir_api_key)],
 )
 def ajustar(thread_id: str):
     estado = grafo.get_state(_config(thread_id)).values
@@ -255,5 +393,49 @@ def ajustar(thread_id: str):
     return _payload_pergunta(thread_id, resultado)
 
 
-REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/reports", StaticFiles(directory=str(REPORTS_DIR)), name="reports")
+@app.get(
+    "/api/relatorios/resumo-diario",
+    tags=["relatorios"],
+    summary="Resumo diário de investigações concluídas",
+    description=(
+        "Varre os relatórios do dia pedido (padrão: ontem, já que o "
+        "workflow n8n roda 1x por dia pedindo o dia anterior) e devolve um "
+        "resumo por investigação (classificação, causa raiz, recorrência, "
+        "recomendação de tratativa, link do PDF sob demanda) mais métricas "
+        "de eficiência operacional agregadas do log estruturado do dia "
+        "(Fase 2, low-code, ver specs/fase02/design.md § Low-code). "
+        "total_investigacoes=0 sinaliza um dia sem investigações; o "
+        "workflow n8n não envia e-mail nesse caso."
+    ),
+    dependencies=[Depends(exigir_api_key)],
+)
+def resumo_diario(request: Request, data: str | None = None):
+    if data is None:
+        dia = date.today() - timedelta(days=1)
+    else:
+        try:
+            dia = date.fromisoformat(data)
+        except ValueError as exc:
+            raise HTTPException(
+                422, "Parâmetro 'data' inválido, use o formato AAAA-MM-DD."
+            ) from exc
+    return montar_resumo_diario(dia, base_url=str(request.base_url).rstrip("/"))
+
+
+@app.get(
+    "/api/relatorios/{relatorio_id}",
+    tags=["relatorios"],
+    summary="Consultar o relatório JSON gravado no banco",
+    description=(
+        "Devolve o `Diagnostico` completo gravado na tabela `relatorios` "
+        "(reports.py::salvar_relatorio), pelo id devolvido em "
+        "`relatorio.json` (rota de revisão) ou em `link_relatorio_pdf` do "
+        "resumo diário. Devolve 404 se o id não existir."
+    ),
+    dependencies=[Depends(exigir_api_key)],
+)
+def obter_relatorio(relatorio_id: int):
+    diagnostico = buscar_relatorio(relatorio_id)
+    if diagnostico is None:
+        raise HTTPException(404, "Relatório não encontrado.")
+    return diagnostico.model_dump()

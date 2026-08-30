@@ -1,64 +1,89 @@
-/* Design tokens do Root-Spector -- ver ../../DESIGN.md para a
-   referência completa (paleta, tipografia, uso de cada token). Mesma
-   linguagem visual de docs/mapeamento-processo.html,
-   docs/fluxo-tecnico-agente.html e docs/apresentacao.html. */
+/* Root-Spector, design tokens -- ver ../../DESIGN.md para a referência
+   completa (paleta, tipografia, uso de cada token).
+
+   Superfície clara e neutra: página gelo, caixas brancas. O roxo aparece
+   em pontos definidos, ou seja botão, foco, rótulo de fase e a arte da
+   marca. Nenhuma área grande recebe cor, o que deixa o semáforo dos
+   indicadores como o único elemento colorido de peso. Nenhuma cor
+   hardcoded fora deste arquivo. */
 
 :root {
+  color-scheme: light;
+
   /* superfícies e texto */
-  --paper: #f3f6f5;
-  --paper-raised: #ffffff;
-  --ink: #14201f;
-  --ink-soft: #47534f;
-  --line: #d8e0dd;
+  --paper: #f4f5f7; /* fundo da página, gelo */
+  --paper-raised: #ffffff; /* caixas */
+  --paper-sunken: #f7f8fa; /* campos, cabeçalho de tabela, código */
+  --ink: #1d1d21;
+  --ink-soft: #676770;
+  --line: #e4e5e9;
+  --line-soft: #eeeff2;
 
-  /* cor de destaque */
-  --accent: #0e8a82;
-  --accent-ink: #08514c;
-  --accent-soft: #e1f1ee;
+  /* acento de interface: os passos escuros do lilás da marca, porque o
+     tom original não tem contraste suficiente sobre branco. O roxo cheio
+     pertence ao botão de ação e a mais nada. */
+  --accent: #5b4bb8; /* fundo do botão primário, anel de foco */
+  --accent-hover: #4b3ca0;
+  --accent-active: #3f3287;
+  --accent-ink: #4c3f97; /* texto, link e rótulo em acento */
+  --accent-deep: #3f3480; /* texto sobre --accent-soft */
+  --accent-border: #d9d3f2; /* borda da caixa de mensagem */
+  --accent-soft: #f1eefc; /* faixa de título da mensagem do sistema */
+  --accent-art: #9184d9; /* só na arte: topo do site, README, favicon */
 
-  --shadow: 0 1px 2px rgba(20, 33, 32, 0.06), 0 8px 24px rgba(20, 33, 32, 0.06);
+  /* controles: alvos grandes, porque quem usa está no piso de produção */
+  --control-height: 48px;
+  --field-height: 52px;
+  --control-border: #c3c4cc;
+  --control-border-strong: #8b8c96;
+  --disabled-bg: #e4e5e9;
+  --disabled-fg: #82828b;
 
-  /* cores "semáforo" -- sempre em tons pastel (fundo claro + texto legível,
-     nunca vermelho/amarelo/verde saturados) */
-  --ok-bg: #e4f2e9;
-  --ok-fg: #226a45;
-  --warn-bg: #f6eedd;
-  --warn-fg: #8a6423;
-  --critical-bg: #fbeae6;
-  --critical-fg: #a23b2e;
-  --neutral-bg: #edefee;
-  --neutral-fg: #666f6c;
+  --shadow: 0 0 0 1px #e4e5e9;
+  --shadow-lg: 0 1px 2px rgba(29, 29, 33, 0.05), 0 12px 32px rgba(29, 29, 33, 0.08);
+
+  /* semáforo: verde, âmbar e vermelho sobre superfície clara. Fundo
+     tingido, borda na mesma família, texto escuro legível. A leitura
+     nunca depende só da cor, há sempre o ponto sólido (ver .badge::before
+     e .estado::before em index.css). */
+  --ok-bg: #e6f4ec;
+  --ok-border: #c7e6d4;
+  --ok-fg: #1b7a44;
+  --warn-bg: #fcf2dc;
+  --warn-border: #efdfb8;
+  --warn-fg: #8a6014;
+  --critical-bg: #fceae7;
+  --critical-border: #f2cec8;
+  --critical-fg: #b23726;
+  --neutral-bg: #efeff2;
+  --neutral-border: #e0e0e5;
+  --neutral-fg: #676770;
 
   /* tipografia */
-  --font-serif: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, "Noto Serif", serif;
-  --font-sans: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  --text-base: 16px; /* corpo, nunca abaixo disso */
+  --text-question: 19px; /* a pergunta do sistema */
+  --text-state: 17px; /* a palavra do estado do lote */
+
+  --font-sans: "Inter", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
+  --font-serif: var(--font-sans); /* o tom serif saiu com a marca nova */
 
   --radius: 10px;
   --radius-sm: 6px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #10171a;
-    --paper-raised: #16201f;
-    --ink: #e7edea;
-    --ink-soft: #a7b4af;
-    --line: #253230;
-
-    --accent: #38b4a9;
-    --accent-ink: #9be0d6;
-    --accent-soft: #12302d;
-
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
-
-    --ok-bg: #16302b;
-    --ok-fg: #6fcb93;
-    --warn-bg: #2e2a1b;
-    --warn-fg: #d8c57e;
-    --critical-bg: #2e1d1a;
-    --critical-fg: #e0796a;
-    --neutral-bg: #1e2624;
-    --neutral-fg: #93a19c;
-  }
+/* Faixa de marca quase preta. Não é um tema alternativo (não segue o tema
+   do sistema operacional), são tokens de faixa: o cabeçalho do produto, o
+   banner e o README. A arte da logo entra sempre sobre esta faixa, com
+   mix-blend-mode: lighten. */
+.on-dark {
+  --paper: #0b0a10;
+  --paper-raised: #14121c;
+  --paper-sunken: #08070c;
+  --ink: #f3f5fe;
+  --ink-soft: #b7b7c2;
+  --line: #2b2741;
+  --accent: var(--accent-art);
+  --accent-ink: #d2cefd;
+  --accent-soft: #2b2741;
 }

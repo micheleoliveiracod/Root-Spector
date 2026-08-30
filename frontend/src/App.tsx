@@ -78,6 +78,9 @@ export default function App() {
   return (
     <main className="page">
       <header className="masthead">
+        <div className="masthead-arte on-dark">
+          <img src="/logo-lockup.png" alt="Root-Spector" />
+        </div>
         <p className="eyebrow">Root-Spector</p>
         <h1>Investigação de causa raiz</h1>
         <p className="dek">

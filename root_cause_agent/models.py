@@ -17,6 +17,8 @@ __all__ = [
     "CategoriaAnalise",
     "CategoriaDescartada",
     "CicloAnterior",
+    "CandidatoRAG",
+    "CasoSemelhante",
     "Diagnostico",
 ]
 
@@ -127,9 +129,36 @@ class CicloAnterior(BaseModel):
     encerrado_em: datetime
 
 
+class CandidatoRAG(BaseModel):
+    """Um chunk recuperado da base de conhecimento curada
+    (data/base_conhecimento/) por pre_busca_rag, via busca por similaridade
+    semântica (root_cause_agent/rag.py). `fonte` é o nome do arquivo de
+    origem, usado tanto para montar o contexto do LLM em
+    recomendar_tratativa quanto para popular Diagnostico.fontes_rag
+    (rastreabilidade)."""
+
+    texto: str
+    fonte: str
+
+
+class CasoSemelhante(BaseModel):
+    """Um caso anterior semelhante ao lote em investigação -- mesma
+    categoria Ishikawa principal e ao menos 1 parâmetro de biosensor fora
+    da faixa em comum, recuperado de reports/*.json pela tool
+    `consultar_recorrencia` (root_cause_agent/tools.py). Populado por
+    recomendar_tratativa só quando o LLM decide chamar a tool (ver
+    specs/fase02/design.md § Tool `consultar_recorrencia`)."""
+
+    batch_id: int
+    categoria_principal: str
+    causa_raiz: str
+    gerado_em: datetime
+
+
 class Diagnostico(BaseModel):
-    """Saída estruturada final -- o que gerar_causa_raiz produz, valida e
-    salva (JSON + HTML) em reports/."""
+    """Saída estruturada final -- o que gerar_causa_raiz produz e
+    recomendar_tratativa complementa, validada e salva (JSON + HTML) em
+    reports/."""
 
     nc: NaoConformidade
     respostas_ishikawa: list[RespostaIshikawa]
@@ -139,4 +168,14 @@ class Diagnostico(BaseModel):
     causa_raiz: str
     narrativa: str
     ciclos_anteriores: list[CicloAnterior] = Field(default_factory=list)
+    # Fase 2 -- RAG (specs/fase02/design.md § RAG). recomendacao_tratativa
+    # é None só nos ciclos anteriores serializados antes desta feature
+    # existir (compatibilidade de leitura de reports/*.json antigos);
+    # sempre preenchida a partir daqui em diante.
+    recomendacao_tratativa: str | None = None
+    fontes_rag: list[str] = Field(default_factory=list)
+    # Fase 2 -- tool `consultar_recorrencia` (specs/fase02/design.md § Tool
+    # `consultar_recorrencia`). Lista vazia = primeiro caso (ou a tool não
+    # foi chamada pelo LLM); preenchida = recorrência rastreável.
+    casos_semelhantes: list[CasoSemelhante] = Field(default_factory=list)
     gerado_em: datetime

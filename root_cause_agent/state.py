@@ -9,6 +9,7 @@ from langgraph.graph.message import add_messages
 from typing_extensions import TypedDict
 
 from root_cause_agent.models import (
+    CandidatoRAG,
     CategoriaAnalise,
     CategoriaDescartada,
     CicloAnterior,
@@ -67,10 +68,19 @@ class AgentState(TypedDict):
     # ciclos anteriores preservados quando o operador pede ajuste
     ciclos_anteriores: list[CicloAnterior]
 
+    # Fase 2 -- RAG (specs/fase02/design.md § RAG). pre_busca_rag roda em
+    # paralelo com o loop dos 5 Porquês (fan-out a partir de
+    # orquestrar_analise), preenchendo candidatos_rag; recomendar_tratativa
+    # consome os dois (candidatos_rag + causa_raiz do diagnóstico) depois
+    # que ambos os ramos convergem, produzindo recomendacao_tratativa.
+    candidatos_rag: list[CandidatoRAG]
+    recomendacao_tratativa: str | None
+
     diagnostico: Diagnostico | None
 
-    # links do relatório (reports/{batch_id}_{ts}.{json,html}), gravados por
+    # link do relatório JSON (reports/{batch_id}_{ts}.json), gravado por
     # backend/main.py::responder assim que o ciclo chega a diagnostico
-    # pronto -- não é responsabilidade do grafo salvar em disco.
+    # pronto -- não é responsabilidade do grafo salvar em disco. O PDF não
+    # tem link persistido: é gerado sob demanda (root_cause_agent/reports.py
+    # ::gerar_pdf), nunca salvo em disco.
     relatorio_json: str | None
-    relatorio_html: str | None

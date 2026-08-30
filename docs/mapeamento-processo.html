@@ -1,4 +1,4 @@
-<title>Root-Spector — Mapeamento do processo</title>
+<title>Root-Spector · Mapeamento do processo</title>
 <style>
   :root {
     --paper: #F3F6F5;
@@ -117,8 +117,9 @@
   .node { flex: none; display: flex; flex-direction: column; gap: 3px; }
 
   .evt {
-    width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    text-align: center; font-size: 10px; font-weight: 700; line-height: 1.15; padding: 4px;
+    width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    text-align: center; font-size: 9px; font-weight: 700; line-height: 1.2; padding: 4px;
+    word-break: break-word; overflow-wrap: break-word;
   }
   .evt.start { border: 2px solid; background: transparent; }
   .evt.end { border: 4px solid; background: transparent; }
@@ -222,7 +223,7 @@
   <header class="masthead">
     <p class="eyebrow">Root-Spector · mapeamento de processo</p>
     <h1>Tratamento de Não-Conformidade de Bioprocesso</h1>
-    <p class="dek">Do lote saindo do biorreator até a ação corretiva — mostrando onde o BiotecPredict, o agente Root-Spector (Ishikawa + 5 Porquês) e o operador entram no processo produtivo real.</p>
+    <p class="dek">Do lote saindo do biorreator até a ação corretiva, mostrando onde o BiotecPredict, o agente Root-Spector (Ishikawa + 5 Porquês) e o operador entram no processo produtivo real.</p>
   </header>
 
   <div class="legend">
@@ -237,7 +238,7 @@
       <div class="swatch"><span class="dot" style="background:var(--lane-op)"></span>Operador</div>
     </div>
   </div>
-  <p class="dek" style="margin: -14px 0 24px; font-size: 13px;">A área com fundo tracejado ao final ("Fase 2") é <strong>visão de roadmap</strong> — documentada aqui, mas fora do escopo implementado nesta entrega.</p>
+  <p class="dek" style="margin: -14px 0 24px; font-size: 13px;">Os itens marcados com borda tracejada e a tarja "fase 2" são a recomendação de tratativa por RAG, planejada para a Fase 2 do curso e ainda não implementada.</p>
 
   <div class="bpmn">
 
@@ -247,7 +248,7 @@
       <div class="lane-track">
         <div class="node"><div class="evt start">início<br/>do lote</div></div>
         <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div class="node"><div class="task"><div class="t-tag">tarefa</div><div class="t-name">Sensores registram leituras</div><div class="t-desc">temperatura, pH, oxigênio dissolvido, pressão, velocidade do agitador — continuamente</div></div></div>
+        <div class="node"><div class="task"><div class="t-tag">tarefa</div><div class="t-name">Sensores registram leituras</div><div class="t-desc">temperatura, pH, oxigênio dissolvido, pressão, velocidade do agitador, continuamente</div></div></div>
         <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
         <div class="node"><div class="task"><div class="t-tag">tarefa</div><div class="t-name">Lote finalizado</div><div class="t-desc">leituras consolidadas, enviadas (upload) pro BiotecPredict</div></div></div>
       </div>
@@ -284,19 +285,19 @@
 
     <!-- LANE: Root-Spector -->
     <div class="lane" data-lane="rs">
-      <div class="lane-label">Root-Spector — Agente (LangGraph)</div>
+      <div class="lane-label">Root-Spector, Agente (LangGraph)</div>
       <div class="lane-track">
         <div class="spacer w3"></div><div class="spacer w2"></div>
         <div class="node"><div class="task"><div class="t-tag">tarefa · determinístico</div><div class="t-name">preparar_contexto</div><div class="t-desc">calcula <code>sensor_metrics</code>, identifica <code>parametros_fora_da_faixa</code> (ex: agitator_speed)</div></div></div>
         <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
 
         <div class="graph-wrap">
-          <span class="graph-label">grafo LangGraph — 2 fases em sequência</span>
+          <span class="graph-label">grafo LangGraph</span>
 
           <div class="loop-box">
-            <span class="loop-title">↻ Fase 1 — Ishikawa (6 categorias) — Método → Máquina → Material → Mão de obra → Meio ambiente → Medição</span>
+            <span class="loop-title">↻ Loop Ishikawa (6 categorias): Método, Máquina, Material, Mão de obra, Meio ambiente, Medição</span>
             <div class="loop-row">
-              <div class="task" style="width:180px;"><div class="t-tag">agêntico</div><div class="t-name">formular_pergunta_ishikawa</div><div class="t-desc">pergunta de contexto da categoria atual — não sobre o parâmetro cru</div></div>
+              <div class="task" style="width:180px;"><div class="t-tag">agêntico</div><div class="t-name">formular_pergunta_ishikawa</div><div class="t-desc">pergunta de contexto da categoria atual, não sobre o parâmetro cru</div></div>
               <div class="arrow"><svg width="20" height="14" viewBox="0 0 20 14"><path d="M0 7H16M11 2L16 7L11 12" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
               <div class="task" style="width:140px;"><div class="t-tag">ferramenta</div><div class="t-name">usar_ferramenta</div><div class="t-desc">no máx. 1x por categoria</div></div>
             </div>
@@ -312,20 +313,35 @@
             <div class="task" style="width:260px;"><div class="t-tag">agêntico · "orquestrador"</div><div class="t-name">orquestrar_analise</div><div class="t-desc">identifica <code>categoria_principal</code> (+ justificativa) e <code>categorias_descartadas</code> (+ motivo); verifica inconsistências</div></div>
           </div>
 
-          <div class="loop-box">
-            <span class="loop-title">↻ Fase 2 — 5 Porquês, ancorado em categoria_principal</span>
-            <div class="loop-row">
-              <div class="task" style="width:180px;"><div class="t-tag">agêntico</div><div class="t-name">formular_porque</div><div class="t-desc">1ª pergunta parte da categoria; 2ª-5ª partem da resposta anterior</div></div>
-              <div class="arrow"><svg width="20" height="14" viewBox="0 0 20 14"><path d="M0 7H16M11 2L16 7L11 12" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-              <div class="task" style="width:140px;"><div class="t-tag">ferramenta</div><div class="t-name">usar_ferramenta</div><div class="t-desc">no máx. 1x por porquê</div></div>
+          <div class="loop-row" style="justify-content:center;">
+            <span style="font-family: ui-monospace, monospace; font-size:10px; color: var(--rag-ink, #8a5a2e); text-align:center;">Fase 2 do curso, planejada, ainda não implementada: os 2 ramos abaixo rodam em paralelo</span>
+          </div>
+
+          <div class="side-by-side">
+            <div class="loop-box">
+              <span class="loop-title">↻ Loop 5 Porquês, ancorado em categoria_principal</span>
+              <div class="loop-row">
+                <div class="task" style="width:180px;"><div class="t-tag">agêntico</div><div class="t-name">formular_porque</div><div class="t-desc">1ª pergunta parte da categoria; 2ª-5ª partem da resposta anterior</div></div>
+                <div class="arrow"><svg width="20" height="14" viewBox="0 0 20 14"><path d="M0 7H16M11 2L16 7L11 12" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                <div class="task" style="width:140px;"><div class="t-tag">ferramenta</div><div class="t-name">usar_ferramenta</div><div class="t-desc">no máx. 1x por porquê</div></div>
+              </div>
+              <div class="loop-row" style="justify-content:center;">
+                <span style="font-family: ui-monospace, monospace; font-size:10px; color: var(--lane-rs); text-align:center;">numero_porque ≤ 5 → repete; senão → segue</span>
+              </div>
             </div>
-            <div class="loop-row" style="justify-content:center;">
-              <span style="font-family: ui-monospace, monospace; font-size:10px; color: var(--lane-rs); text-align:center;">numero_porque ≤ 5 → repete; senão → segue</span>
+
+            <div class="node">
+              <div class="task" style="width:100%; border-style:dashed;"><div class="t-tag">agêntico · retrieval · fase 2</div><div class="t-name">pre_busca_rag</div><div class="t-desc">busca por similaridade em <code>data/base_conhecimento/</code> a partir de <code>categoria_principal</code>; só levanta candidatos, não decide a tratativa</div></div>
             </div>
           </div>
 
-          <div class="node" style="align-self:center;">
-            <div class="task" style="width:240px;"><div class="t-tag">agêntico · "relatório"</div><div class="t-name">gerar_causa_raiz</div><div class="t-desc">sintetiza Ishikawa + 5 porquês em <code>causa_raiz</code> + narrativa, por categoria; valida e salva</div></div>
+          <div class="side-by-side">
+            <div class="node">
+              <div class="task" style="width:100%;"><div class="t-tag">agêntico · "relatório"</div><div class="t-name">gerar_causa_raiz</div><div class="t-desc">sintetiza Ishikawa + 5 porquês em <code>causa_raiz</code> + narrativa, por categoria; valida e salva</div></div>
+            </div>
+            <div class="node">
+              <div class="task" style="width:100%; border-style:dashed;"><div class="t-tag">agêntico · fase 2</div><div class="t-name">recomendar_tratativa</div><div class="t-desc">recebe causa raiz e os candidatos do RAG; pode chamar <code>consultar_recorrencia</code> (verifica se o caso já ocorreu em relatórios anteriores); escreve <code>recomendacao_tratativa</code> e <code>fontes_rag</code> no diagnóstico</div></div>
+            </div>
           </div>
         </div>
       </div>
@@ -341,9 +357,9 @@
       <div class="lane-label">Operador</div>
       <div class="lane-track">
         <div class="spacer w3"></div><div class="spacer w3"></div>
-        <div class="node"><div class="task"><div class="t-tag">tarefa · humana</div><div class="t-name">Responde Ishikawa (6x) + 5 Porquês</div><div class="t-desc">via interface web (interrupt() + checkpointer) — 11 respostas ao todo, cada uma molda a próxima pergunta</div></div></div>
+        <div class="node"><div class="task"><div class="t-tag">tarefa · humana</div><div class="t-name">Responde Ishikawa (6x) + 5 Porquês</div><div class="t-desc">via interface web (interrupt() + checkpointer), 11 respostas ao todo, cada uma molda a próxima pergunta</div></div></div>
         <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div class="node"><div class="task"><div class="t-tag">tarefa · humana</div><div class="t-name">Recebe o relatório</div><div class="t-desc">causa raiz + Ishikawa + cadeia de porquês, em reports/</div></div></div>
+        <div class="node"><div class="task" style="width:220px;"><div class="t-tag">tarefa · humana</div><div class="t-name">Recebe o relatório</div><div class="t-desc">causa raiz + Ishikawa + cadeia de porquês, em reports/. Na Fase 2 do curso, também traz a recomendação de tratativa e as fontes do RAG</div></div></div>
         <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
         <div class="gateway-wrap">
           <div class="gateway"><span>?</span></div>
@@ -355,73 +371,21 @@
     <div class="lane-connector" style="flex-direction: column; align-items: flex-start; gap: 2px; padding-top:8px; padding-bottom:8px;">
       <div style="display:flex; align-items:center; gap:8px;">
         <svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 14V2M3 7L8 2L13 7" stroke="var(--lane-op)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span><strong style="color:var(--lane-op);">pede ajuste</strong> → novo ciclo completo no Root-Spector — ciclo anterior é <strong>preservado</strong> em <code>ciclos_anteriores</code> (evidência/auditoria, nunca sobrescrito)</span>
+        <span><strong style="color:var(--lane-op);">pede ajuste</strong>: novo ciclo completo no Root-Spector, o ciclo anterior fica <strong>preservado</strong> em <code>ciclos_anteriores</code> (evidência e auditoria, nunca sobrescrito)</span>
       </div>
       <div style="display:flex; align-items:center; gap:8px;">
         <svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 2V14M3 9L8 14L13 9" stroke="var(--lane-rs)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span><strong style="color:var(--lane-rs);">aprova</strong> → segue pro Setor da Qualidade (Fase 2)</span>
+        <span><strong style="color:var(--lane-rs);">aprova</strong>: relatório publicado, com a recomendação de tratativa incluída desde a Fase 2 do curso. Fim do ciclo</span>
       </div>
     </div>
 
   </div>
 
   <div class="roadmap">
-    <div class="roadmap-ribbon">Fase 2 — roadmap, fora do escopo desta entrega</div>
-    <p class="roadmap-note">O relatório aprovado pelo operador não volta pra ele — segue pro setor da Qualidade, que investiga o tratamento da NC com apoio de um segundo agente (RAG) sobre a base documental da empresa. A Garantia da Qualidade não executa o plano do RAG automaticamente: avalia junto com a Coordenação da Produção e decide se mantém a sugestão ou ajusta algo antes de seguir. O ciclo fecha em PDCA: o Agente RAG recomenda o Plan (ação corretiva + Kaizen), a Garantia da Qualidade + Coordenação da Produção validam e executam (Do), e verificam eficácia por reincidência (Check) — se não reincidir, padroniza; se reincidir, um novo plano é gerado (Act).</p>
-
-    <div class="bpmn">
-      <div class="lane" data-lane="qual">
-        <div class="lane-label">Setor da Qualidade</div>
-        <div class="lane-track">
-          <div class="node"><div class="evt start">relatório<br/>aprovado</div></div>
-          <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <div class="node"><div class="task"><div class="t-tag">tarefa</div><div class="t-name">Aciona o Agente RAG</div><div class="t-desc">solicita como tratar esta NC especificamente</div></div></div>
-        </div>
-      </div>
-      <div class="lane-connector"><svg width="16" height="24" viewBox="0 0 16 24"><path d="M8 0V18M2 12L8 20L14 12" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>consulta</div>
-      <div class="lane" data-lane="rag">
-        <div class="lane-label">Agente RAG</div>
-        <div class="lane-track">
-          <div class="spacer w2"></div>
-          <div class="node"><div class="task"><div class="t-tag">agêntico · retrieval</div><div class="t-name">Busca na base documental</div><div class="t-desc">documentação interna, legislação aplicável, normas ANVISA, referências bibliográficas</div></div></div>
-          <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <div class="node"><div class="task" style="width:210px;"><div class="t-tag">agêntico</div><div class="t-name">Recomenda: PDCA estruturado</div><div class="t-desc">ação corretiva + Kaizen de melhoria, plano Plan-Do-Check-Act fundamentado nas fontes recuperadas</div></div></div>
-        </div>
-      </div>
-      <div class="lane-connector"><svg width="16" height="24" viewBox="0 0 16 24"><path d="M8 0V18M2 12L8 20L14 12" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>relatório final: causa raiz + plano PDCA (Plan)</div>
-      <div class="lane" data-lane="qa">
-        <div class="lane-label">Garantia da Qualidade</div>
-        <div class="lane-track">
-          <div class="node"><div class="task"><div class="t-tag">tarefa</div><div class="t-name">Recebe o relatório final</div><div class="t-desc">causa raiz + plano PDCA + fontes citadas — não vai para o operador</div></div></div>
-          <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <div class="node"><div class="task" style="width:210px;"><div class="t-tag">tarefa · colaborativa</div><div class="t-name">Avalia o plano com a Coordenação da Produção</div><div class="t-desc">decide junto: segue o plano sugerido pelo Agente RAG como está, ou ajusta algo antes de executar</div></div></div>
-          <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <div class="gateway-wrap">
-            <div class="gateway"><span>?</span></div>
-            <div class="gateway-label">mantém sugestão ou ajusta?</div>
-          </div>
-          <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <div class="node"><div class="task"><div class="t-tag">tarefa · Do</div><div class="t-name">Executa o plano</div><div class="t-desc">ação corretiva + Kaizen aplicados no processo produtivo (como sugerido, ou ajustado)</div></div></div>
-          <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <div class="gateway-wrap">
-            <div class="gateway"><span>?</span></div>
-            <div class="gateway-label">Check: reincidência do problema?</div>
-          </div>
-          <div class="arrow"><svg width="30" height="16" viewBox="0 0 30 16"><path d="M0 8H26M20 2L26 8L20 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <div class="node" style="align-items:center;">
-            <div class="branch-note" style="color:var(--lane-qa);">sem reincidência → eficaz</div>
-            <div class="evt end" style="margin-top:4px;">PDCA<br/>padronizado</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="lane-connector" style="padding-left:152px;">
-      <svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 14V2M3 7L8 2L13 7" stroke="var(--lane-rag)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span><strong style="color:var(--lane-rag);">Act:</strong> reincidiu → não foi eficaz → volta pro Agente RAG pra um novo plano PDCA (causa raiz pode ter sido mal endereçada)</span>
-    </div>
+    <div class="roadmap-ribbon">Fase 2 do curso, planejada, ainda não implementada</div>
+    <p class="roadmap-note">A recomendação de tratativa não é feita por um agente separado nem por um setor externo. Ela acontece dentro do próprio Root-Spector, como parte do mesmo grafo: depois de identificar a categoria principal da não conformidade, o agente busca casos parecidos numa base de conhecimento curada e, junto com a causa raiz já apurada, propõe uma tratativa. O relatório final, com a recomendação incluída, continua sendo revisado e aprovado pelo mesmo operador de sempre. O desenho completo está em specs/fase02/design.md.</p>
   </div>
 
-  <footer class="credit">root-spector · mapeamento de processo produtivo · biorreator → biotecpredict → agente (ishikawa+5 porquês) → operador → (roadmap) qualidade → agente rag → garantia da qualidade (pdca)</footer>
+  <footer class="credit">root-spector, mapeamento de processo produtivo. biorreator, biotecpredict, agente (ishikawa mais 5 porquês, com RAG e recomendação de tratativa na fase 2), operador</footer>
 
 </div>

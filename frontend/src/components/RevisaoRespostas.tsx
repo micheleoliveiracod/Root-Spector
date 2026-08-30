@@ -1,4 +1,5 @@
-import type { Revisao } from "../api";
+import { useState } from "react";
+import { baixarRelatorioJson, gerarRelatorioPdf, type Revisao } from "../api";
 
 interface Props {
   revisao: Revisao;
@@ -8,6 +9,47 @@ interface Props {
 }
 
 export function RevisaoRespostas({ revisao, onAjustar, onReiniciar, processando }: Props) {
+  const [gerandoPdf, setGerandoPdf] = useState(false);
+  const [erroPdf, setErroPdf] = useState<string | null>(null);
+  const [baixandoJson, setBaixandoJson] = useState(false);
+  const [erroJson, setErroJson] = useState<string | null>(null);
+
+  async function baixarPdf() {
+    setGerandoPdf(true);
+    setErroPdf(null);
+    try {
+      const blob = await gerarRelatorioPdf(revisao.thread_id);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${revisao.thread_id}_relatorio.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (erro) {
+      setErroPdf(erro instanceof Error ? erro.message : "Falha ao gerar o relatório.");
+    } finally {
+      setGerandoPdf(false);
+    }
+  }
+
+  async function baixarJson() {
+    setBaixandoJson(true);
+    setErroJson(null);
+    try {
+      const blob = await baixarRelatorioJson(revisao.relatorio.json);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${revisao.thread_id}_relatorio.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (erro) {
+      setErroJson(erro instanceof Error ? erro.message : "Falha ao baixar o relatório.");
+    } finally {
+      setBaixandoJson(false);
+    }
+  }
+
   return (
     <div className="card section">
       <h2>Revisão da investigação</h2>
@@ -54,13 +96,15 @@ export function RevisaoRespostas({ revisao, onAjustar, onReiniciar, processando 
 
       <h3>Relatório</h3>
       <div className="report-links">
-        <a href={`http://localhost:8000${revisao.relatorio.html}`} target="_blank" rel="noreferrer">
-          Ver relatório (HTML)
-        </a>
-        <a href={`http://localhost:8000${revisao.relatorio.json}`} target="_blank" rel="noreferrer">
-          Baixar JSON
-        </a>
+        <button onClick={baixarPdf} disabled={gerandoPdf}>
+          {gerandoPdf ? "Gerando PDF..." : "Gerar relatório (PDF)"}
+        </button>
+        <button onClick={baixarJson} disabled={baixandoJson}>
+          {baixandoJson ? "Baixando JSON..." : "Baixar JSON"}
+        </button>
       </div>
+      {erroPdf && <p className="alert alert--critical">{erroPdf}</p>}
+      {erroJson && <p className="alert alert--critical">{erroJson}</p>}
 
       <div className="actions">
         <button onClick={onReiniciar}>Voltar à lista de lotes</button>

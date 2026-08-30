@@ -1,4 +1,4 @@
-<title>Root-Spector — Apresentação</title>
+<title>Root-Spector · Apresentação</title>
 <style>
   :root {
     --paper: #F3F6F5;
@@ -209,20 +209,20 @@
     <div class="grid1">
       <div class="card accent">
         <p class="kicker">Problema</p>
-        <p>Tratar uma não conformidade exige identificar a causa raiz do desvio — hoje isso depende de um especialista cruzando manualmente o evento com o histórico do processo. Sem um método estruturado, a investigação é lenta e o registro da análise raramente fica rastreável.</p>
+        <p>Tratar uma não conformidade exige identificar a causa raiz do desvio, hoje isso depende de um especialista cruzando manualmente o evento com o histórico do processo. Sem um método estruturado, a investigação é lenta e o registro da análise raramente fica rastreável.</p>
       </div>
       <div class="card accent">
         <p class="kicker">Processo automatizado</p>
-        <p>A investigação de causa raiz de um lote reprovado, conduzida após a classificação de risco. O agente aplica duas ferramentas de qualidade em sequência — Ishikawa e 5 Porquês — sempre em conjunto com o operador, nunca sozinho.</p>
+        <p>A investigação de causa raiz de um lote reprovado, conduzida após a classificação de risco. O agente aplica duas ferramentas de qualidade em sequência, Ishikawa e 5 Porquês, sempre em conjunto com o operador, nunca sozinho.</p>
       </div>
       <div class="card accent">
         <p class="kicker">Proposta do agente</p>
-        <p>Agente construído com <strong>LangGraph</strong>, complementar ao <a href="https://github.com/micheleoliveiracod/Projeto-avaliativo-M1-2-BiotecPredict">BiotecPredict</a>. O operador escolhe, numa lista já classificada por risco, o lote a investigar, e conduz a investigação com o agente pelo navegador — aprovando o relatório final ou pedindo ajuste, com o ciclo anterior sempre preservado para auditoria.</p>
+        <p>Agente construído com <strong>LangGraph</strong>, complementar ao <a href="https://github.com/micheleoliveiracod/Projeto-avaliativo-M1-2-BiotecPredict">BiotecPredict</a>. O operador escolhe, numa lista já classificada por risco, o lote a investigar, e conduz a investigação com o agente pelo navegador, aprovando o relatório final ou pedindo ajuste, com o ciclo anterior sempre preservado para auditoria.</p>
       </div>
     </div>
 
     <div class="foot-note">
-      <span>Case de referência: BiotecPredict — classificação de risco de bioprocesso a partir de dados de biosensores.</span>
+      <span>Case de referência: BiotecPredict, classificação de risco de bioprocesso a partir de dados de biosensores.</span>
       <span>Motor adaptável a outros setores produtivos, trocando só configuração e dados.</span>
     </div>
   </section>
@@ -239,7 +239,7 @@
     <div class="grid2">
       <div class="card">
         <p class="kicker">Entrada esperada</p>
-        <p>Linha de <code>batches</code>, schema real do BiotecPredict, lida de <code>data/biotecpredict.db</code> — lote 11 do dataset de demonstração atual.</p>
+        <p>Linha de <code>batches</code>, schema real do BiotecPredict, lida de <code>data/biotecpredict.db</code>, lote 11 do dataset de demonstração atual.</p>
         <div class="json-block">{
   "id": 11,
   "status": "COMPLETED",
@@ -251,7 +251,7 @@
 
       <div class="card">
         <p class="kicker">Saída esperada</p>
-        <p><code>Diagnostico</code> estruturado — categoria Ishikawa principal, cadeia completa dos 5 Porquês e causa raiz sintetizada.</p>
+        <p><code>Diagnostico</code> estruturado, categoria Ishikawa principal, cadeia completa dos 5 Porquês e causa raiz sintetizada.</p>
         <div class="tool-block">reports/{batch_id}_{ts}.json   → consumo por outros sistemas
 reports/{batch_id}_{ts}.html  → leitura humana, link ao operador</div>
         <p>Só é gerada após o operador revisar e aprovar a cadeia completa.</p>
@@ -261,7 +261,7 @@ reports/{batch_id}_{ts}.html  → leitura humana, link ao operador</div>
     <div class="grid2" style="margin-top: 18px;">
       <div class="card" style="border-left: 4px solid var(--tool);">
         <p class="kicker" style="color: var(--tool);">Ferramenta utilizada</p>
-        <p><code>consultar_leituras_biosensor(data_inicio, data_fim)</code> — consulta somente-leitura (<code>SELECT</code>) ao histórico de biosensor do lote, chamada pelos nós agênticos quando a evidência agregada não basta.</p>
+        <p><code>consultar_leituras_biosensor(data_inicio, data_fim)</code>, consulta somente-leitura (<code>SELECT</code>) ao histórico de biosensor do lote, chamada pelos nós agênticos quando a evidência agregada não basta.</p>
         <div class="taglist">
           <span class="tag">SQL somente-leitura</span>
           <span class="tag">batch_id injetado do estado</span>
@@ -270,9 +270,9 @@ reports/{batch_id}_{ts}.html  → leitura humana, link ao operador</div>
       </div>
       <div class="card" style="border-left: 4px solid var(--fallback);">
         <p class="kicker" style="color: var(--fallback);">Fallback de LLM</p>
-        <p>Toda chamada agêntica passa por uma cadeia de fallback — só troca de provedor se o anterior falhar (rede, rate limit, chave).</p>
+        <p>Toda chamada agêntica passa por uma cadeia de fallback, só troca de provedor se o anterior falhar (rede, rate limit, chave).</p>
         <div class="fallback-block">Gemini (oficial) → Anthropic → OpenAI</div>
-        <p>Se todos falharem: erro tratado, checkpoint preservado — o operador tenta de novo sem perder a investigação.</p>
+        <p>Se todos falharem: erro tratado, checkpoint preservado, o operador tenta de novo sem perder a investigação.</p>
       </div>
     </div>
 

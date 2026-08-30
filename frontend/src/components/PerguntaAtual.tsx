@@ -64,7 +64,13 @@ export function PerguntaAtual({ pergunta, onResponder, processando }: Props) {
         </tbody>
       </table>
 
-      <p>{pergunta.pergunta}</p>
+      <div className="progresso" role="progressbar" aria-valuenow={pergunta.indice} aria-valuemin={1} aria-valuemax={pergunta.total}>
+        <span style={{ width: `${(pergunta.indice / pergunta.total) * 100}%` }} />
+      </div>
+      <div className="mensagem">
+        <div className="faixa">Pergunta do sistema</div>
+        <div className="corpo">{pergunta.pergunta}</div>
+      </div>
       <textarea
         value={resposta}
         onChange={(e) => setResposta(e.target.value)}

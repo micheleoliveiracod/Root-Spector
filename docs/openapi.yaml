@@ -12,9 +12,11 @@ paths:
       - lotes
       summary: Listar lotes classificados pelo BiotecPredict
       description: Lê `batches` (status COMPLETED, compliance_score não nulo) e devolve
-        cada lote com `classification` recalculada, `elegivel` (WARNING/CRITICAL)
-        e `parametros_fora_da_faixa` (calculado a partir de `sensor_readings`, vazio
-        para lotes ACCEPTABLE).
+        cada lote com `classification` recalculada, `elegivel` (WARNING/CRITICAL de
+        `classification`, ou `risk_prediction` diferente de LOW_RISK, ou parâmetro
+        de biosensor fora da faixa) e `parametros_fora_da_faixa` (calculado a partir
+        de `sensor_readings`, vazio quando os dois primeiros sinais já indicam que
+        está tudo bem).
       operationId: listar_lotes_api_lotes_get
       responses:
         '200':
@@ -56,12 +58,14 @@ paths:
       tags:
       - investigacoes
       summary: Enviar a resposta do operador à pergunta atual
-      description: '`Command(resume=resposta)` — retoma o grafo a partir do `interrupt()`
+      description: '`Command(resume=resposta)`, retoma o grafo a partir do `interrupt()`
         pausado. Se ainda houver perguntas, devolve a próxima (`{thread_id, fase,
-        categoria|numero, pergunta, ...}`); ao concluir o 5º porquê, já gera `reports/*.json`+`.html`
+        categoria|numero, pergunta, ...}`); ao concluir o 5º porquê, já gera `reports/*.json`
         e devolve `{thread_id, status: ''pronto_para_revisao''}`. Devolve 503 (''Serviço
         de IA indisponível, recarregue a página.'') se todos os provedores de LLM
-        configurados falharem.'
+        configurados falharem, ou 429 (''Limite de respostas rejeitadas atingido para
+        esta pergunta, investigação encerrada.'') se o limite de respostas rejeitadas
+        pela Camada 1 de validação for excedido (guardrail, ver root_cause_agent/nodes.py::MAX_TENTATIVAS_CAMADA_1).'
       operationId: responder_api_investigacoes__thread_id__responder_post
       parameters:
       - name: thread_id
@@ -94,10 +98,40 @@ paths:
       - investigacoes
       summary: Consultar o diagnóstico concluído para revisão
       description: Devolve a cadeia Ishikawa + 5 Porquês, `categoria_principal`, `categorias_descartadas`,
-        `causa_raiz`, `narrativa` e os links `relatorio.json`/`relatorio.html` já
-        gerados. Devolve 400 se o ciclo ainda não chegou à revisão (5º porquê ainda
-        não respondido).
+        `causa_raiz`, `narrativa`, `recomendacao_tratativa` + `fontes_rag` (Fase 2,
+        RAG) e o link do `relatorio.json` já gerado. O PDF não tem link aqui, é gerado
+        sob demanda em `GET /api/investigacoes/{thread_id}/relatorio.pdf`. Devolve
+        400 se o ciclo ainda não chegou à revisão (5º porquê ainda não respondido).
       operationId: revisao_api_investigacoes__thread_id__revisao_get
+      parameters:
+      - name: thread_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Thread Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/investigacoes/{thread_id}/relatorio.pdf:
+    get:
+      tags:
+      - investigacoes
+      summary: Gerar o PDF do relatório sob demanda
+      description: Lê o `Diagnostico` já concluído direto do checkpoint da investigação
+        e gera o PDF na hora, em memória, sem nunca salvar em disco (diferente do
+        `reports/*.json`, que é persistido automaticamente ao fim da investigação).
+        Devolve 400 se o ciclo ainda não chegou à revisão.
+      operationId: relatorio_pdf_api_investigacoes__thread_id__relatorio_pdf_get
       parameters:
       - name: thread_id
         in: path
@@ -121,7 +155,7 @@ paths:
     post:
       tags:
       - investigacoes
-      summary: Pedir ajuste — arquivar o ciclo atual e reabrir um novo
+      summary: Pedir ajuste, arquivar o ciclo atual e reabrir um novo
       description: Move o diagnóstico atual para `ciclos_anteriores` (auditoria, nunca
         sobrescrito) e reinicia o grafo para o mesmo `batch_id`, devolvendo a 1ª pergunta
         do novo ciclo Ishikawa (mesmo formato de `iniciar`). Devolve 400 se não houver
@@ -134,6 +168,40 @@ paths:
         schema:
           type: string
           title: Thread Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/relatorios/resumo-diario:
+    get:
+      tags:
+      - relatorios
+      summary: Resumo diário de investigações concluídas
+      description: 'Varre reports/*.json do dia pedido (padrão: ontem, já que o workflow
+        n8n roda 1x por dia pedindo o dia anterior) e devolve um resumo por investigação
+        (classificação, causa raiz, recorrência, recomendação de tratativa, link do
+        PDF sob demanda) mais métricas de eficiência operacional agregadas do log
+        estruturado do dia (Fase 2, low-code, ver specs/fase02/design.md § Low-code).
+        total_investigacoes=0 sinaliza um dia sem investigações; o workflow n8n não
+        envia e-mail nesse caso.'
+      operationId: resumo_diario_api_relatorios_resumo_diario_get
+      parameters:
+      - name: data
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Data
       responses:
         '200':
           description: Successful Response

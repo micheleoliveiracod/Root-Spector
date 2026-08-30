@@ -36,7 +36,26 @@ def _instancia_dummy(schema: type[BaseModel]) -> BaseModel:
 
 
 class _FakeBound:
+    def __init__(self, tools=None):
+        self._tools = tools or []
+
     def invoke(self, mensagens):
+        # A única decisão agêntica de verdade que o fake precisa simular:
+        # recomendar_tratativa (nodes.py) vincula só consultar_recorrencia
+        # (nunca junto de outra tool) e decide o resto do fluxo a partir de
+        # tool_calls estar presente ou não -- o fake sempre "decide" chamar,
+        # cobrindo esse ramo nos testes automatizados sem precisar de rede.
+        # formular_pergunta_ishikawa/formular_porque vinculam TOOLS
+        # (consultar_leituras_biosensor) e continuam nunca recebendo
+        # tool_calls do fake, como antes.
+        nomes = {getattr(t, "name", None) for t in self._tools}
+        if "consultar_recorrencia" in nomes:
+            return AIMessage(
+                content="",
+                tool_calls=[
+                    {"name": "consultar_recorrencia", "args": {}, "id": "fake-tool-call-1"}
+                ],
+            )
         return AIMessage(content=RESPOSTA_FAKE)
 
 
@@ -54,7 +73,7 @@ class FakeChatModel:
     respostas determinísticas e sem nunca chamar rede."""
 
     def bind_tools(self, tools):
-        return _FakeBound()
+        return _FakeBound(tools)
 
     def with_structured_output(self, schema: type[BaseModel]):
         return _FakeStructured(schema)
