@@ -115,7 +115,7 @@ describe("RevisaoRespostas", () => {
 
     expect(screen.getByRole("button", { name: "Reabrindo ciclo..." })).toBeDisabled();
     expect(
-      screen.getByText("Reabrindo um novo ciclo de investigação — isso pode levar alguns instantes."),
+      screen.getByText("Reabrindo um novo ciclo de investigação, isso pode levar alguns instantes."),
     ).toBeInTheDocument();
   });
 });

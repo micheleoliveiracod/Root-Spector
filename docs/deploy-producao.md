@@ -17,10 +17,10 @@ deste projeto. Contexto e decisões de arquitetura completas em
 
 | Variável | Valor |
 |---|---|
-| `LLM_PROVIDER` | `google_genai` (ou o provedor principal escolhido) |
-| `LLM_MODEL` | `gemini-2.5-flash` |
-| `GOOGLE_API_KEY` | chave real |
-| `GROQ_API_KEY`, `DEEPSEEK_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` | chaves reais dos fallbacks configurados, em branco os que não forem usados |
+| `LLM_PROVIDER` | `groq` (ou o provedor principal escolhido) |
+| `LLM_MODEL` | `openai/gpt-oss-120b` |
+| `GROQ_API_KEY` | chave real |
+| `GOOGLE_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` | chaves reais dos fallbacks configurados, em branco os que não forem usados |
 | `DATABASE_URL` | string de conexão do Azure Database for PostgreSQL, com `sslmode=require` |
 | `CORS_ALLOWED_ORIGINS` | domínio real do Vercel, por exemplo `https://root-spector.vercel.app` |
 | `INTERNAL_API_KEY` | um valor aleatório longo, gerado uma vez (por exemplo `openssl rand -hex 32`) |

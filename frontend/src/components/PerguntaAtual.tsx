@@ -86,7 +86,7 @@ export function PerguntaAtual({ pergunta, onResponder, processando }: Props) {
       {processando && (
         <div className="loading">
           <span className="spinner" aria-hidden="true" />
-          <span>O agente está formulando a próxima pergunta — isso pode levar alguns instantes.</span>
+          <span>O agente está formulando a próxima pergunta, isso pode levar alguns instantes.</span>
         </div>
       )}
     </div>

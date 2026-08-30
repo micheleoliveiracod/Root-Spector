@@ -105,7 +105,7 @@ describe("PerguntaAtual", () => {
     render(<PerguntaAtual pergunta={PERGUNTA} onResponder={() => {}} processando={true} />);
 
     expect(
-      screen.getByText("O agente está formulando a próxima pergunta — isso pode levar alguns instantes."),
+      screen.getByText("O agente está formulando a próxima pergunta, isso pode levar alguns instantes."),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Enviando..." })).toBeDisabled();
     expect(screen.getByLabelText("Resposta")).toBeDisabled();

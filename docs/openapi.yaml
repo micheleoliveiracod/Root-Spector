@@ -185,7 +185,7 @@ paths:
       tags:
       - relatorios
       summary: Resumo diário de investigações concluídas
-      description: 'Varre reports/*.json do dia pedido (padrão: ontem, já que o workflow
+      description: 'Varre os relatórios do dia pedido (padrão: ontem, já que o workflow
         n8n roda 1x por dia pedindo o dia anterior) e devolve um resumo por investigação
         (classificação, causa raiz, recorrência, recomendação de tratativa, link do
         PDF sob demanda) mais métricas de eficiência operacional agregadas do log
@@ -202,6 +202,35 @@ paths:
           - type: string
           - type: 'null'
           title: Data
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/relatorios/{relatorio_id}:
+    get:
+      tags:
+      - relatorios
+      summary: Consultar o relatório JSON gravado no banco
+      description: Devolve o `Diagnostico` completo gravado na tabela `relatorios`
+        (reports.py::salvar_relatorio), pelo id devolvido em `relatorio.json` (rota
+        de revisão) ou em `link_relatorio_pdf` do resumo diário. Devolve 404 se o
+        id não existir.
+      operationId: obter_relatorio_api_relatorios__relatorio_id__get
+      parameters:
+      - name: relatorio_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Relatorio Id
       responses:
         '200':
           description: Successful Response

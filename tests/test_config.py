@@ -1,8 +1,8 @@
-"""Teste básico: config.py::get_llm() monta a cadeia de fallback Gemini ->
-Groq -> DeepSeek -> Anthropic -> OpenAI corretamente conforme as chaves
-presentes no ambiente (mockadas, nunca uma chamada real). Cobre pelo menos:
-só Gemini configurado (sem fallback), Gemini+Groq (os 2 provedores
-gratuitos), Gemini+Groq+DeepSeek, os 5 provedores, e o caso em que todos os
+"""Teste básico: config.py::get_llm() monta a cadeia de fallback Groq ->
+Gemini -> Anthropic -> OpenAI corretamente conforme as chaves presentes
+no ambiente (mockadas, nunca uma chamada real). Cobre pelo menos: só Groq
+configurado (sem fallback), Groq+Gemini (os 2 provedores gratuitos),
+Groq+Gemini+Anthropic, os 4 provedores, e o caso em que todos os
 provedores configurados falham -- o nó agêntico que chama get_llm() deve
 relançar FalhaLLMError (nodes.py) apenas nesse último caso, nunca antes de
 esgotar os fallbacks configurados.
@@ -47,72 +47,58 @@ def _patch_init_chat_model(mocker):
 
 @pytest.fixture(autouse=True)
 def sem_chaves_de_fallback_por_padrao(monkeypatch):
-    """Garante que nenhum teste herda GROQ_API_KEY/ANTHROPIC_API_KEY/
+    """Garante que nenhum teste herda GOOGLE_API_KEY/ANTHROPIC_API_KEY/
     OPENAI_API_KEY de um .env real na máquina de quem roda os testes --
     cada teste liga explicitamente só as chaves que quer exercitar."""
-    for chave in ("GROQ_API_KEY", "DEEPSEEK_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY"):
+    for chave in ("GOOGLE_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY"):
         monkeypatch.delenv(chave, raising=False)
 
 
-def test_so_gemini_configurado_sem_fallback(mocker):
+def test_so_groq_configurado_sem_fallback(mocker):
     criados = _patch_init_chat_model(mocker)
 
     llm = get_llm()
 
-    assert [c.provider for c in criados] == ["google_genai"]
+    assert [c.provider for c in criados] == ["groq"]
     # sem fallback configurado, get_llm() devolve o principal direto --
     # with_fallbacks() nunca é chamado (nada pra encadear)
     assert llm is criados[0]
     assert llm.fallbacks is None
 
 
-def test_gemini_e_groq_os_2_provedores_gratuitos(mocker, monkeypatch):
-    monkeypatch.setenv("GROQ_API_KEY", "chave-fake")
+def test_groq_e_gemini_os_2_provedores_gratuitos(mocker, monkeypatch):
+    monkeypatch.setenv("GOOGLE_API_KEY", "chave-fake")
     criados = _patch_init_chat_model(mocker)
 
     llm = get_llm()
 
-    assert [c.provider for c in criados] == ["google_genai", "groq"]
+    assert [c.provider for c in criados] == ["groq", "google_genai"]
     assert llm is criados[0]
     assert llm.fallbacks == [criados[1]]
 
 
-def test_gemini_groq_e_deepseek(mocker, monkeypatch):
-    monkeypatch.setenv("GROQ_API_KEY", "chave-fake")
-    monkeypatch.setenv("DEEPSEEK_API_KEY", "outra-chave-fake")
+def test_groq_gemini_e_anthropic(mocker, monkeypatch):
+    monkeypatch.setenv("GOOGLE_API_KEY", "chave-fake")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "outra-chave-fake")
     criados = _patch_init_chat_model(mocker)
 
     llm = get_llm()
 
-    assert [c.provider for c in criados] == ["google_genai", "groq", "deepseek"]
+    assert [c.provider for c in criados] == ["groq", "google_genai", "anthropic"]
     assert llm.fallbacks == criados[1:]
 
 
-def test_gemini_groq_deepseek_e_anthropic(mocker, monkeypatch):
-    monkeypatch.setenv("GROQ_API_KEY", "chave-fake")
-    monkeypatch.setenv("DEEPSEEK_API_KEY", "outra-chave-fake")
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "mais-uma-chave-fake")
-    criados = _patch_init_chat_model(mocker)
-
-    llm = get_llm()
-
-    assert [c.provider for c in criados] == ["google_genai", "groq", "deepseek", "anthropic"]
-    assert llm.fallbacks == criados[1:]
-
-
-def test_os_5_provedores_configurados(mocker, monkeypatch):
-    monkeypatch.setenv("GROQ_API_KEY", "chave-fake")
-    monkeypatch.setenv("DEEPSEEK_API_KEY", "outra-chave-fake")
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "mais-uma-chave-fake")
-    monkeypatch.setenv("OPENAI_API_KEY", "ainda-mais-uma-chave-fake")
+def test_os_4_provedores_configurados(mocker, monkeypatch):
+    monkeypatch.setenv("GOOGLE_API_KEY", "chave-fake")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "outra-chave-fake")
+    monkeypatch.setenv("OPENAI_API_KEY", "mais-uma-chave-fake")
     criados = _patch_init_chat_model(mocker)
 
     llm = get_llm()
 
     assert [c.provider for c in criados] == [
-        "google_genai",
         "groq",
-        "deepseek",
+        "google_genai",
         "anthropic",
         "openai",
     ]
