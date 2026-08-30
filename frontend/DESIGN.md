@@ -1,11 +1,10 @@
-# Design system — Root-Spector (frontend)
+# Design system, Root-Spector (frontend)
 
-Este documento descreve a linguagem visual usada em `src/`. A referência
-original é a mesma dos artefatos HTML produzidos para a apresentação e o
-mapeamento de processo do projeto (`docs/apresentacao.html`,
-`docs/mapeamento-processo.html`, `docs/fluxo-tecnico-agente.html`,
-`docs/checklist-fluxo.html`): elegante, minimalista, tipografia editorial,
-cores de status em tons pastel.
+Este documento descreve a linguagem visual usada em `src/`, alinhada à
+identidade visual da marca (logo, favicon, `README.md`): superfície do
+produto clara e neutra, roxo em pontos definidos (botão, foco, rótulo de
+fase), nunca como preenchimento de área grande, e o semáforo dos
+indicadores como o único elemento colorido de peso.
 
 ## Onde vive
 
@@ -21,31 +20,37 @@ cores de status em tons pastel.
 
 ## Paleta e tema
 
-Claro/escuro via `@media (prefers-color-scheme: dark)` em
-`tokens.css` — nenhum componente decide cor por conta própria, todos leem
-os tokens (`--paper`, `--ink`, `--accent`, etc.), então o tema muda sem
-tocar em `index.css` ou nos componentes.
+Superfície única, clara e neutra (`color-scheme: light` em `tokens.css`),
+não segue o tema do sistema operacional. Nenhum componente decide cor por
+conta própria, todos leem os tokens (`--paper`, `--ink`, `--accent`,
+etc.), então a paleta muda sem tocar em `index.css` ou nos componentes.
+`.on-dark` é uma classe utilitária à parte, reservada à faixa quase preta
+da marca (banner, README, documentação), não usada dentro do produto.
 
 | Token | Uso |
 |---|---|
-| `--paper` / `--paper-raised` | fundo da página / fundo dos cards |
+| `--paper` / `--paper-raised` / `--paper-sunken` | fundo da página / fundo dos cards / campos e cabeçalho de tabela |
 | `--ink` / `--ink-soft` | texto principal / texto secundário |
-| `--line` | bordas e divisores |
+| `--line` / `--line-soft` | bordas e divisores |
 | `--accent` / `--accent-ink` / `--accent-soft` | cor de marca (botão primário, eyebrow, callout, links de relatório) |
-| `--shadow` | sombra sutil dos cards |
+| `--accent-deep` / `--accent-border` | texto sobre `--accent-soft` / borda discreta em acento |
+| `--accent-art` | reservado à arte da logo e às faixas escuras (`.on-dark`), sem contraste suficiente sobre branco pra uso em texto/borda |
+| `--shadow` / `--shadow-lg` | sombra sutil dos cards |
 
 ### Cores "semáforo"
 
-Nunca vermelho/amarelo/verde saturados — sempre fundo pastel + texto legível
-na mesma família de cor, para não competir com o resto da interface nem
-parecer um alerta de sistema operacional:
+Nunca vermelho/amarelo/verde saturados, sempre fundo pastel, borda na
+mesma família de cor e texto legível, pra não competir com o resto da
+interface nem parecer um alerta de sistema operacional. A leitura nunca
+depende só da cor, o ponto sólido em `.badge::before` reforça o estado
+mesmo pra quem não distingue bem as cores:
 
-| Token (bg/fg) | Significado | Usado em |
+| Token (bg/border/fg) | Significado | Usado em |
 |---|---|---|
-| `--ok-bg` / `--ok-fg` | aceitável / baixo risco | `badge--ok` |
-| `--warn-bg` / `--warn-fg` | atenção / risco médio | `badge--warn` |
-| `--critical-bg` / `--critical-fg` | crítico / alto risco | `badge--critical`, `.alert--critical` |
-| `--neutral-bg` / `--neutral-fg` | classificação não mapeada | `badge--neutral` |
+| `--ok-bg` / `--ok-border` / `--ok-fg` | aceitável / baixo risco | `badge--ok` |
+| `--warn-bg` / `--warn-border` / `--warn-fg` | atenção / risco médio | `badge--warn` |
+| `--critical-bg` / `--critical-border` / `--critical-fg` | crítico / alto risco | `badge--critical`, `.alert--critical` |
+| `--neutral-bg` / `--neutral-border` / `--neutral-fg` | classificação não mapeada | `badge--neutral` |
 
 `statusBadge.ts` é o único lugar que decide qual badge usar a partir do
 valor vindo da API — se um novo valor de classificação/risco for
@@ -54,17 +59,18 @@ componente.
 
 ## Tipografia
 
-Três famílias, cada uma com um papel fixo (mesmo padrão dos artefatos
-HTML da apresentação):
+Duas famílias, carregadas via Google Fonts em `index.html`, cada uma com
+um papel fixo:
 
-- **Serif** (`--font-serif`, Charter) — títulos (`h1`, `h2`): dá o tom
-  editorial/relatório em vez de "dashboard genérico".
-- **Mono** (`--font-mono`) — rótulos curtos em caixa alta com
-  letter-spacing: `.eyebrow`, `h3`, cabeçalho de tabela, `.categoria` nas
-  listas de pergunta/resposta, badges, links de relatório. Sinaliza
-  "metadado", não texto de leitura corrida.
-- **Sans** (`--font-sans`) — corpo do texto (`body`, parágrafos, textarea,
-  botões).
+- **Sans** (`--font-sans`, Inter) — corpo do texto (`body`, parágrafos,
+  textarea, botões) e títulos (`h1`, `h2`, peso 500). `--font-serif`
+  aponta pra `--font-sans`, mantido só por compatibilidade com o restante
+  do CSS que já referenciava esse token.
+- **Mono** (`--font-mono`, JetBrains Mono) — rótulos curtos em caixa alta
+  com letter-spacing: `.eyebrow`, `h3`, cabeçalho de tabela, `.categoria`
+  nas listas de pergunta/resposta, badges, links de relatório, dado
+  (identificador de lote, parâmetro, unidade). Sinaliza "metadado", não
+  texto de leitura corrida.
 
 ## Padrões de layout
 
@@ -88,10 +94,12 @@ HTML da apresentação):
 
 ## Botões
 
-- Padrão: fundo `--accent`, texto branco — ação primária (Responder,
-  Voltar à lista de lotes).
-- `.secondary`: fundo transparente, borda `--line` — ação secundária
-  (Pedir ajuste).
+- Padrão: contorno em `--accent`, fundo transparente, texto
+  `--accent-ink`, fundo `--accent-soft` no hover, ação primária
+  (Responder, Voltar à lista de lotes). Nunca preenchimento de área
+  grande, mesma regra da paleta como um todo.
+- `.secondary`: fundo transparente, borda `--line`, texto `--ink`, ação
+  secundária (Pedir ajuste).
 
 ## Adicionando um novo componente
 

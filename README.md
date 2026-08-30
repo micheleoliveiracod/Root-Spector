@@ -1,4 +1,22 @@
-# Root-Spector — Agente de Investigação de Causa Raiz de NC
+<div align="center">
+
+<img src="docs/brand/logo-lockup.png" alt="Root-Spector" width="720" />
+
+**Investigador raiz. Soluções inteligentes.**
+
+Agente de investigação de causa raiz de não conformidades (NC) em processos
+produtivos de biotecnologia. Mapeamento Ishikawa e cadeia dos 5 porquês,
+conduzidos em conjunto com o operador.
+
+![Python](https://img.shields.io/badge/Python-3.12-9184D9?style=flat-square&labelColor=0B0A10)
+![LangGraph](https://img.shields.io/badge/LangGraph-agente-9184D9?style=flat-square&labelColor=0B0A10)
+![FastAPI](https://img.shields.io/badge/FastAPI-backend-9184D9?style=flat-square&labelColor=0B0A10)
+![React](https://img.shields.io/badge/React-frontend-9184D9?style=flat-square&labelColor=0B0A10)
+![CI](https://img.shields.io/github/actions/workflow/status/micheleoliveiracod/Root-Spector/ci.yml?style=flat-square&labelColor=0B0A10&color=9184D9&label=CI)
+
+</div>
+
+---
 
 **Desenvolvido por:** [Michele Oliveira](https://github.com/micheleoliveiracod)
 
@@ -319,7 +337,7 @@ Ver seção correspondente em `specs/design.md`.
 
 ---
 
-## 👨‍💻 Desenvolvedor
+## 👩🏻‍💻 Desenvolvedora
 
 **Desenvolvido com 💜 por Michele Oliveira**
 - GitHub: [@micheleoliveiracod](https://github.com/micheleoliveiracod)

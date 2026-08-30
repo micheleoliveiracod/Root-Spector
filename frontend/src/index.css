@@ -40,7 +40,8 @@ body {
 }
 
 h1 {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
+  font-weight: 500;
   font-size: clamp(26px, 3.6vw, 34px);
   line-height: 1.15;
   margin: 0;
@@ -49,7 +50,8 @@ h1 {
 }
 
 h2 {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
+  font-weight: 500;
   font-size: 20px;
   margin: 0 0 4px;
   letter-spacing: -0.005em;
@@ -147,21 +149,25 @@ tbody tr:last-child td {
 .badge--ok {
   background: var(--ok-bg);
   color: var(--ok-fg);
+  border: 1px solid var(--ok-border);
 }
 
 .badge--warn {
   background: var(--warn-bg);
   color: var(--warn-fg);
+  border: 1px solid var(--warn-border);
 }
 
 .badge--critical {
   background: var(--critical-bg);
   color: var(--critical-fg);
+  border: 1px solid var(--critical-border);
 }
 
 .badge--neutral {
   background: var(--neutral-bg);
   color: var(--neutral-fg);
+  border: 1px solid var(--neutral-border);
 }
 
 .muted {
@@ -248,14 +254,14 @@ button {
   padding: 9px 18px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--accent);
-  background: var(--accent);
-  color: #fff;
+  background: transparent;
+  color: var(--accent-ink);
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: background 0.15s;
 }
 
 button:hover {
-  opacity: 0.9;
+  background: var(--accent-soft);
 }
 
 button.secondary {
