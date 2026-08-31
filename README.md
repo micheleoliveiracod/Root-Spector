@@ -48,6 +48,12 @@ Este projeto foi entregue em duas fases do Módulo 2 do curso IA para DEVs:
 
 ---
 
+## Vídeo de demonstração
+
+[Root-Spector em funcionamento](https://youtu.be/PQP-jA8mIXI)
+
+---
+
 ## Fase 1, Entrega Parcial do Módulo 2
 
 ### Descrição do problema
@@ -567,7 +573,7 @@ endpoint acima. Instruções de construção, passo a passo, em
 
 ---
 
-## 👩🏻‍💻🪄 Desenvolvedora
+## 👩🏻‍💻 Desenvolvedora
 
 **Desenvolvido com 💜 por Michele Oliveira**
 - GitHub: [@micheleoliveiracod](https://github.com/micheleoliveiracod)
