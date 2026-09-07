@@ -100,6 +100,9 @@ export default function App() {
           processando={processando}
         />
       )}
+      <footer className="app-footer">
+        © {new Date().getFullYear()} Michele Oliveira. Todos os direitos reservados.
+      </footer>
     </main>
   );
 }
