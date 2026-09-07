@@ -534,3 +534,13 @@ button:disabled {
 .report-links a:hover {
   text-decoration: underline;
 }
+
+/* rodapé de direitos autorais, mesmo padrão discreto usado nos
+   documentos técnicos (docs/*.html) */
+.app-footer {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+  text-align: center;
+  margin-top: 48px;
+}

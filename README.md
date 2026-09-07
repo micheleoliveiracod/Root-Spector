@@ -7,7 +7,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-backend-9184D9?style=flat-square&labelColor=0B0A10)
 ![React](https://img.shields.io/badge/React-frontend-9184D9?style=flat-square&labelColor=0B0A10)
 [![CI](https://github.com/micheleoliveiracod/Root-Spector/actions/workflows/ci.yml/badge.svg)](https://github.com/micheleoliveiracod/Root-Spector/actions/workflows/ci.yml)
-![License](https://img.shields.io/badge/licenca-Apache--2.0-9184D9?style=flat-square&labelColor=0B0A10)
+![License](https://img.shields.io/badge/licenca-todos%20os%20direitos%20reservados-9184D9?style=flat-square&labelColor=0B0A10)
 
 </div>
 
@@ -596,4 +596,15 @@ Consulte [GitFlow](specs/gitflow.md) para mais detalhes.
 
 ## 📄 Licença do Projeto
 
-Este projeto está licenciado sob a **Apache License 2.0**.
+Copyright (c) 2026 Michele Oliveira. Todos os direitos reservados.
+
+A Fase 1 (mini-projeto avaliativo, entregue em 19/07/2026) foi
+licenciada sob a Apache License 2.0. A partir do início da construção
+da Fase 2, o projeto passou a ser proprietário.
+
+Este código é disponibilizado publicamente apenas para fins de consulta,
+avaliação acadêmica e portfólio. É permitido baixar e executar o projeto
+localmente, para estudo pessoal. Não é permitido copiar, modificar,
+redistribuir ou usar este código para fins comerciais sem autorização
+prévia e por escrito da autora. Ver [LICENSE](LICENSE) para o texto
+completo.
