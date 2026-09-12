@@ -537,6 +537,18 @@ endpoint acima. Instruções de construção, passo a passo, em
 
 ---
 
+## Backlog pós-entrega
+
+Trabalho posterior à entrega da Fase 2, fora do escopo avaliado do PDF,
+cada item com sua própria issue e branch (`feature/*`/`docs/*`, convenção
+em `specs/gitflow.md`). Lista completa, com status de cada branch/PR, em
+`docs/gitflow.md` § Backlog pós-entrega. Em andamento ou já entregue até
+aqui: responsividade do frontend para celular e tablet (issue #99) e
+persistência dos embeddings do RAG em Postgres, pra não recalcular a base
+de conhecimento a cada início do agente (issue #98).
+
+---
+
 ## Documentação relacionada
 
 **Fase 1:**

@@ -211,3 +211,19 @@ formalizar o Gitflow.
   - Tag `v1.0-entrega` em `main` após o merge
   - Back-merge de `release/v1.0-entrega` em `develop`, também via PR
 - [ ] **Submissão do link do repositório no AVA**
+
+## Backlog pós-entrega
+
+Trabalho posterior à entrega da Fase 2 (v2.0/v3.0-entrega), fora do
+escopo avaliado do PDF, sem milestone própria (nenhum dos 17 milestones
+existentes cobre isso), cada item com issue própria no board. Mesma
+convenção de nome de branch de `specs/gitflow.md` § Modelo de branches
+(prefixo pelo tipo predominante do conteúdo).
+
+| Branch | Issue | PR | Status | Cobre |
+|---|---|---|---|---|
+| `chore/licenca-direitos-reservados` | -- | #95 | Mergeado | Troca de licença para todos os direitos reservados a partir da Fase 2 |
+| `docs/remove-politica-contribuicao` | -- | #97 | Mergeado | Remove a seção "Contribuindo" do README, projeto não aceita contribuidores externos |
+| `docs/dedicatoria-readme` | -- | #100 | Mergeado | Dedicatória na seção de Agradecimentos do README |
+| `feature/responsividade-mobile-tablet` | #99 | #101 | Mergeado | Breakpoints de celular/tablet em `frontend/src/index.css` e `.table-scroll` em `ListaLotes`/`PerguntaAtual` |
+| `feature/persistir-embeddings-rag` | #98 | -- | Aberta, PR ainda não enviado | Persiste os embeddings do RAG em `PGVector` quando `DATABASE_URL` estiver definida, reindexação condicional por hash do corpus (ver `docs/RAG.md` § Armazenamento vetorial) |
