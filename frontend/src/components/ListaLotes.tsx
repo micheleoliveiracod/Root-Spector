@@ -63,48 +63,50 @@ export function ListaLotes({ onEscolher, processando }: Props) {
   return (
     <div className="card section">
       <h2>Lotes</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Lote</th>
-            <th>Situação</th>
-            <th>O que fazer</th>
-            <th>Parâmetro(s) fora da faixa</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {lotes.map((lote) => {
-            const situacao = situacaoLote(lote);
-            return (
-              <tr key={lote.batch_id}>
-                <td>{lote.batch_id}</td>
-                <td>
-                  <span className={`estado ${situacao.classe}`}>{situacao.rotulo}</span>
-                  <span className="estado-codigo">{situacao.codigo}</span>
-                </td>
-                <td>{situacao.acao}</td>
-                <td>
-                  {lote.parametros_fora_da_faixa.length > 0 ? (
-                    lote.parametros_fora_da_faixa.map(nomeParametro).join(", ")
-                  ) : (
-                    <span className="muted">—</span>
-                  )}
-                </td>
-                <td>
-                  {lote.elegivel ? (
-                    <button onClick={() => onEscolher(lote)} disabled={processando}>
-                      Investigar
-                    </button>
-                  ) : (
-                    <span className="muted">não elegível</span>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Lote</th>
+              <th>Situação</th>
+              <th>O que fazer</th>
+              <th>Parâmetro(s) fora da faixa</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {lotes.map((lote) => {
+              const situacao = situacaoLote(lote);
+              return (
+                <tr key={lote.batch_id}>
+                  <td>{lote.batch_id}</td>
+                  <td>
+                    <span className={`estado ${situacao.classe}`}>{situacao.rotulo}</span>
+                    <span className="estado-codigo">{situacao.codigo}</span>
+                  </td>
+                  <td>{situacao.acao}</td>
+                  <td>
+                    {lote.parametros_fora_da_faixa.length > 0 ? (
+                      lote.parametros_fora_da_faixa.map(nomeParametro).join(", ")
+                    ) : (
+                      <span className="muted">—</span>
+                    )}
+                  </td>
+                  <td>
+                    {lote.elegivel ? (
+                      <button onClick={() => onEscolher(lote)} disabled={processando}>
+                        Investigar
+                      </button>
+                    ) : (
+                      <span className="muted">não elegível</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
       {processando && (
         <div className="loading">
           <span className="spinner" aria-hidden="true" />
