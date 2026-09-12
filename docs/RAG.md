@@ -125,28 +125,53 @@ está correto e operacional para o volume atual da base de conhecimento.
 
 ## Armazenamento vetorial
 
-Os embeddings são armazenados em `InMemoryVectorStore`
-(`langchain_core.vectorstores`), estrutura mantida inteiramente em
-memória durante a execução do processo, sem persistência em disco. A
-função `_vector_store()` em `root_cause_agent/rag.py` é decorada com
-`functools.lru_cache`, de modo que a indexação completa da base de
-conhecimento ocorre uma única vez por processo, na primeira consulta, e é
-reaproveitada em todas as consultas seguintes enquanto o processo estiver
-em execução. Esse é o mesmo padrão de cache já usado por
-`carregar_regras_setor()` em `root_cause_agent/config.py`.
+O armazenamento tem dois backends, no mesmo padrão dual já usado pelo
+checkpointer do grafo (`graph.py::_criar_checkpointer`) e pelo log
+estruturado em banco (`config.py::_HandlerBancoDeDados`): local por
+padrão, Postgres quando `DATABASE_URL` estiver definida. A escolha é
+feita em `_vector_store()` (`root_cause_agent/rag.py`), decorada com
+`functools.lru_cache`, mesmo padrão de cache já usado por
+`carregar_regras_setor()` em `root_cause_agent/config.py`: a decisão de
+qual backend usar, e a consulta que ela dispara, acontece uma única vez
+por processo.
 
-Internamente, o `InMemoryVectorStore` mantém um dicionário Python
+**Sem `DATABASE_URL` (padrão em desenvolvimento):** `InMemoryVectorStore`
+(`langchain_core.vectorstores`), mantido inteiramente em memória, sem
+persistência em disco. Internamente, mantém um dicionário Python
 (atributo `store`) que associa, a cada chunk indexado, um identificador
 único, o vetor de embedding, o texto original do chunk e o metadado de
-origem (`fonte`). Não existe um banco de dados externo: o índice inteiro
-é reconstruído a cada novo processo, a partir dos arquivos Markdown em
-`data/base_conhecimento/`, o que mantém a base de conhecimento como única
-fonte de verdade, sem risco de o índice vetorial divergir dos documentos
-que o originaram.
+origem (`fonte`). O índice inteiro é reconstruído a cada novo processo, a
+partir dos arquivos Markdown em `data/base_conhecimento/`, o que mantém a
+base de conhecimento como única fonte de verdade, sem risco de o índice
+vetorial divergir dos documentos que o originaram -- aceitável em
+desenvolvimento, corpus pequeno.
 
-A função `limpar_cache()` descarta o índice em memória, forçando
-reconstrução na próxima consulta. É usada nos testes automatizados para
-evitar que embeddings gerados por um provedor sejam reaproveitados
+**Com `DATABASE_URL` (produção):** `PGVector` (`langchain-postgres`),
+sobre a mesma instância Postgres do checkpointer e do `eventos_log`, na
+coleção `root_spector_base_conhecimento`. Reindexar (chunking e chamadas
+reais de embedding) a cada reinício do processo desperdiçaria custo e
+latência para um corpus que não muda com frequência, então
+`_vector_store_postgres()` compara um hash SHA-256 do conteúdo atual de
+`data/base_conhecimento/*.md` contra o último hash persistido na tabela
+`rag_indice_hash` (criada automaticamente na primeira execução):
+
+- Hash igual (caso comum, corpus não mudou): a coleção já persistida é
+  reaproveitada como está, nenhum embedding novo é gerado.
+- Hash diferente (1ª execução contra esse banco, ou algum `.md` foi
+  editado/adicionado/removido): a coleção é apagada e reconstruída do
+  zero (`pre_delete_collection=True`), e o hash novo é gravado em
+  `rag_indice_hash`.
+
+Esse hash cobre a base inteira, não arquivo por arquivo -- qualquer
+mudança em qualquer `.md` da base reindexa tudo, não só o arquivo
+alterado, decisão deliberada por simplicidade: o corpus inteiro já é
+pequeno o suficiente para uma reindexação completa caber dentro do limite
+de requisições por minuto da API de embeddings (ver seção anterior).
+
+A função `limpar_cache()` descarta o backend selecionado (o dicionário em
+memória, ou a referência ao `PGVector` já aberto), forçando a escolha e a
+consulta de novo na próxima chamada -- usada nos testes automatizados
+para evitar que embeddings gerados por um provedor sejam reaproveitados
 indevidamente numa consulta feita sob outra configuração de provedor.
 
 ## Recuperação

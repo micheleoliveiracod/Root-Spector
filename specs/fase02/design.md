@@ -94,7 +94,7 @@ infraestrutura nova (nada de Pinecone/Weaviate/servidor de vetores).
 |---|---|---|
 | Chunking | `langchain-text-splitters` (`RecursiveCharacterTextSplitter`, ou `MarkdownHeaderTextSplitter` primeiro por seção) | Sim, só essa, pacote pequeno e oficial do LangChain, sem sub-dependências pesadas |
 | Embedding | `GoogleGenerativeAIEmbeddings` (`langchain_google_genai`, modelo `models/gemini-embedding-001`, `text-embedding-004` foi descontinuado pela Google) | Não, já instalado, reaproveita a mesma `GOOGLE_API_KEY`, independente do `LLM_PROVIDER` configurado pra `get_llm()` (embeddings não fazem parte da cadeia de fallback do LLM principal) |
-| Vector store | `InMemoryVectorStore` (`langchain_core.vectorstores`) | Não, já vem com `langchain-core`, que já é dependência |
+| Vector store | `InMemoryVectorStore` (`langchain_core.vectorstores`) por padrão; `PGVector` (`langchain-postgres`) quando `DATABASE_URL` estiver definida, ver `docs/RAG.md` § Armazenamento vetorial | `InMemoryVectorStore` não, já vem com `langchain-core`; `langchain-postgres` sim, adicionada na issue #98 |
 | Retrieval | `.similarity_search(query, k=3)`, busca semântica de verdade |, |
 
 Falha na chamada de embeddings (cota, rede) não derruba a investigação:
@@ -110,11 +110,14 @@ nesse caso (contexto RAG genérico).
   overlap ~50) sobre cada documento, como os documentos são curtos e
   focados, cada um vira poucos chunks (2-5), corpus final pequeno mas
   real (~20-40 chunks).
-- **Indexação**: `InMemoryVectorStore` construído uma vez a partir dos
-  chunks embedados, cacheado (`lru_cache`, mesmo padrão de
-  `carregar_regras_setor()` em `config.py`), reconstruído no startup do
-  processo, não persistido em disco (corpus pequeno o suficiente pra não
-  precisar).
+- **Indexação**: construída uma vez por processo (cacheada com
+  `lru_cache`, mesmo padrão de `carregar_regras_setor()` em `config.py`).
+  Sem `DATABASE_URL`, `InMemoryVectorStore`, reconstruída a cada início de
+  processo (corpus pequeno o suficiente pra não precisar persistir em
+  disco em dev). Com `DATABASE_URL`, `PGVector` sobre o mesmo Postgres do
+  checkpointer, com reindexação condicional por hash do corpus (issue
+  #98, mudança posterior à entrega da Fase 2, ver `docs/RAG.md` §
+  Armazenamento vetorial).
 - **Recuperação**: `pre_busca_rag` monta uma query semântica de verdade
   (categoria principal + resumo da NC, não mais correspondência exata de
   string) e busca por similaridade, `.similarity_search(query, k=3)`.

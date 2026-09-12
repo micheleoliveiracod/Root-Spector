@@ -537,6 +537,18 @@ endpoint acima. Instruções de construção, passo a passo, em
 
 ---
 
+## Backlog pós-entrega
+
+Trabalho posterior à entrega da Fase 2, fora do escopo avaliado do PDF,
+cada item com sua própria issue e branch (`feature/*`/`docs/*`, convenção
+em `specs/gitflow.md`). Lista completa, com status de cada branch/PR, em
+`docs/gitflow.md` § Backlog pós-entrega. Em andamento ou já entregue até
+aqui: responsividade do frontend para celular e tablet (issue #99) e
+persistência dos embeddings do RAG em Postgres, pra não recalcular a base
+de conhecimento a cada início do agente (issue #98).
+
+---
+
 ## Documentação relacionada
 
 **Fase 1:**
@@ -571,6 +583,8 @@ endpoint acima. Instruções de construção, passo a passo, em
 - **SCTEC e SENAI:** Programa de IA para DEVs
 - **Comunidade Open Source:** ferramentas e bibliotecas utilizadas
 
+Dedico este projeto aos colegas de trabalho especiais que tive, e que me ensinaram sobre Qualidade e Excelência Operacional.
+
 ---
 
 ## 👩🏻‍💻 Desenvolvedora
@@ -580,17 +594,6 @@ endpoint acima. Instruções de construção, passo a passo, em
 - Email: [data.analystmlso@gmail.com](mailto:data.analystmlso@gmail.com)
 
 **Última atualização:** 29 de agosto de 2026
-
----
-
-## 🤝 Contribuindo
-
-1. Crie uma branch para sua feature: `git checkout -b feature/sua-feature`
-2. Commit suas mudanças: `git commit -m 'feat: descrição da feature'`
-3. Push para a branch: `git push origin feature/sua-feature`
-4. Abra um Pull Request
-
-Consulte [GitFlow](specs/gitflow.md) para mais detalhes.
 
 ---
 

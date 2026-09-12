@@ -28,16 +28,19 @@ dependencies = [
     # contrário do WeasyPrint, que exige GTK/Pango instalados à parte),
     # funciona igual em desenvolvimento local, CI e no deploy.
     "xhtml2pdf>=0.2.17",
-    # Checkpointer condicional (graph.py::_criar_checkpointer) e log
-    # estruturado em banco (config.py::_HandlerBancoDeDados) usam Postgres
-    # só quando DATABASE_URL estiver definida (deploy, Azure Database for
-    # PostgreSQL); em dev/CI, sem essa variável, o SQLite local continua
-    # sendo o padrão, sem exigir nenhuma conexão real. Precisam estar
-    # instalados de qualquer forma, tanto em produção (para o caminho
-    # Postgres funcionar de verdade) quanto em dev/CI (para os testes que
-    # cobrem esse caminho, com um Postgres fake, rodarem).
+    # Checkpointer condicional (graph.py::_criar_checkpointer), log
+    # estruturado em banco (config.py::_HandlerBancoDeDados) e persistência
+    # dos embeddings do RAG (root_cause_agent/rag.py::_vector_store_postgres)
+    # usam Postgres só quando DATABASE_URL estiver definida (deploy, Azure
+    # Database for PostgreSQL); em dev/CI, sem essa variável, o SQLite
+    # local/InMemoryVectorStore continuam sendo o padrão, sem exigir
+    # nenhuma conexão real. Precisam estar instalados de qualquer forma,
+    # tanto em produção (para o caminho Postgres funcionar de verdade)
+    # quanto em dev/CI (para os testes que cobrem esse caminho, com um
+    # Postgres fake, rodarem).
     "langgraph-checkpoint-postgres>=2.0",
     "psycopg[binary,pool]>=3.2",
+    "langchain-postgres>=0.0.12",
 ]
 
 [project.optional-dependencies]
