@@ -571,7 +571,7 @@ endpoint acima. Instruções de construção, passo a passo, em
 - **SCTEC e SENAI:** Programa de IA para DEVs
 - **Comunidade Open Source:** ferramentas e bibliotecas utilizadas
 
-Dedico este projeto aos colegas de trabalho especiais que tive, e que me ensinaram sobre qualidade e Excelência Operacional.
+Dedico este projeto aos colegas de trabalho especiais que tive, e que me ensinaram sobre Qualidade e Excelência Operacional.
 
 ---
 
