@@ -571,6 +571,8 @@ endpoint acima. Instruções de construção, passo a passo, em
 - **SCTEC e SENAI:** Programa de IA para DEVs
 - **Comunidade Open Source:** ferramentas e bibliotecas utilizadas
 
+Dedico este trabalho aos colegas de trabalho especiais que eu tive, e que me ensinaram sobre excelência operacional.
+
 ---
 
 ## 👩🏻‍💻 Desenvolvedora
