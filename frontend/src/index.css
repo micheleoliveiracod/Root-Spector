@@ -114,7 +114,14 @@ p {
   gap: 14px;
 }
 
-/* tabela de lotes */
+/* tabela de lotes e de parâmetros do lote. Em telas estreitas a tabela
+   não empilha (perderia a leitura por coluna), rola na horizontal dentro
+   do próprio .card em vez de estourar a largura da página. */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 table {
   border-collapse: collapse;
   width: 100%;
@@ -543,4 +550,44 @@ button:disabled {
   color: var(--ink-soft);
   text-align: center;
   margin-top: 48px;
+}
+
+/* ── RESPONSIVO (tablet) ──────────────────────────────────────────────
+   .page já é max-width: 720px e centralizada, então de 721px pra baixo
+   até aqui a tela já ocupa a largura útil de um tablet sem sobra. Só a
+   margem lateral fica um pouco apertada. */
+@media (max-width: 720px) {
+  .page {
+    padding: 40px 20px 80px;
+  }
+}
+
+/* ── RESPONSIVO (celular) ─────────────────────────────────────────────
+   Abaixo disso o operador está no celular: menos respiro nas bordas,
+   botões empilhados em coluna inteira (alvo de toque maior que lado a
+   lado) e as tabelas ganham .table-scroll (acima) pra rolar sem
+   espremer as colunas. */
+@media (max-width: 480px) {
+  .page {
+    padding: 24px 14px 64px;
+  }
+
+  .card {
+    padding: 18px 16px;
+  }
+
+  h1 {
+    font-size: 24px;
+  }
+
+  .actions,
+  .report-links {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actions button,
+  .report-links button {
+    width: 100%;
+  }
 }
