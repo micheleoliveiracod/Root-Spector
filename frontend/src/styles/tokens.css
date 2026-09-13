@@ -62,7 +62,7 @@
   /* tipografia */
   --text-base: 16px; /* corpo, nunca abaixo disso */
   --text-question: 19px; /* a pergunta do sistema */
-  --text-state: 17px; /* a palavra do estado do lote */
+  --text-state: 14px; /* a palavra do estado do lote */
 
   --font-sans: "Inter", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
