@@ -106,3 +106,21 @@ def test_hash_e_estavel_para_o_mesmo_conteudo(tmp_path, monkeypatch):
     (tmp_path / "a.md").write_text("conteudo estavel", encoding="utf-8")
 
     assert rag._hash_base_conhecimento() == rag._hash_base_conhecimento()
+
+
+def test_url_para_sqlalchemy_troca_o_driver_para_psycopg3():
+    """Regressão: SQLAlchemy resolve um `postgresql://` puro para o driver
+    psycopg2, não instalado neste projeto (a dependência real é psycopg
+    v3) -- sem essa troca, PGVector() falha com ModuleNotFoundError contra
+    o Postgres real assim que uma investigação chega em pre_busca_rag."""
+    original = "postgresql://usuario:senha@host:5432/banco?sslmode=require"
+
+    resultado = rag._url_para_sqlalchemy(original)
+
+    assert resultado == "postgresql+psycopg://usuario:senha@host:5432/banco?sslmode=require"
+
+
+def test_url_para_sqlalchemy_preserva_url_ja_com_driver():
+    ja_com_driver = "postgresql+psycopg://usuario:senha@host:5432/banco"
+
+    assert rag._url_para_sqlalchemy(ja_com_driver) == ja_com_driver
