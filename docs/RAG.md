@@ -148,7 +148,12 @@ desenvolvimento, corpus pequeno.
 
 **Com `DATABASE_URL` (produção):** `PGVector` (`langchain-postgres`),
 sobre a mesma instância Postgres do checkpointer e do `eventos_log`, na
-coleção `root_spector_base_conhecimento`. Reindexar (chunking e chamadas
+coleção `root_spector_base_conhecimento`. `PGVector` usa SQLAlchemy
+internamente, que resolve um `postgresql://` puro para o driver
+`psycopg2` (não instalado, a dependência real do projeto é `psycopg` v3);
+`_url_para_sqlalchemy()` troca o esquema pra `postgresql+psycopg://`
+antes de repassar a URL, senão a 1ª chamada falharia com
+`ModuleNotFoundError`. Reindexar (chunking e chamadas
 reais de embedding) a cada reinício do processo desperdiçaria custo e
 latência para um corpus que não muda com frequência, então
 `_vector_store_postgres()` compara um hash SHA-256 do conteúdo atual de

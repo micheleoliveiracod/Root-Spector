@@ -111,6 +111,20 @@ def _vector_store_memoria() -> InMemoryVectorStore:
     return store
 
 
+def _url_para_sqlalchemy(database_url: str) -> str:
+    """PGVector usa SQLAlchemy internamente, que por padrão resolve um
+    esquema `postgresql://` puro para o driver `psycopg2` -- não instalado
+    neste projeto (a dependência real é `psycopg` v3, `psycopg[binary,pool]`
+    em pyproject.toml, usado diretamente por psycopg.connect() acima e pelo
+    checkpointer em graph.py::_criar_checkpointer). Sem essa troca de
+    esquema, a 1ª chamada a PGVector() falha com `ModuleNotFoundError: No
+    module named 'psycopg2'` assim que uma investigação real chega em
+    pre_busca_rag."""
+    if database_url.startswith("postgresql://"):
+        return "postgresql+psycopg://" + database_url[len("postgresql://") :]
+    return database_url
+
+
 def _vector_store_postgres(database_url: str):
     """PGVector (`langchain-postgres`) sobre a mesma instância apontada
     por DATABASE_URL (checkpointer, eventos_log -- ver graph.py/config.py).
@@ -136,7 +150,7 @@ def _vector_store_postgres(database_url: str):
         store = PGVector(
             embeddings=_obter_embeddings(),
             collection_name=_COLECAO_RAG,
-            connection=database_url,
+            connection=_url_para_sqlalchemy(database_url),
             use_jsonb=True,
             pre_delete_collection=precisa_reindexar,
         )
