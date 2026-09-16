@@ -43,10 +43,11 @@ Variables):
 |---|---|
 | `VITE_API_URL` | domínio público do backend no Render, por exemplo `https://root-spector.onrender.com` |
 | `VITE_API_KEY` | o mesmo valor de `INTERNAL_API_KEY` definido no Render |
+| `VITE_MODO_DEMO` | `true`, liga o aviso de demonstração no topo da página (`App.tsx`); qualquer outro valor ou ausente mantém a tela sem aviso |
 
-Sem essas duas variáveis, o frontend aponta para `http://localhost:8000`
-e não envia nenhuma chave, o comportamento de desenvolvimento local
-(`frontend/src/api.ts`).
+Sem essas variáveis, o frontend aponta para `http://localhost:8000`, não
+envia nenhuma chave e não mostra o aviso de demonstração, o comportamento
+de desenvolvimento local (`frontend/src/api.ts`, `frontend/src/App.tsx`).
 
 ## 3. Workflow no n8n Cloud
 
