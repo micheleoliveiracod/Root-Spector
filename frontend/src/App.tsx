@@ -8,6 +8,11 @@ import { RevisaoRespostas } from "./components/RevisaoRespostas";
 
 type Tela = "lista" | "pergunta" | "revisao";
 
+// VITE_MODO_DEMO (build-time, ver docs/deploy-producao.md): liga o aviso
+// abaixo só na instância pública de demonstração, nunca em desenvolvimento
+// local nem no Docker Compose, onde o projeto completo já está disponível.
+const MODO_DEMO = import.meta.env.VITE_MODO_DEMO === "true";
+
 export default function App() {
   const [tela, setTela] = useState<Tela>("lista");
   const [threadId, setThreadId] = useState<string | null>(null);
@@ -87,6 +92,14 @@ export default function App() {
           Mapeamento Ishikawa e 5 Porquês, conduzidos em conjunto com o operador.
         </p>
       </header>
+      {MODO_DEMO && (
+        <p className="alert alert--warn">
+          <strong>Demonstração inicial.</strong> As chamadas de IA nesta instância
+          pública estão desativadas para não consumir cota de API. Para rodar a
+          investigação completa, com respostas geradas de verdade, siga "Como
+          executar" no README e teste localmente.
+        </p>
+      )}
       {erro && <p className="alert alert--critical">{erro}</p>}
       {tela === "lista" && <ListaLotes onEscolher={escolherLote} processando={processando} />}
       {tela === "pergunta" && pergunta && (
