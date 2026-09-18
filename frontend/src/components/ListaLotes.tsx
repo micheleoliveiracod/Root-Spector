@@ -71,7 +71,7 @@ export function ListaLotes({ onEscolher, processando }: Props) {
               <th>Situação</th>
               <th>O que fazer</th>
               <th>Parâmetro(s) fora da faixa</th>
-              <th />
+              <th>Elegibilidade</th>
             </tr>
           </thead>
           <tbody>
