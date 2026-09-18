@@ -13,7 +13,7 @@
 
 ---
 
-# Root-Spector, Agente de Investigação de Causa Raiz de NC
+# Agente de Investigação da Causa Raiz de NC em Processo Produtivo
 
 **Desenvolvido por:** [Michele Oliveira](https://github.com/micheleoliveiracod)
 
@@ -22,6 +22,32 @@
 **Curso:** IA para DEVs
 
 **Objetivo:** Desenvolvimento de um mini projeto E2E com IA em todas as etapas, entregue em 2 fases do módulo 2.
+
+## Nota sobre dados e referências bibliográficas
+
+Os dados de biosensor usados neste projeto são **sintéticos, gerados por
+IA**, desenhados para representar cenários fisicamente plausíveis de
+desvio de bioprocesso, não leituras reais de uma planta produtiva.
+
+A escolha do método (Ishikawa + 5 Porquês, conduzido por um agente de
+IA) e a arquitetura multiagente de referência se apoiam nas seguintes
+referências bibliográficas:
+
+1. BOCANET, V.I.; MUNTEAN, M.H.; FLESERIU, C. *Multi-agent Framework for
+   AI-Supported Collaborative Root Cause Analysis in Quality Assurance*.
+   In: Advances in Production Management Systems. Cyber-Physical-Human
+   Production Systems: Human-AI Collaboration and Beyond (APMS 2025).
+   IFIP Advances in Information and Communication Technology, vol. 766.
+   Springer, Cham, 2026.
+   [DOI: 10.1007/978-3-032-03538-7_15](https://link.springer.com/chapter/10.1007/978-3-032-03538-7_15)
+2. ROONEY, James J.; VANDEN HEUVEL, Lee N. Root Cause Analysis for
+   Beginners. *Quality Progress*, v. 37, n. 7, p. 45-53, jul. 2004.
+3. ILIE, Gabriela; CIOCOIU, Cristian Nicolae. Application of Fishbone
+   Diagram to Determine the Risk of an Event with Multiple Causes.
+   *Management Research and Practice*, v. 2, n. 1, p. 1-20, 2010.
+4. SERRAT, Olivier. The Five Whys Technique. In: SERRAT, Olivier.
+   *Knowledge Solutions: Tools, Methods, and Approaches to Drive
+   Organizational Performance*. Singapura: Springer, 2017. p. 307-310.
 
 ## Fases de entrega
 
