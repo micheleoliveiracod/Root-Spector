@@ -550,7 +550,7 @@ Send Email) foi construído manualmente na interface do n8n, consumindo o
 endpoint acima. Instruções de construção, passo a passo, em
 `docs/fase02/low-code/construcao-workflow-n8n.md`.
 
-### Planejado, ainda não implementado
+### Implementado e desativado
 
 - **Nenhum item de escopo do PDF ficou pendente.** O deploy em produção
   (Render, Vercel e Azure), fora do escopo avaliado do PDF mas executado
@@ -609,8 +609,6 @@ de conhecimento a cada início do agente (issue #98).
 - **SCTEC e SENAI:** Programa de IA para DEVs
 - **Comunidade Open Source:** ferramentas e bibliotecas utilizadas
 
-Dedico este projeto aos colegas de trabalho especiais que tive, e que me ensinaram sobre Qualidade e Excelência Operacional.
-
 ---
 
 ## 👩🏻‍💻 Desenvolvedora
@@ -619,7 +617,7 @@ Dedico este projeto aos colegas de trabalho especiais que tive, e que me ensinar
 - GitHub: [@micheleoliveiracod](https://github.com/micheleoliveiracod)
 - Email: [data.analystmlso@gmail.com](mailto:data.analystmlso@gmail.com)
 
-**Última atualização:** 29 de agosto de 2026
+**Última atualização:** 14 de outubro de 2026
 
 ---
 
