@@ -13,6 +13,111 @@
 
 ---
 
+<details>
+<summary><strong>🇬🇧 English overview</strong> (click to expand)</summary>
+
+### What it is
+
+Root-Spector is an AI agent that guides root cause investigations of
+non-conformities (NCs) in production processes. The reference case is
+biotechnology: bioprocess batches monitored by biosensors.
+
+### What it is for
+
+When a batch goes out of specification, the slowest step is usually
+finding out *why* it happened. That normally depends on an expert
+manually cross-checking the NC against historical process data, while
+the batch keeps moving through production. Root-Spector starts the
+investigation as soon as the NC is detected, so the cause can be found
+and corrected while the process is still running, reducing material
+waste, lost time, and the chance of the same problem recurring in the
+next batches.
+
+It is the root cause companion to
+[BiotecPredict](https://github.com/micheleoliveiracod/Projeto-avaliativo-M1-2-BiotecPredict),
+a platform that scores bioprocess batches from biosensor data
+(a compliance score plus an ML risk prediction).
+
+### How it works
+
+1. The operator opens the web app, sees the batches ranked by risk, and
+   picks an eligible batch to investigate.
+2. The system deterministically identifies which biosensor parameters
+   are out of range, comparing the batch's average readings against the
+   configured process rules.
+3. The agent then runs two quality tools, in sequence, together with
+   the operator:
+   - **Ishikawa (fishbone) diagram:** 6 context questions, one per
+     category (Method, Machine, Material, Manpower, Environment,
+     Measurement), to find the most likely category.
+   - **5 Whys:** 5 questions anchored on that category, down to a
+     systemic root cause.
+4. In parallel with the 5 Whys, a RAG search runs over a curated
+   knowledge base, and the agent then recommends corrective and
+   preventive actions.
+5. A report is generated (JSON, plus a PDF on demand). The operator
+   reviews the full chain and can request adjustments, which opens a
+   new cycle while keeping the previous one for audit.
+
+The LLM decides at runtime what to ask next and when to use its tools
+(one reads the batch's biosensor readings, the other checks whether the
+same NC has happened before); there is no fixed script. The agent does
+not investigate on its own: it conducts the investigation together with
+the person who runs the process.
+
+### Tech stack
+
+- **Agent:** Python and LangGraph, with human-in-the-loop pauses via
+  `interrupt()` and a checkpointer.
+- **Backend:** FastAPI.
+- **Frontend:** React and TypeScript (Vite).
+- **LLM:** pluggable via environment variables, with an automatic
+  fallback chain (Groq, Gemini, Anthropic, OpenAI). If every provider
+  fails, the API returns HTTP 503 and the investigation resumes from
+  the last completed step.
+- **Data:** SQLite, using BiotecPredict's schema.
+- **Quality and operations:** pytest, Vitest and Playwright tests, CI
+  on GitHub Actions, structured logging, optional LangSmith tracing,
+  prompt injection tests and API guardrails.
+
+The solution can be adapted to other industries by swapping only its
+configuration and data files.
+
+### Note on data
+
+The biosensor data used in this project is **synthetic, AI-generated**,
+designed to represent physically plausible bioprocess deviation
+scenarios, not real readings from a production plant.
+
+### How to run
+
+```bash
+# 1. Backend
+python -m venv .venv
+.venv\Scripts\activate      # Windows
+pip install -e ".[dev]"
+cp .env.example .env         # set the API key of your chosen LLM provider
+
+# 2. Data: place a biotecpredict.db file (exported from BiotecPredict,
+#    schema in specs/design.md) at data/biotecpredict.db.
+
+# 3. Start the API
+uvicorn backend.main:app --reload
+
+# 4. Frontend (in another terminal)
+cd frontend
+npm install
+npm run dev
+```
+
+Open the URL shown by Vite (default `http://localhost:5173`). The home
+screen lists the batches from `data/biotecpredict.db` with their
+classification.
+
+</details>
+
+---
+
 # Agente de Investigação da Causa Raiz de NC em Processo Produtivo
 
 **Desenvolvido por:** [Michele Oliveira](https://github.com/micheleoliveiracod)
